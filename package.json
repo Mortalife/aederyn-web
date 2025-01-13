@@ -1,0 +1,29 @@
+{
+  "name": "game-html",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "vite-dev": "vite --mode client",
+    "build": "vite build --mode client && vite build",
+    "db": "bunx @outerbase/studio local.db --port=3333",
+    "compile": "bun build src/index.ts --target=bun --outfile game --compile"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.33.1",
+    "@libsql/client": "^0.14.0",
+    "date-fns": "^4.1.0",
+    "deepmerge-ts": "^7.1.3",
+    "hono": "^4.6.15",
+    "openai": "^4.77.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@hono/vite-build": "^1.2.1",
+    "@types/bun": "latest",
+    "autoprefixer": "^10.4.20",
+    "daisyui": "^4.12.23",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.0.7"
+  }
+}

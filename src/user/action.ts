@@ -1,0 +1,201 @@
+import { items, resources, type GameUser, type ResourceModel } from "../config";
+import { client } from "../database";
+import { markResourceUsed } from "../world/resources";
+import { addToInventory, getInventory, updateInventory } from "./inventory";
+import { progressHooks } from "./quest-hooks";
+import { addSystemMessage } from "./system";
+
+/**
+ *   "CREATE TABLE IF NOT EXISTS inprogress (user_id TEXT PRIMARY KEY,x INT, y INT, resource_id TEXT, inprogress_at INT, completed_at INT)",
+
+ */
+
+export type UserAction = {
+  user_id: string;
+  x: number;
+  y: number;
+  resource_id: string;
+  inprogress_at: number;
+  completed_at: number;
+};
+
+export const markActionInProgress = async (
+  user: GameUser,
+  resource_id: string
+) => {
+  const resource = resources.find((r) => r.id === resource_id);
+
+  if (!resource) {
+    return false;
+  }
+
+  // Check if resource is already in progress
+  const action = await client.execute({
+    sql: "SELECT count(*) FROM inprogress WHERE user_id = ?",
+    args: [user.id],
+  });
+
+  if (parseInt(action.rows[0]["count"]?.toString() ?? "0") > 0) {
+    return false;
+  }
+
+  await client.execute({
+    sql: `INSERT INTO inprogress (user_id, x, y, resource_id, inprogress_at, completed_at) 
+    VALUES (:user_id, :x, :y, :resource_id, :inprogress_at, :completed_at) 
+    ON CONFLICT (user_id) DO UPDATE SET x = :x, y = :y, resource_id = :resource_id, inprogress_at = :inprogress_at, completed_at = :completed_at`,
+    args: {
+      user_id: user.id,
+      x: user.p.x,
+      y: user.p.y,
+      resource_id: resource.id,
+      inprogress_at: Date.now(),
+      completed_at: Date.now() + resource.collectionTime * 1000,
+    },
+  });
+
+  return true;
+};
+
+export const markActionComplete = async (
+  user_id: string,
+  x: number,
+  y: number
+) => {
+  await client.execute({
+    sql: "DELETE FROM inprogress WHERE user_id = ? AND x = ? AND y = ?",
+    args: [user_id, x, y],
+  });
+};
+
+export const getInProgressAction = async (user_id: string) => {
+  const result = await client.execute({
+    sql: "SELECT * FROM inprogress WHERE user_id = ?",
+    args: [user_id],
+  });
+
+  if (!result.rows.length) {
+    return null;
+  }
+
+  return result.rows[0] as unknown as UserAction;
+};
+
+export const calculateProgress = (action: UserAction) =>
+  (action.completed_at - action.inprogress_at) / 1000 -
+  Math.floor(
+    (action.completed_at - Math.min(action.completed_at, Date.now())) / 1000
+  );
+
+export const resourceRequirementsCheck = async (
+  user_id: string,
+  resource: ResourceModel
+) => {
+  if (resource.required_items.length === 0) {
+    return true;
+  }
+
+  const inventory = await getInventory(user_id);
+
+  for (const requiredItem of resource.required_items) {
+    const qty = inventory.reduce((acc, i) => {
+      if (i.item_id === requiredItem.item_id) {
+        return acc + i.qty;
+      }
+      return acc;
+    }, 0);
+
+    if (qty < requiredItem.qty) {
+      await addSystemMessage(
+        user_id,
+        "You do not have the required items.",
+        "error"
+      );
+      return false;
+    }
+  }
+
+  for (const requiredItem of resource.required_items) {
+    if (requiredItem.consumed) {
+      let requiredQty = requiredItem.qty;
+      for (const item of inventory) {
+        if (item.item_id === requiredItem.item_id) {
+          if (item.qty >= requiredQty) {
+            item.qty -= requiredQty;
+            requiredQty = 0;
+          } else {
+            requiredQty -= item.qty;
+            item.qty = 0;
+          }
+        }
+      }
+    }
+  }
+
+  const newInventory = inventory.filter((i) => i.qty > 0);
+
+  await updateInventory(user_id, newInventory);
+
+  return true;
+};
+
+export const processActions = async () => {
+  const response = await client.execute({
+    sql: "SELECT * FROM inprogress WHERE completed_at < ? LIMIT 500",
+    args: [Date.now()],
+  });
+
+  const actions = response.rows as unknown as UserAction[];
+
+  for (const action of actions) {
+    const resource = resources.find((r) => r.id === action.resource_id);
+
+    if (!resource) {
+      await markActionComplete(action.user_id, action.x, action.y);
+      continue;
+    }
+
+    const canPerformAction = await resourceRequirementsCheck(
+      action.user_id,
+      resource
+    );
+
+    console.log("Can perform action", canPerformAction);
+
+    if (!canPerformAction) {
+      await markActionComplete(action.user_id, action.x, action.y);
+      continue;
+    }
+
+    const successfullyUsed = await markResourceUsed(
+      action.x,
+      action.y,
+      resource
+    );
+
+    await markActionComplete(action.user_id, action.x, action.y);
+
+    console.log("Successfully used", successfullyUsed);
+    if (successfullyUsed) {
+      for (const reward of resource.reward_items) {
+        addToInventory(action.user_id, {
+          qty: reward.qty,
+          item_id: reward.item_id,
+        });
+      }
+
+      await progressHooks.onResourceCompleted(action.user_id, resource.id);
+      await addSystemMessage(
+        action.user_id,
+        `You have completed: ${
+          resource.name
+        } and acquired ${resource.reward_items
+          .map(
+            (item) =>
+              `${item.qty} x ${items.find((i) => i.id === item.item_id)?.name}`
+          )
+          .join(", ")}`,
+        "success"
+      );
+    }
+  }
+};
