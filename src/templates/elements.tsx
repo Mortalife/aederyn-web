@@ -37,7 +37,9 @@ export const WorldMap = (
           indicator.x === worldTile.x && indicator.y === worldTile.y
       );
       return html`<div
-        class="flex flex-col w-[100px] h-[100px] items-center justify-center text-center p-4 border border-gray-400"
+        class="${worldTile.here
+          ? "rounded-full scale-125 border-4 shadow-lg"
+          : ""} transition text-sm flex flex-col w-[100px] h-[100px] items-center justify-center text-center p-4 border border-gray-400"
         style=" background-color: ${worldTile?.tile?.backgroundColor ??
         "#333"}; color: ${worldTile?.tile?.color ?? "#000"};"
       >
@@ -87,16 +89,16 @@ export const WorldMap = (
 </div>`;
 
 export const MapIndicatorIcons = (indicator: MapIndicator) => html` <div
-  class="p-1 rounded bg-gray-800 flex flex-row gap-1"
+  class="flex flex-row gap-1"
 >
   ${indicator.available
     ? html`<svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
-        stroke-width="1.5"
+        stroke-width="3"
         stroke="currentColor"
-        class="size-6 text-yellow-600"
+        class="size-6 text-yellow-300"
       >
         <path
           stroke-linecap="round"
@@ -420,9 +422,9 @@ export const InventorySlot = (props: {
 </div>`;
 
 export const Messages = (messages: SystemMessage[]) => {
-  return html`<div class="">
+  return html`
     <div class="stack">${messages.map((message) => Message(message))}</div>
-  </div>`;
+  `;
 };
 
 export const Message = (message: SystemMessage) => html`

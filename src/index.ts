@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { Content } from "./templates/layout";
 import { fragmentEvent } from "./sse";
-import { getTile, isOutOfBounds } from "./world";
+import { getTile, getTileSelection, isOutOfBounds } from "./world";
 import { GameLogin, GamePage } from "./templates/game";
 import {
   getPopulatedUser,
@@ -54,8 +54,13 @@ import { questManager } from "./user/quest-generator";
 import { QuestNPCCompleted, QuestNPCDialog } from "./templates/quests";
 
 const app = new Hono({});
-
-app.use("/static/*", serveStatic({ root: "./dist/static" }));
+app.use(
+  "/static/assets/*",
+  serveStatic({
+    root: "./dist/static/assets",
+    rewriteRequestPath: (path) => path.replace("/static/assets", ""),
+  })
+);
 app.use("/assets/*", serveStatic({ root: "./public" }));
 
 app.get("/", async (c) => {
@@ -77,8 +82,6 @@ app.post("/game/start", async (c) => {
     c,
     async (stream) => {
       const user = await getUserSync(user_id);
-
-      console.log("logging in", user);
 
       if (!user) {
         await stream.writeSSE(
@@ -312,7 +315,9 @@ app.post("/game/move/:direction", async (c) => {
           return;
       }
 
-      if (!isOutOfBounds(user.p.x, user.p.y)) {
+      const mapTile = getTileSelection(user.p.x, user.p.y);
+
+      if (!isOutOfBounds(user.p.x, user.p.y) && mapTile.accessible) {
         await saveUser(user.id, transformUser(user));
       }
 

@@ -4,9 +4,9 @@
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "vite-dev": "vite --mode client",
-    "build": "vite build --mode client && vite build",
+    "build": "vite build --mode client",
     "db": "bunx @outerbase/studio local.db --port=3333",
-    "compile": "bun build src/index.ts --target=bun --outfile game --compile"
+    "compile": "bun build --target=bun --outfile game src/index.ts "
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.33.1",

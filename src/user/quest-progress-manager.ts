@@ -1,8 +1,14 @@
+import { tutorialQuests } from "../config/quests";
 import { client } from "../database";
 import { getTile, type WorldTile } from "../world";
 import { addToInventory } from "./inventory";
 import { getItemName } from "./items";
-import type { TileObjective, TileQuest, TileTalkObjective } from "./quest";
+import type {
+  Quest,
+  TileObjective,
+  TileQuest,
+  TileTalkObjective,
+} from "./quest";
 import { questManager, type QuestManager } from "./quest-generator";
 import { addSystemMessage } from "./system";
 
@@ -563,11 +569,17 @@ export class QuestProgressManager {
     questId: string,
     questManager: QuestManager
   ): Promise<void> {
-    const quest = await questManager.getQuestTemplate(questId);
+    let quest: Quest | TileQuest | undefined | null =
+      await questManager.getQuestTemplate(questId);
 
     if (!quest) {
-      await addSystemMessage(userId, "Quest not found", "error");
-      return;
+      // Is it a tutorial?
+      quest = tutorialQuests.find((q) => q.id === questId);
+
+      if (!quest) {
+        await addSystemMessage(userId, "Quest not found", "error");
+        return;
+      }
     }
 
     await client.execute({

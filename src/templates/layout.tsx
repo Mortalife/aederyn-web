@@ -1,5 +1,6 @@
 import { html, raw } from "hono/html";
 import { GameLogin } from "./game";
+import path from "node:path";
 
 interface SiteData {
   title: string;
@@ -8,6 +9,16 @@ interface SiteData {
   children?: any;
 }
 const Layout = (props: SiteData) => {
+  let css = "";
+
+  if (process.env.NODE_ENV === "production") {
+    const manifest = require(path.join(
+      process.cwd(),
+      "./dist/static/.vite/manifest.json"
+    ));
+    css = manifest["src/client.ts"].css[0];
+  }
+
   return html`
   <html>
   <head>
@@ -23,7 +34,8 @@ const Layout = (props: SiteData) => {
     <script type="module" src="https://cdn.jsdelivr.net/npm/@starfederation/datastar@1.0.0-beta.1/dist/datastar.js"></script>
     ${
       process.env.NODE_ENV === "production"
-        ? raw('<script type="module" src="/static/client.js"></script>')
+        ? raw(`<script type="module" src="/static/assets/client.js"></script>
+          <link rel="stylesheet" href="/static/${css}">`)
         : raw(
             '<script type="module" src="http://localhost:5173/src/client.ts"></script>'
           )

@@ -24,8 +24,35 @@ export const calculateDistance = (point1: Point, point2: Point): number => {
   return Math.sqrt(dx * dx + dy * dy);
 };
 
+const miscTiles = {
+  "22,30": "tile_castle_wall",
+  "23,29": "tile_castle_wall",
+  "24,29": "tile_castle_wall",
+  "25,30": "tile_castle_wall",
+  "25,31": "tile_castle_wall",
+  "25,32": "tile_castle_wall",
+  "24,32": "tile_castle_wall",
+  "23,33": "tile_castle_wall",
+  "22,32": "tile_castle_wall",
+  "25,27": "tile_basic_workshop",
+};
+
 export const getTileSelection = (x: number, y: number) => {
-  const string = `${x},${y}`;
+  const coords = `${x},${y}`;
+
+  if (miscTiles[coords as keyof typeof miscTiles]) {
+    const tile = tileTypes.find(
+      (t) => t.id === miscTiles[coords as keyof typeof miscTiles]
+    );
+
+    if (!tile) {
+      throw new Error(
+        `Castle tile ${miscTiles[coords as keyof typeof miscTiles]} not found`
+      );
+    }
+
+    return tile;
+  }
 
   const center = START_POSITION;
   if (center.x === x && center.y === y) {
@@ -54,7 +81,7 @@ export const getTileSelection = (x: number, y: number) => {
   const selectedTiles =
     rarityFactor === 0 ? sortedTiles : sortedTiles.slice(0, splitIndex + 1);
 
-  const tile = selectRandom(string, selectedTiles);
+  const tile = selectRandom(coords, selectedTiles);
 
   if (!tile) {
     throw new Error("No tile found");
@@ -62,7 +89,6 @@ export const getTileSelection = (x: number, y: number) => {
 
   return tile;
 };
-console.log(getTileSelection(0, 0));
 
 export const isOutOfBounds = (x: number, y: number) => {
   return x < 0 || x > MAP_WIDTH || y < 0 || y > MAP_HEIGHT;

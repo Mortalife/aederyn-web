@@ -20,11 +20,12 @@ export default defineConfig(({ mode }) => {
   if (mode === "client") {
     return {
       build: {
+        manifest: true,
         rollupOptions: {
           input: "./src/client.ts",
           output: {
             dir: "./dist/static",
-            entryFileNames: "client.js",
+            entryFileNames: "assets/client.js",
           },
         },
         copyPublicDir: false,

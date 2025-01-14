@@ -5,6 +5,7 @@ import { generateQuestTemplates } from "../ai/quests";
 import { MAP_HEIGHT, MAP_WIDTH, type Tile } from "../config";
 import { getTileSelection } from "../world";
 import { randomIndex } from "../lib/random";
+import { tutorialQuests } from "../config/quests";
 
 export class QuestManager {
   static VERSION = 1;
@@ -277,6 +278,14 @@ export class QuestManager {
 
       tileQuests.push(tileQuest.data);
     }
+
+    for (const tileQuest of tutorialQuests) {
+      const clone = structuredClone(tileQuest);
+      clone.starts_at = starts_at.getTime();
+      clone.ends_at = ends_at.getTime();
+      tileQuests.push(clone);
+    }
+
     return tileQuests;
   }
 }
