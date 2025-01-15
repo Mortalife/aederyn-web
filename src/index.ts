@@ -154,7 +154,6 @@ app.delete("/game/logout", async (c) => {
         fragmentEvent(
           GameLogin({
             user_id: "",
-            error: "User not found",
           }),
           1
         )
@@ -180,7 +179,6 @@ app.get("/game", async (c) => {
           fragmentEvent(
             GameLogin({
               user_id: "",
-              error: "User not found",
             }),
             id
           )
