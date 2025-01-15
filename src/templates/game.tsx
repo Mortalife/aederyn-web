@@ -30,6 +30,8 @@ export const Game = (props: {
     <div
       class="md:container md:mx-auto grid grid-rows-[50px_1fr_60px] gap-4 h-full items-between"
       id="game"
+      data-signals="${toHtmlJson({ user_id: props.user.id })}"
+      data-persist-user="user_id"
     >
       <div id="info">${UserInfo(props.user, props.messages)}</div>
       <div id="content">
@@ -45,9 +47,21 @@ export const Game = (props: {
           props.npcInteractions
         )}
       </div>
-      <div class="p-4 flex flex-row gap-2 justify-end">
+      <div
+        class="p-4 flex flex-row gap-2 items-center justify-between"
+        data-signals="${toHtmlJson({
+          _showUserId: false,
+        })}"
+      >
+        <button class="btn" data-on-click="$_showUserId = !$_showUserId">
+          Toggle User Id
+        </button>
+        <div class="flex flex-row items-center gap-2" data-show="$_showUserId">
+          Your user is:
+          <input class="input" type="text" value="${props.user.id}" />
+        </div>
         <button
-          class="btn btn-ghost self-end"
+          class="btn btn-ghost"
           id="game-logout"
           data-on-click="@delete('/game/logout')"
         >
@@ -60,17 +74,23 @@ export const Game = (props: {
 
 export const GameContainer = (props: { user_id: string }) => html`
   <div id="game-container" class="h-full" data-on-load="@get('/game')">
-    <div class="md:container md:mx-auto" id="game"></div>
+    <div
+      class="md:container md:mx-auto"
+      id="game"
+      data-signals="${toHtmlJson({ user_id: props.user_id })}"
+      data-persist-user="user_id"
+    ></div>
   </div>
 `;
 
 export const GameLogin = (props: { user_id: string; error?: string }) => html`
-  <div class="container mx-auto" id="game">
-    <div
-      class="grid grid-cols-1 gap-4"
-      data-signals="${toHtmlJson({ user_id: props.user_id })}"
-      data-persist-user="user_id"
-    >
+  <div
+    class="container mx-auto"
+    id="game"
+    data-signals="${toHtmlJson({ user_id: props.user_id })}"
+    data-persist-user="user_id"
+  >
+    <div class="grid grid-cols-1 gap-4">
       <h1 class="text-3xl font-bold">Welcome to Aederyn Web!</h1>
       <form
         class="container grid grid-cols-1 gap-4"

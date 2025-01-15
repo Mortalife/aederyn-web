@@ -29,7 +29,7 @@ export const WorldMap = (
   <div
     id="map"
     style="background-color: #333; grid-auto-flow: column;"
-    class="relative p-4 grid grid-rows-5 grid-cols-5 aspect-square gap-1"
+    class="relative w-[500px] md:w-[700px] p-4 grid grid-rows-5 grid-cols-5 aspect-square gap-1"
   >
     ${map.map((worldTile) => {
       const indicators = mapIndicators.find(
@@ -173,8 +173,7 @@ export const Zone = (
       _showInventory: true,
       _showSocial: true,
     })}"
-    data-persist="_showActions _showQuests _showInventory _showSocial
-    "
+    data-persist="_showActions _showQuests _showInventory _showSocial"
   >
     <h1 class="text-3xl font-bold">${worldTile.tile?.name}</h1>
     <div id="actions" class="flex flex-row gap-2">
@@ -321,18 +320,8 @@ export const UserInfo = (
   messages?: SystemMessage[]
 ) => html` <div
   id="user-info"
-  class="w-full flex flex-row justify-between items-center"
-  data-signals="${toHtmlJson({
-    _showUserId: false,
-  })}"
+  class="w-full flex flex-row justify-end items-center"
 >
-  <p>
-    Your user is: <span data-show="$_showUserId">${user.id}</span>
-    <button class="btn btn-sm " data-on-click="$_showUserId = !$_showUserId">
-      Toggle User Id
-    </button>
-  </p>
-
   <div class="flex flex-row gap-2">
     ${messages ? Messages(messages) : null} ${user.z && UserZoneInfo(user)}
     <button class="btn btn-square" data-on-click="@get('/game/refresh')">
@@ -528,14 +517,16 @@ export const Messages = (messages: SystemMessage[]) => {
           </svg>
         </label>
       </div>
-      <div class="drawer-side">
+      <div class="drawer-side  z-20">
         <label
           for="my-drawer"
           aria-label="close sidebar"
           class="drawer-overlay"
         ></label>
 
-        <div class="menu h-full bg-base-100 flex flex-col gap-2">
+        <div
+          class="menu min-w-[75%] md:min-w-[50%] h-full bg-base-100 flex flex-col gap-2"
+        >
           <button
             class="btn btn-sm btn-primary"
             data-on-click="@delete('/game/system-messages')"
