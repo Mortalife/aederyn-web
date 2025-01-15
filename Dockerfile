@@ -26,6 +26,8 @@ COPY --from=prerelease /usr/src/app/game game
 COPY --from=prerelease /usr/src/app/package.json .
 COPY --from=prerelease /usr/src/app/dist dist
 
+RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
+
 # Create a directory for writable data
 RUN mkdir -p /usr/src/app/data
 
