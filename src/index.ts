@@ -78,7 +78,6 @@ app.use(
       sameSite: "Lax", // Recommended for basic CSRF protection in modern browsers
       path: "/", // Required for this library to work properly
       httpOnly: true, // Recommended to avoid XSS attacks
-      maxAge: 86400,
     },
   })
 );
