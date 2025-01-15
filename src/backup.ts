@@ -2,8 +2,11 @@ import { $ } from "bun";
 
 async function createBackup() {
   try {
-    const result =
-      await $`sqlite3 local.db ".backup local.db.${Date.now()}.bak"`;
+    const result = await $`sqlite3 ${
+      process.env["DATABASE_PATH"] ?? ""
+    }local.db ".backup ${
+      process.env["DATABASE_PATH"] ?? ""
+    }local.db.${Date.now()}.bak"`;
 
     if (result.exitCode === 0) {
       console.log("Backup on main database created successfully.");
@@ -16,8 +19,11 @@ async function createBackup() {
       }
     }
 
-    const sessionResult =
-      await $`sqlite3 local.sessions.db ".backup local.sessions.db.${Date.now()}.bak"`;
+    const sessionResult = await $`sqlite3 ${
+      process.env["DATABASE_PATH"] ?? ""
+    }local.sessions.db ".backup ${
+      process.env["DATABASE_PATH"] ?? ""
+    }local.sessions.db.${Date.now()}.bak"`;
 
     if (sessionResult.exitCode === 0) {
       console.log("Backup of sessions created successfully.");
