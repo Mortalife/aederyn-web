@@ -5,6 +5,7 @@ import { openai } from "../lib/openai";
 import { manifest } from "./design-doc";
 import schemas, { type Quest } from "../user/quest";
 import { anthropic } from "../lib/anthropic";
+import { questManager } from "../user/quest-generator";
 
 export const TaskSchema = z.object({
   id: z
@@ -137,45 +138,7 @@ const RPGTask = z
   })
   .strict();
 
-// You are a task generator that generates RPG tasks based on a users request.
-//           You should take strictly into account the game items, zones, and NPC personalities.
-//           The tasks you generate the player will have 24 hours to complete, before new tasks will be generated.
-//           Tasks should play into the NPC's motivations in game.
-//           Tasks should generally start in a zone that is different from zone which contains the resource to be collected.
-//           Tasks can be completed by interacting with items, resources, zones, or NPCs.
-
-//           Make sure you have a variety of tasks using all available actions.
-//           Some examples: NPC's requesting information from other NPCS.
-//           Finding a particularly rare zone and entering it.
-//           An NPC requesting an item from the player.
-//           An NPC requesting a resource from the player to be delivered to another NPC.
-//           An NPC meeting the player after they have completed a task in a different zone type.
-
-// Generate a variety of RPG quests based on user requests, considering game items, zones, and NPC personalities.
-
-// The generated quests should:
-// - Be completed in 24 hours, after which new tasks will be provided.
-// - Align with the NPC's motivations and personalities.
-// - Initiate in a zone different from the one containing the key resource.
-// - Involve interactions with items, resources, zones, or NPCs.
-
-// Ensure a diversity of tasks, utilizing all available actions and interactions.
-
-// # Steps
-
-// 1. **Understand User Request:** Start by understanding the user’s request, game setting, and available elements such as items, zones, and NPCs.
-// 2. **Task Creation:** Design quests that:
-//    - Reflect the NPC's motivations.
-//    - Start and end in different zones.
-//    - Require interaction with various game elements.
-// 3. **Diversity of Actions:** Vary the types of tasks generated, incorporating collection, delivery, exploration, and interaction.
-
-// # Notes
-
-// - Ensure each task aligns with the in-game lore and logical constraints.
-// - Adjust task complexity based on user's request context and game setup.
-
-const message = `
+const message = (quests: string[]) => `
 <npcs>
 ${JSON.stringify(npcs)}
 </npcs>
@@ -195,6 +158,10 @@ ${JSON.stringify(
 )}
 </output-schema>
 
+<existing-quests>
+${JSON.stringify(quests)}
+</existing-quests>
+
 Using the provided information about the game, and the required output schema, generate a set of quests complex quests which involved multiple objectives that the user can complete and fit into the world.
 Start with describing what the quest is about before outputting the json
 Ensure the json output is placed between <quests> and </quests>
@@ -208,13 +175,15 @@ export const generateQuestTemplates = async (
     return null;
   }
 
+  const quests = await questManager.getQuestTemplateNames();
+
   const msg = await anthropic.messages.create({
     model: "claude-3-5-sonnet-latest",
     max_tokens: 4000,
     messages: [
       {
         role: "user",
-        content: message,
+        content: message(quests ?? []),
       },
     ],
   });

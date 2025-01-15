@@ -27,52 +27,59 @@ export const Game = (props: {
   // const theme = zone?.tile?.theme;
 
   return html`
-    <div class="container mx-auto" id="game">
-      <!-- <div data-text="ctx.signals.JSON()"></div> -->
-      ${UserInfo(props.user)}
-      ${props.messages && props.messages.length
-        ? Messages(props.messages)
-        : null}
-      ${!props.user.z && WorldMap(props.map, props.mapIndicators)}
-      ${props.user.z &&
-      Zone(
-        props.user,
-        props.map.find((z) => z.here)!,
-        props.inprogress,
-        props.players,
-        props.chatMessages,
-        props.quests,
-        props.npcInteractions
-      )}
+    <div
+      class="container mx-auto grid grid-rows-[50px_1fr_60px] gap-4 h-full items-between"
+      id="game"
+    >
+      <div id="info">
+        ${UserInfo(props.user)}
+        ${props.messages && props.messages.length
+          ? Messages(props.messages)
+          : null}
+      </div>
+      <div id="content">
+        ${!props.user.z && WorldMap(props.map, props.mapIndicators)}
+        ${props.user.z &&
+        Zone(
+          props.user,
+          props.map.find((z) => z.here)!,
+          props.inprogress,
+          props.players,
+          props.chatMessages,
+          props.quests,
+          props.npcInteractions
+        )}
+      </div>
+      <div class="p-4 flex flex-row gap-2 justify-end">
+        <button
+          class="btn btn-ghost self-end"
+          id="game-logout"
+          data-on-click="@delete('/game/logout')"
+        >
+          Logout
+        </button>
+      </div>
     </div>
   `;
 };
 
-export const GamePage = (props: { user_id: string }) => html`
-  <div
-    id="game-container"
-    data-signals="${toHtmlJson({
-      user_id: props.user_id,
-    })}"
-    data-persist-user="user_id"
-    data-on-load="@get('/game')"
-  >
+export const GameContainer = (props: { user_id: string }) => html`
+  <div id="game-container" class="h-full" data-on-load="@get('/game')">
     <div class="container mx-auto" id="game"></div>
   </div>
 `;
 
 export const GameLogin = (props: { user_id: string; error?: string }) => html`
-  <div
-    class="container mx-auto"
-    id="game-container"
-    data-signals="${toHtmlJson({ user_id: props.user_id })}"
-    data-persist-user="user_id"
-  >
-    <div class="grid grid-cols-1 gap-4">
+  <div id="game">
+    <div
+      class="grid grid-cols-1 gap-4"
+      data-signals="${toHtmlJson({ user_id: props.user_id })}"
+      data-persist-user="user_id"
+    >
       <h1 class="text-3xl font-bold">Welcome to Aederyn Web!</h1>
       <form
         class="container grid grid-cols-1 gap-4"
-        data-on-submit="@post('/game/start')"
+        data-on-submit="@post('/game/login')"
       >
         <label class="input input-bordered flex items-center gap-2">
           <svg
@@ -90,7 +97,7 @@ export const GameLogin = (props: { user_id: string; error?: string }) => html`
             type="text"
             autocomplete="off"
             data-bind="user_id"
-            placeholder="Enter your existing user id"
+            placeholder="Enter your existing user id or leave blank to create a new one"
           />
         </label>
         ${props.error &&
@@ -110,7 +117,10 @@ export const GameLogin = (props: { user_id: string; error?: string }) => html`
           </svg>
           <span>${props.error}</span>
         </div>`}
-        <button class="btn btn-primary" data-on-click="@post('/game/start')">
+        <button
+          class="btn btn-primary"
+          data-on-click_once="@post('/game/login')"
+        >
           Join
         </button>
       </form>

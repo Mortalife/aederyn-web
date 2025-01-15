@@ -14,7 +14,11 @@ export const Quests = (props: {
 }) => {
   if (!props.zoneQuests) return null;
 
-  return html` <div id="quests" class="grid grid-cols-1 gap-2">
+  return html` <div
+    id="quests"
+    class="grid grid-cols-1 gap-2"
+    data-show="$_showQuests"
+  >
     ${props.npcInteractions && props.npcInteractions.length
       ? html`
           <h2 class="text-2xl font-bold">In the area</h2>

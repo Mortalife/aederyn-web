@@ -83,6 +83,20 @@ export class QuestManager {
     }
     return JSON.parse(rows[0]["data"] as string) as Quest;
   }
+  async getQuestTemplateNames() {
+    const { rows } = await client.execute({
+      sql: `
+        SELECT * FROM quests_templates 
+      `,
+      args: [],
+    });
+
+    if (!rows.length) {
+      return null;
+    }
+
+    return rows.map((row) => (JSON.parse(row["data"] as string) as Quest).name);
+  }
 
   async rotateActiveQuests() {
     const inactiveQuests = await this.getInactiveQuests();

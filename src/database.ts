@@ -3,7 +3,7 @@ import { QuestProgressManager } from "./user/quest-progress-manager";
 import { QuestManager } from "./user/quest-generator";
 
 export const client = createClient({
-  url: "file:local.db",
+  url: `file:${process.env["DATABASE_PATH"] ?? ""}local.db`,
 });
 
 await client.execute("PRAGMA journey_mode = WAL;");
@@ -27,5 +27,10 @@ await client.migrate([
 ]);
 
 //  await client.execute("DROP TABLE IF EXISTS online");
-
-console.log((await client.execute("SELECT * FROM users")).toJSON());
+if (process.env.NODE_ENV !== "production") {
+  console.log((await client.execute("SELECT * FROM users")).toJSON());
+} else {
+  console.log(
+    (await client.execute("SELECT count(*) as c FROM users")).rows[0]["c"]
+  );
+}

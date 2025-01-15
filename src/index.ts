@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
+import { Session, sessionMiddleware } from "hono-sessions";
 import { Content } from "./templates/layout";
 import { fragmentEvent } from "./sse";
 import { getTile, getTileSelection, isOutOfBounds } from "./world";
-import { GameLogin, GamePage } from "./templates/game";
+import { GameLogin } from "./templates/game";
 import {
   getPopulatedUser,
   getUser,
@@ -52,8 +53,35 @@ import {
 import { questProgressManager } from "./user/quest-progress-manager";
 import { questManager } from "./user/quest-generator";
 import { QuestNPCCompleted, QuestNPCDialog } from "./templates/quests";
+import { sessionStore } from "./lib/libsql-store";
 
-const app = new Hono({});
+let connections = 0;
+
+type SessionDataTypes = {
+  user_id: string;
+};
+
+const app = new Hono<{
+  Variables: {
+    session: Session<SessionDataTypes>;
+    session_key_rotation: boolean;
+  };
+}>({});
+app.use(
+  "*",
+  sessionMiddleware({
+    store: sessionStore,
+    encryptionKey:
+      process.env["SESSION_SECRET"] ?? "secret-key-that-should-be-very-secret",
+    expireAfterSeconds: 900, // Expire session after 15 minutes of inactivity
+    cookieOptions: {
+      sameSite: "Lax", // Recommended for basic CSRF protection in modern browsers
+      path: "/", // Required for this library to work properly
+      httpOnly: true, // Recommended to avoid XSS attacks
+      maxAge: 86400,
+    },
+  })
+);
 app.use(
   "/static/assets/*",
   serveStatic({
@@ -67,8 +95,8 @@ app.get("/", async (c) => {
   return c.html(
     Content({
       siteData: {
-        title: "Hello World",
-        description: "Hello World",
+        title: "Aederyn Online - Web",
+        description: "Aederyn Online - Web",
         image: "",
       },
       user_id: "",
@@ -76,13 +104,18 @@ app.get("/", async (c) => {
   );
 });
 
-app.post("/game/start", async (c) => {
+app.post("/game/login", async (c) => {
   const { user_id = "" } = await c.req.json<{ user_id: string }>();
+  const user = await getUserSync(user_id);
+
+  if (user) {
+    const session = c.get("session");
+    session.set("user_id", user.id);
+  }
+
   return streamSSE(
     c,
     async (stream) => {
-      const user = await getUserSync(user_id);
-
       if (!user) {
         await stream.writeSSE(
           fragmentEvent(
@@ -96,10 +129,32 @@ app.post("/game/start", async (c) => {
         return;
       }
 
+      await sendGame(stream, {
+        user_id: user.id,
+      });
+    },
+    async (err) => {
+      console.error(err);
+    }
+  );
+});
+app.delete("/game/logout", async (c) => {
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
+  const user = await getUserSync(user_id);
+
+  if (user) {
+    session.deleteSession();
+  }
+
+  return streamSSE(
+    c,
+    async (stream) => {
       await stream.writeSSE(
         fragmentEvent(
-          GamePage({
-            user_id: user.id,
+          GameLogin({
+            user_id: "",
+            error: "User not found",
           }),
           1
         )
@@ -112,8 +167,8 @@ app.post("/game/start", async (c) => {
 });
 
 app.get("/game", async (c) => {
-  const datastar = c.req.query("datastar");
-  const { user_id } = JSON.parse(datastar ?? "");
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   let id = 0;
   return streamSSE(
     c,
@@ -124,7 +179,7 @@ app.get("/game", async (c) => {
         await stream.writeSSE(
           fragmentEvent(
             GameLogin({
-              user_id: user_id.id,
+              user_id: "",
               error: "User not found",
             }),
             id
@@ -132,6 +187,8 @@ app.get("/game", async (c) => {
         );
         return;
       }
+
+      connections++;
 
       let user: GameUser = tempUser;
 
@@ -221,6 +278,7 @@ app.get("/game", async (c) => {
           await removeUserFromZone(user.id);
         }
 
+        connections--;
         console.log("user offline");
         isAborted = true;
       });
@@ -234,9 +292,10 @@ app.get("/game", async (c) => {
     }
   );
 });
+
 app.get("/game/refresh", async (c) => {
-  const datastar = c.req.query("datastar");
-  const { user_id } = JSON.parse(datastar ?? "");
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   let id = 0;
   return streamSSE(
     c,
@@ -247,7 +306,7 @@ app.get("/game/refresh", async (c) => {
         await stream.writeSSE(
           fragmentEvent(
             GameLogin({
-              user_id: user_id.id,
+              user_id: "",
               error: "User not found",
             }),
             id
@@ -267,7 +326,8 @@ app.get("/game/refresh", async (c) => {
 });
 
 app.post("/game/move/:direction", async (c) => {
-  const { user_id } = await c.req.json();
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   const direction = c.req.param("direction");
   return streamSSE(
     c,
@@ -330,10 +390,12 @@ app.post("/game/move/:direction", async (c) => {
     }
   );
 });
+
 app.get("/game/resources/:resource_id", async (c) => {
-  const datastar = c.req.query("datastar");
   const resource_id = c.req.param("resource_id");
-  const { user_id = "" } = JSON.parse(datastar ?? "");
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
+
   let id = 0;
   return streamSSE(
     c,
@@ -407,6 +469,7 @@ app.get("/game/resources/:resource_id", async (c) => {
     }
   );
 });
+
 app.delete("/game/resources/:resource_id", async (c) => {
   const { user_id = "" } = await c.req.json();
   const resource_id = c.req.param("resource_id");
@@ -444,7 +507,9 @@ app.delete("/game/resources/:resource_id", async (c) => {
 });
 
 app.post("/game/chat", async (c) => {
-  const { user_id, message } = await c.req.json();
+  const { message } = await c.req.json();
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
 
   return streamSSE(c, async (stream) => {
     const user = await getUser(user_id);
@@ -469,7 +534,8 @@ app.post("/game/chat", async (c) => {
 });
 
 app.delete("/game/inventory/:inventory_id", async (c) => {
-  const { user_id } = await c.req.json();
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   const inventory_id = c.req.param("inventory_id");
 
   return streamSSE(c, async (stream) => {
@@ -488,7 +554,8 @@ app.delete("/game/inventory/:inventory_id", async (c) => {
 });
 
 app.delete("/game/system-messages", async (c) => {
-  const { user_id = "" } = await c.req.json();
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   let id = 0;
   return streamSSE(
     c,
@@ -513,7 +580,8 @@ app.delete("/game/system-messages", async (c) => {
 });
 
 app.delete("/game/system-messages/:system_message_id", async (c) => {
-  const { user_id = "" } = await c.req.json();
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   const systemMessageId = c.req.param("system_message_id");
   let id = 0;
   return streamSSE(
@@ -543,7 +611,8 @@ app.delete("/game/system-messages/:system_message_id", async (c) => {
 });
 
 app.post("/game/quest/:quest_id", async (c) => {
-  const { user_id = "" } = await c.req.json();
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   const quest_id = c.req.param("quest_id");
   return streamSSE(c, async (stream) => {
     const user = await getUser(user_id);
@@ -579,9 +648,10 @@ app.post("/game/quest/:quest_id", async (c) => {
     });
   });
 });
+
 app.get("/game/quest/:quest_id/objective/:objective_id", async (c) => {
-  const datastar = c.req.query("datastar");
-  const { user_id = "" } = JSON.parse(datastar ?? "");
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   const quest_id = c.req.param("quest_id");
   const objective_id = c.req.param("objective_id");
   return streamSSE(c, async (stream) => {
@@ -635,8 +705,10 @@ app.get("/game/quest/:quest_id/objective/:objective_id", async (c) => {
     return;
   });
 });
+
 app.put("/game/quest/:quest_id/objective/:objective_id", async (c) => {
-  const { user_id = "" } = await c.req.json();
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   const quest_id = c.req.param("quest_id");
   const objective_id = c.req.param("objective_id");
   return streamSSE(c, async (stream) => {
@@ -687,8 +759,10 @@ app.put("/game/quest/:quest_id/objective/:objective_id", async (c) => {
     });
   });
 });
+
 app.post("/game/quest/:quest_id/complete", async (c) => {
-  const { user_id = "" } = await c.req.json();
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   const quest_id = c.req.param("quest_id");
   return streamSSE(c, async (stream) => {
     const user = await getUser(user_id);
@@ -729,8 +803,10 @@ app.post("/game/quest/:quest_id/complete", async (c) => {
     });
   });
 });
+
 app.delete("/game/quest/:quest_id", async (c) => {
-  const { user_id = "" } = await c.req.json();
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   const quest_id = c.req.param("quest_id");
   return streamSSE(c, async (stream) => {
     const user = await getUser(user_id);
@@ -775,6 +851,16 @@ setInterval(() => {
     })
     .catch((err) => console.error(err));
 }, 100);
+
+setInterval(() => {
+  console.log(
+    `${new Date().toISOString()}: Memory used: ${(
+      process.memoryUsage().heapUsed /
+      1024 /
+      1024
+    ).toFixed(2)}MB, connections: ${connections}`
+  );
+}, 60000);
 
 export default {
   fetch: app.fetch,

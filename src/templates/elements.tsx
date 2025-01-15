@@ -39,7 +39,7 @@ export const WorldMap = (
       return html`<div
         class="${worldTile.here
           ? "rounded-full scale-125 border-4 shadow-lg"
-          : ""} transition text-sm flex flex-col w-[100px] h-[100px] items-center justify-center text-center p-4 border border-gray-400"
+          : ""} transition duration-500 text-sm flex flex-col w-[100px] h-[100px] items-center justify-center text-center p-4 border border-gray-400"
         style=" background-color: ${worldTile?.tile?.backgroundColor ??
         "#333"}; color: ${worldTile?.tile?.color ?? "#000"};"
       >
@@ -165,9 +165,57 @@ export const Zone = (
     (resource) => resource.type
   );
 
-  return html`<div id="zone">
+  return html`<div
+    id="zone"
+    data-signals="${toHtmlJson({
+      _showActions: true,
+      _showQuests: true,
+      _showInventory: true,
+      _showSocial: true,
+    })}"
+    data-persist="_showActions _showQuests _showInventory _showSocial
+    "
+  >
     <h1 class="text-3xl font-bold">${worldTile.tile?.name}</h1>
-    <div id="resources" class="grid grid-cols-1 gap-2">
+    <div id="actions" class="flex flex-row gap-2 p-2">
+      <button
+        class="btn btn-xs"
+        data-on-click="$_showActions = !$_showActions"
+        data-class-btn-primary="$_showActions"
+        data-class-btn-outline="!$_showActions"
+      >
+        Actions
+      </button>
+      <button
+        class="btn btn-primary btn-xs"
+        data-on-click="$_showQuests = !$_showQuests"
+        data-class-btn-primary="$_showQuests"
+        data-class-btn-outline="!$_showQuests"
+      >
+        Quests
+      </button>
+      <button
+        class="btn btn-primary btn-xs"
+        data-on-click="$_showInventory = !$_showInventory"
+        data-class-btn-primary="$_showInventory"
+        data-class-btn-outline="!$_showInventory"
+      >
+        Inventory
+      </button>
+      <button
+        class="btn btn-primary btn-xs"
+        data-on-click="$_showSocial = !$_showSocial"
+        data-class-btn-primary="$_showSocial"
+        data-class-btn-outline="!$_showSocial"
+      >
+        Social
+      </button>
+    </div>
+    <div
+      id="resources"
+      class="grid grid-cols-1 gap-2"
+      data-show="$_showActions"
+    >
       ${Object.entries(groupedResources).map(
         ([type, resources]) => html`<h2 class="text-2xl font-bold capitalize">
             ${type}
@@ -187,7 +235,11 @@ export const Zone = (
       )}
     </div>
     ${Quests({ zoneQuests, npcInteractions })}
-    <div id="inventory" class="grid grid-cols-1 gap-2">
+    <div
+      id="inventory"
+      class="grid grid-cols-1 gap-2"
+      data-show="$_showInventory"
+    >
       <h2 class="text-2xl font-bold">
         Inventory (${user.i.length}/${MAX_INVENTORY_SIZE})
       </h2>
@@ -198,28 +250,30 @@ export const Zone = (
         })
       )}
     </div>
-    <div id="players" class="grid grid-cols-1 gap-2">
-      <h2 class="text-2xl font-bold">Active Players</h2>
-      ${players.map((player) => OtherPlayerInfo(player))}
-    </div>
-    <div
-      id="chat"
-      class="grid grid-cols-1 gap-2"
-      data-signals="${toHtmlJson({ message: "" })}"
-    >
-      <h2 class="text-2xl font-bold">Chat</h2>
-      <form class="flex flex-row gap-2" data-on-submit="@post('/game/chat')">
-        <input
-          type="text"
-          class="p-2 border-gray-400 rounded flex-grow"
-          autocomplete="off"
-          data-bind="message"
-          maxlength="100"
-          placeholder="Enter your message"
-        />
-        <button class="btn btn-primary">Send</button>
-      </form>
-      ${ChatMessages(chatMessages, user)}
+    <div id="social" class="grid grid-cols-1 gap-2" data-show="$_showSocial">
+      <div id="players" class="grid grid-cols-1 gap-2">
+        <h2 class="text-2xl font-bold">Active Players</h2>
+        ${players.map((player) => OtherPlayerInfo(player))}
+      </div>
+      <div
+        id="chat"
+        class="grid grid-cols-1 gap-2"
+        data-signals="${toHtmlJson({ message: "" })}"
+      >
+        <h2 class="text-2xl font-bold">Chat</h2>
+        <form class="flex flex-row gap-2" data-on-submit="@post('/game/chat')">
+          <input
+            type="text"
+            class="p-2 border-gray-400 rounded flex-grow"
+            autocomplete="off"
+            data-bind="message"
+            maxlength="100"
+            placeholder="Enter your message"
+          />
+          <button class="btn btn-primary">Send</button>
+        </form>
+        ${ChatMessages(chatMessages, user)}
+      </div>
     </div>
   </div>`;
 };
@@ -263,7 +317,7 @@ export const UserZoneInfo = (user: GameUser) => html`<div
 
 export const UserInfo = (user: GameUser) => html` <div
   id="user-info"
-  class="w-full flex flex-row justify-between"
+  class="w-full flex flex-row justify-between items-center"
   data-signals="${toHtmlJson({
     _showUserId: false,
   })}"

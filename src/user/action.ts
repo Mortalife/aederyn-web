@@ -159,8 +159,6 @@ export const processActions = async () => {
       resource
     );
 
-    console.log("Can perform action", canPerformAction);
-
     if (!canPerformAction) {
       await markActionComplete(action.user_id, action.x, action.y);
       continue;
@@ -174,7 +172,6 @@ export const processActions = async () => {
 
     await markActionComplete(action.user_id, action.x, action.y);
 
-    console.log("Successfully used", successfullyUsed);
     if (successfullyUsed) {
       for (const reward of resource.reward_items) {
         addToInventory(action.user_id, {

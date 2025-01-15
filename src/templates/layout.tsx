@@ -1,5 +1,5 @@
 import { html, raw } from "hono/html";
-import { GameLogin } from "./game";
+import { GameContainer } from "./game";
 import path from "node:path";
 
 interface SiteData {
@@ -56,7 +56,7 @@ const Layout = (props: SiteData) => {
 const Content = (props: { siteData: SiteData; user_id: string }) => {
   return Layout({
     ...props.siteData,
-    children: GameLogin({ user_id: props.user_id }),
+    children: GameContainer({ user_id: props.user_id }),
   });
 };
 

@@ -15,8 +15,8 @@ export const tileTypes: TileType[] = [
   {
     id: "tile_castle_wall",
     name: "Castle Wall",
-    color: "#5b705b",
-    backgroundColor: "#363463",
+    color: "#a6adbb",
+    backgroundColor: "#2f1e1e",
     theme: "storm",
     resources: [],
     rarity: 0,
