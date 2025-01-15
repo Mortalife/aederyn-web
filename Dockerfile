@@ -27,7 +27,7 @@ COPY --from=prerelease /usr/src/app/package.json .
 COPY --from=prerelease /usr/src/app/dist dist
 COPY --from=prerelease /usr/src/app/src/backup.ts .
 
-RUN apt-get update && apt-get install -y wget && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y sqlite3 && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Create a directory for writable data
 RUN mkdir -p /usr/src/app/data
