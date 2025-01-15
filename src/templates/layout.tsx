@@ -23,6 +23,7 @@ const Layout = (props: SiteData) => {
   <html>
   <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${props.title}</title>
     <meta name="description" content="${props.description}">
     <head prefix="og: http://ogp.me/ns#">

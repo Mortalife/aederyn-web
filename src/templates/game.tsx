@@ -28,15 +28,10 @@ export const Game = (props: {
 
   return html`
     <div
-      class="container mx-auto grid grid-rows-[50px_1fr_60px] gap-4 h-full items-between"
+      class="md:container md:mx-auto grid grid-rows-[50px_1fr_60px] gap-4 h-full items-between"
       id="game"
     >
-      <div id="info">
-        ${UserInfo(props.user)}
-        ${props.messages && props.messages.length
-          ? Messages(props.messages)
-          : null}
-      </div>
+      <div id="info">${UserInfo(props.user, props.messages)}</div>
       <div id="content">
         ${!props.user.z && WorldMap(props.map, props.mapIndicators)}
         ${props.user.z &&
@@ -65,12 +60,12 @@ export const Game = (props: {
 
 export const GameContainer = (props: { user_id: string }) => html`
   <div id="game-container" class="h-full" data-on-load="@get('/game')">
-    <div class="container mx-auto" id="game"></div>
+    <div class="md:container md:mx-auto" id="game"></div>
   </div>
 `;
 
 export const GameLogin = (props: { user_id: string; error?: string }) => html`
-  <div id="game">
+  <div class="container mx-auto" id="game">
     <div
       class="grid grid-cols-1 gap-4"
       data-signals="${toHtmlJson({ user_id: props.user_id })}"

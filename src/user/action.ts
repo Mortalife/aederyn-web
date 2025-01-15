@@ -1,5 +1,6 @@
 import { items, resources, type GameUser, type ResourceModel } from "../config";
 import { client } from "../database";
+import { PubSub, USER_EVENT } from "../sse/pubsub";
 import { markResourceUsed } from "../world/resources";
 import { addToInventory, getInventory, updateInventory } from "./inventory";
 import { progressHooks } from "./quest-hooks";
@@ -193,6 +194,8 @@ export const processActions = async () => {
           .join(", ")}`,
         "success"
       );
+
+      PubSub.publish(USER_EVENT, { user_id: action.user_id });
     }
   }
 };

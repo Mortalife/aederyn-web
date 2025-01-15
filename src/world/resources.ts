@@ -31,7 +31,8 @@ export const markResourceUsed = async (
     }
   }
 
-  const interval = Math.floor(resource.collectionTime * 1.2 * 1000);
+  const interval = Math.floor(resource.collectionTime * 5 * 1000);
+
   const refresh_at = Date.now() + interval;
   await client.execute({
     sql: "INSERT INTO resource_usage (x, y, resource_id, qty, refresh_at, interval) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (x,y,resource_id) DO UPDATE SET qty = resource_usage.qty + 1",

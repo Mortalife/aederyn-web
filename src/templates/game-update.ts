@@ -97,7 +97,10 @@ export const sendGame = async (
     npcInteractions,
   });
 
-  console.log(`Game state generated in ${Date.now() - start}ms`);
+  if (start % 4 === 0) {
+    console.log(`Game state generated in ${Date.now() - start}ms`);
+  }
+
   return stream.writeSSE(fragmentEvent(game, id));
 };
 

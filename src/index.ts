@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { streamSSE } from "hono/streaming";
+import { SSEStreamingApi, streamSSE } from "hono/streaming";
 import { Session, sessionMiddleware } from "hono-sessions";
 import { Content } from "./templates/layout";
 import { fragmentEvent } from "./sse";
@@ -73,7 +73,7 @@ app.use(
     store: sessionStore,
     encryptionKey:
       process.env["SESSION_SECRET"] ?? "secret-key-that-should-be-very-secret",
-    expireAfterSeconds: 900, // Expire session after 15 minutes of inactivity
+    expireAfterSeconds: 60 * 60 * 24 * 90, // Expire session after 90 days of inactivity
     cookieOptions: {
       sameSite: "Lax", // Recommended for basic CSRF protection in modern browsers
       path: "/", // Required for this library to work properly
@@ -173,7 +173,6 @@ app.get("/game", async (c) => {
     c,
     async (stream) => {
       const tempUser = await getPopulatedUser(user_id);
-
       if (!tempUser) {
         await stream.writeSSE(
           fragmentEvent(
@@ -254,12 +253,17 @@ app.get("/game", async (c) => {
           return;
         }
 
-        getPopulatedUser(user_id).then((newUser) => {
+        getPopulatedUser(user_id).then(async (newUser) => {
           if (newUser === null) {
             return;
           }
 
           user = newUser!;
+
+          await sendGame(stream, {
+            user_id: user.id,
+            user,
+          });
         });
       };
 
@@ -271,22 +275,32 @@ app.get("/game", async (c) => {
         PubSub.off(CHAT_EVENT, processChatEvent);
         PubSub.off(USER_EVENT, processUserEvent);
         PubSub.off(ZONE_EVENT, processZoneUpdate);
-        await markUserOffline(user_id);
+        await markUserOffline(user.id);
         if (user.z) {
           await removeUserFromZone(user.id);
         }
-
         connections--;
+
         console.log("user offline");
         isAborted = true;
       });
 
-      while (isAborted === false) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      let work = 0;
+      while (!isAborted) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        work++;
+
+        if (work % 10 === 0) {
+          work = 0;
+        }
       }
     },
     async (err) => {
       console.error(err);
+      if (user_id) {
+        await removeUserFromZone(user_id);
+        await markUserOffline(user_id);
+      }
     }
   );
 });
@@ -469,7 +483,8 @@ app.get("/game/resources/:resource_id", async (c) => {
 });
 
 app.delete("/game/resources/:resource_id", async (c) => {
-  const { user_id = "" } = await c.req.json();
+  const session = c.get("session");
+  const user_id = session.get("user_id") ?? "";
   const resource_id = c.req.param("resource_id");
   let id = 0;
   return streamSSE(
@@ -827,11 +842,6 @@ app.delete("/game/quest/:quest_id", async (c) => {
 });
 
 app.get("/health", (c) => {
-  console.log(
-    `Memory used: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(
-      2
-    )}MB`
-  );
   return c.text("OK");
 });
 
@@ -851,13 +861,7 @@ setInterval(() => {
 }, 100);
 
 setInterval(() => {
-  console.log(
-    `${new Date().toISOString()}: Memory used: ${(
-      process.memoryUsage().heapUsed /
-      1024 /
-      1024
-    ).toFixed(2)}MB, connections: ${connections}`
-  );
+  console.log(`${new Date().toISOString()}: Connections: ${connections}`);
 }, 60000);
 
 export default {

@@ -28,8 +28,8 @@ export const WorldMap = (
 >
   <div
     id="map"
-    style="width: 520px; height: 520px; background-color: #333; grid-auto-flow: column;"
-    class="relative grid grid-rows-5 grid-flow-col gap-1"
+    style="background-color: #333; grid-auto-flow: column;"
+    class="relative p-4 grid grid-rows-5 grid-cols-5 aspect-square gap-1"
   >
     ${map.map((worldTile) => {
       const indicators = mapIndicators.find(
@@ -39,7 +39,7 @@ export const WorldMap = (
       return html`<div
         class="${worldTile.here
           ? "rounded-full scale-125 border-4 shadow-lg"
-          : ""} transition duration-500 text-sm flex flex-col w-[100px] h-[100px] items-center justify-center text-center p-4 border border-gray-400"
+          : ""} transition duration-500 text-sm flex flex-col items-center justify-center text-center p-4 border border-gray-400"
         style=" background-color: ${worldTile?.tile?.backgroundColor ??
         "#333"}; color: ${worldTile?.tile?.color ?? "#000"};"
       >
@@ -51,8 +51,7 @@ export const WorldMap = (
       </div>`;
     })}
     <div
-      style="width: 160px; height: 160px"
-      class="absolute bottom-5 right-5 grid grid-cols-3 grid-rows-3 gap-2"
+      class="bg-black/10 p-2 rounded-full w-[172px] h-[172px] absolute bottom-10 right-10 grid grid-cols-3 grid-rows-3 gap-2"
     >
       <button
         class="btn btn-square col-start-2 row-start-1 shadow"
@@ -167,6 +166,7 @@ export const Zone = (
 
   return html`<div
     id="zone"
+    class="grid grid-cols-1 gap-4"
     data-signals="${toHtmlJson({
       _showActions: true,
       _showQuests: true,
@@ -177,7 +177,7 @@ export const Zone = (
     "
   >
     <h1 class="text-3xl font-bold">${worldTile.tile?.name}</h1>
-    <div id="actions" class="flex flex-row gap-2 p-2">
+    <div id="actions" class="flex flex-row gap-2">
       <button
         class="btn btn-xs"
         data-on-click="$_showActions = !$_showActions"
@@ -223,6 +223,7 @@ export const Zone = (
           ${resources.map((resource) =>
             ResourceItem({
               resource,
+              inventory: user.i,
               inprogress:
                 inprogress?.resource_id === resource.id
                   ? {
@@ -315,7 +316,10 @@ export const UserZoneInfo = (user: GameUser) => html`<div
   </button>
 </div>`;
 
-export const UserInfo = (user: GameUser) => html` <div
+export const UserInfo = (
+  user: GameUser,
+  messages?: SystemMessage[]
+) => html` <div
   id="user-info"
   class="w-full flex flex-row justify-between items-center"
   data-signals="${toHtmlJson({
@@ -328,8 +332,9 @@ export const UserInfo = (user: GameUser) => html` <div
       Toggle User Id
     </button>
   </p>
+
   <div class="flex flex-row gap-2">
-    ${user.z && UserZoneInfo(user)}
+    ${messages ? Messages(messages) : null} ${user.z && UserZoneInfo(user)}
     <button class="btn btn-square" data-on-click="@get('/game/refresh')">
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -358,6 +363,7 @@ export const OtherPlayerInfo = (otherUser: OtherUser) => html` <div
 
 export const ResourceItem = (props: {
   resource: Resource;
+  inventory: InventoryItem[];
   inprogress?: {
     total: number;
     current: number;
@@ -389,17 +395,23 @@ export const ResourceItem = (props: {
         ${props.resource.required_items.length
           ? html`<span
               >Requires:
-              ${props.resource.required_items
-                .map(
-                  (i) =>
-                    `${i.item.name} (${i.qty}) ${
-                      i.consumed ? "(consumed)" : ""
-                    }`
-                )
-                .join(", ")}</span
+              ${props.resource.required_items.map((i) => {
+                const hasItem = props.inventory.find(
+                  (inv) => inv.item.id === i.item.id && inv.qty >= i.qty
+                );
+
+                if (hasItem) {
+                  return `${i.item.name} (${i.qty})`;
+                }
+
+                return html`<span class="line-through"
+                    >${i.item.name} (${i.qty})</span
+                  >
+                  ${i.consumed ? " (consumed)" : ""}`;
+              })}</span
             >`
           : ""}
-        ${props.resource.required_items.length
+        ${props.resource.reward_items.length
           ? html`<span
               >Rewards:
               ${props.resource.reward_items
@@ -476,8 +488,65 @@ export const InventorySlot = (props: {
 </div>`;
 
 export const Messages = (messages: SystemMessage[]) => {
+  const last = messages[0];
+
+  let alertClass = "";
+
+  if (last && last.sent_at > Date.now() - 10000) {
+    switch (last.type) {
+      case "error":
+        alertClass = "text-red-500";
+        break;
+      case "warning":
+        alertClass = "text-yellow-500";
+        break;
+      case "success":
+        alertClass = "text-green-500";
+        break;
+      default:
+        break;
+    }
+  }
   return html`
-    <div class="stack">${messages.map((message) => Message(message))}</div>
+    <div class="drawer w-auto">
+      <input id="my-drawer" type="checkbox" class="drawer-toggle" />
+      <div class="drawer-content">
+        <label for="my-drawer" class="btn btn-ghost drawer-button"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="size-6 ${alertClass}"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
+            />
+          </svg>
+        </label>
+      </div>
+      <div class="drawer-side">
+        <label
+          for="my-drawer"
+          aria-label="close sidebar"
+          class="drawer-overlay"
+        ></label>
+
+        <div class="menu h-full bg-base-100 flex flex-col gap-2">
+          <button
+            class="btn btn-sm btn-primary"
+            data-on-click="@delete('/game/system-messages')"
+          >
+            Remove All
+          </button>
+          ${messages.map((message) => Message(message))}
+        </div>
+      </div>
+      <div class="flex flex-col gap-2"></div>
+    </div>
   `;
 };
 
@@ -485,7 +554,7 @@ export const Message = (message: SystemMessage) => html`
   <div
     role="alert"
     id="message-${message.id}"
-    class="alert ${message.type === "error"
+    class="flex flex-row justify-between alert ${message.type === "error"
       ? "alert-error"
       : message.type === "warning"
       ? "alert-warning"
@@ -500,12 +569,6 @@ export const Message = (message: SystemMessage) => html`
         data-on-click="@delete('/game/system-messages/${message.id}')"
       >
         Remove
-      </button>
-      <button
-        class="btn btn-sm btn-primary"
-        data-on-click="@delete('/game/system-messages')"
-      >
-        Remove All
       </button>
     </div>
   </div>
