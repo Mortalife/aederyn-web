@@ -25,6 +25,7 @@ FROM base AS release
 COPY --from=prerelease /usr/src/app/game game
 COPY --from=prerelease /usr/src/app/package.json .
 COPY --from=prerelease /usr/src/app/dist dist
+COPY --from=prerelease /usr/src/app/src/backup.ts .
 
 RUN apt-get update && apt-get install -y wget && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
