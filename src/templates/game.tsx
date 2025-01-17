@@ -23,9 +23,6 @@ export const Game = (props: {
   quests?: ZoneQuests;
   npcInteractions?: ZoneInteraction[];
 }) => {
-  // const zone = props.map.find((z) => z.here);
-  // const theme = zone?.tile?.theme;
-
   return html`
     <div
       class="md:container md:mx-auto grid grid-rows-[50px_1fr_60px] gap-4 h-full items-between"
@@ -34,7 +31,8 @@ export const Game = (props: {
       data-persist-user="user_id"
     >
       <div id="info">${UserInfo(props.user, props.messages)}</div>
-      <div id="content">
+      <div id="content" class="flex flex-col gap-4">
+        ${props.messages?.length ? Messages(props.messages, true) : null}
         ${!props.user.z && WorldMap(props.map, props.mapIndicators)}
         ${props.user.z &&
         Zone(

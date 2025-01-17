@@ -21,6 +21,7 @@ export const addToInventory = async (
   const existing = inventory.find(
     (i) =>
       i.item_id === inventoryItem.item_id &&
+      item.stackable &&
       i.qty + inventoryItem.qty < item.maxStackSize
   );
   if (existing) {
@@ -41,11 +42,16 @@ export const addToInventory = async (
     }
   } else {
     if (inventory.length < MAX_INVENTORY_SIZE) {
-      inventory.push({
+      const newItem = {
         id: crypto.randomUUID(),
         item_id: item.id,
         qty: inventoryItem.qty,
-      });
+        metadata: item.durability
+          ? { currentDurability: item.durability.current }
+          : undefined,
+      };
+
+      inventory.push(newItem);
     } else {
       return false;
     }

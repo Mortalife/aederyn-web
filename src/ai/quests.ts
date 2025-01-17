@@ -1,8 +1,6 @@
 import { zodResponseFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
 import { npcs, tileTypes, items, resources } from "../config";
-import { openai } from "../lib/openai";
-import { manifest } from "./design-doc";
 import schemas, { type Quest } from "../user/quest";
 import { anthropic } from "../lib/anthropic";
 import { questManager } from "../user/quest-generator";
@@ -123,12 +121,6 @@ export const TaskSchema = z.object({
 });
 
 export type Task = z.infer<typeof TaskSchema>;
-
-// const RPGTask = z
-//   .object({
-//     task: TaskSchema.describe("A tasks that the user can complete"),
-//   })
-//   .strict();
 
 const RPGTask = z
   .object({

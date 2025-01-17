@@ -5,7 +5,9 @@ import {
   type GameUser,
   type OtherUser,
   type Resource,
+  type RequiredItem,
   MAX_INVENTORY_SIZE,
+  type RewardItem,
 } from "../config";
 import { toHtmlJson } from "../lib/datastar";
 import { calculateProgress, type UserAction } from "../user/action";
@@ -360,11 +362,11 @@ export const ResourceItem = (props: {
 }) => {
   return html`<div
     id="resources-${props.resource.id}"
-    class="flex flex-row gap-4 justify-between p-4 border border-gray-400"
+    class="rounded-lg flex flex-row gap-4 justify-between p-4 border border-gray-400"
   >
     <div class="flex flex-col gap-2 flex-1">
       <div class="flex flex-row justify-between gap-2">
-        <span
+        <span class="font-semibold text-lg"
           >${props.resource.name}
           ${props.resource.limitless ? "" : `(${props.resource.amount})`}</span
         >
@@ -380,33 +382,24 @@ export const ResourceItem = (props: {
           </div>
         `}
       </div>
-      <div class="flex flex-row gap-2">
+      <div class="flex flex-row gap-4">
         ${props.resource.required_items.length
-          ? html`<span
-              >Requires:
-              ${props.resource.required_items.map((i) => {
-                const hasItem = props.inventory.find(
-                  (inv) => inv.item.id === i.item.id && inv.qty >= i.qty
-                );
-
-                if (hasItem) {
-                  return `${i.item.name} (${i.qty})`;
-                }
-
-                return html`<span class="line-through"
-                    >${i.item.name} (${i.qty})</span
-                  >
-                  ${i.consumed ? " (consumed)" : ""}`;
-              })}</span
-            >`
+          ? html`<div class="flex flex-col gap-4">
+              <span>Requires:</span>
+              <div class="flex flex-row gap-2">
+                ${props.resource.required_items.map((a) =>
+                  ResourceRequiredItem(a, props.inventory)
+                )}
+              </div>
+            </div>`
           : ""}
         ${props.resource.reward_items.length
-          ? html`<span
-              >Rewards:
-              ${props.resource.reward_items
-                .map((i) => `${i.item.name} (${i.qty})`)
-                .join(", ")}</span
-            >`
+          ? html`<div class="flex flex-col gap-4">
+              <span>Rewards:</span>
+              <div class="flex flex-row gap-2">
+                ${props.resource.reward_items.map((i) => ResourceRewardItem(i))}
+              </div>
+            </div>`
           : ""}
       </div>
     </div>
@@ -427,6 +420,84 @@ export const ResourceItem = (props: {
   </div>`;
 };
 
+export const ResourceRequiredItem = (
+  item: RequiredItem,
+  inventory: InventoryItem[]
+) => {
+  const hasItem = inventory.find(
+    (inv) => inv.item.id === item.item.id && inv.qty >= item.qty
+  );
+
+  if (hasItem) {
+    if (item.consumed) {
+      return html`<div class="indicator">
+        <span
+          class="tooltip indicator-item badge badge-error text-xs font-bold"
+          data-tip="This item is consumed"
+        >
+          -${item.qty}</span
+        >
+        <div class="inline badge badge-outline">${item.item.name}</div>
+      </div>`;
+    }
+
+    return html`<div class="indicator">
+      <span class="indicator-item badge badge-outline">
+        -${item.qty === 1 && !item.consumed && item.itemDurabilityReduction
+          ? html`${DurabilityIcon} ${item.itemDurabilityReduction}`
+          : item.qty}</span
+      >
+      <div class="tooltip inline badge badge-outline">${item.item.name}</div>
+    </div>`;
+  }
+
+  if (item.consumed) {
+    return html`<div class="indicator">
+      ${item.qty > 1
+        ? html`<span
+            class="tooltip indicator-item badge badge-error text-xs font-bold"
+            data-tip="You do not have the required qty of this item"
+          >
+            -${item.qty}</span
+          >`
+        : null}
+      <div
+        class="tooltip inline badge badge-outline badge-error opacity-50"
+        ${item.qty === 1
+          ? html`data-tip="You do not have the required qty of this item"`
+          : ""}
+      >
+        ${item.item.name}
+      </div>
+    </div>`;
+  }
+
+  return html`<div class="indicator ">
+    ${item.qty > 1
+      ? html`<span
+          class="tooltip indicator-item badge badge-error text-xs font-bold"
+          data-tip="This item is consumed"
+        >
+          -${item.qty}</span
+        >`
+      : null}
+    <div
+      class="tooltip inline badge badge-outline badge-error opacity-50"
+      data-tip="This item is required"
+    >
+      ${item.item.name}
+    </div>
+  </div>`;
+};
+export const ResourceRewardItem = (item: RewardItem) => {
+  return html`<div class="indicator">
+    <span class="indicator-item badge badge-success text-xs font-bold">
+      +${item.qty}</span
+    >
+    <span class="badge badge-success badge-outline">${item.item.name} </span>
+  </div>`;
+};
+
 export const InventorySlot = (props: {
   slot: InventoryItem;
   index: number;
@@ -444,20 +515,7 @@ export const InventorySlot = (props: {
   <div class="flex flex-col gap-2">
     ${props.slot.item.durability
       ? html`<div class="flex flex-row items-center gap-1 text-sm">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="size-4"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
-            />
-          </svg>
+          ${DurabilityIcon}
 
           <span
             >${props.slot.item.durability.current}/${props.slot.item.durability
@@ -476,7 +534,22 @@ export const InventorySlot = (props: {
   </div>
 </div>`;
 
-export const Messages = (messages: SystemMessage[]) => {
+export const DurabilityIcon = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  fill="none"
+  viewBox="0 0 24 24"
+  stroke-width="1.5"
+  stroke="currentColor"
+  class="size-4 inline"
+>
+  <path
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
+  />
+</svg>`;
+
+export const Messages = (messages: SystemMessage[], showLatest = false) => {
   const last = messages[0];
 
   let alertClass = "";
@@ -495,7 +568,11 @@ export const Messages = (messages: SystemMessage[]) => {
       default:
         break;
     }
+    if (showLatest) {
+      return Message(last);
+    }
   }
+
   return html`
     <div class="drawer w-auto">
       <input id="my-drawer" type="checkbox" class="drawer-toggle" />
@@ -533,7 +610,11 @@ export const Messages = (messages: SystemMessage[]) => {
           >
             Remove All
           </button>
-          ${messages.map((message) => Message(message))}
+          <div
+            class="flex flex-col h-[90vh] max-h-full overflow-y-scroll gap-4"
+          >
+            ${messages.map((message) => Message(message))}
+          </div>
         </div>
       </div>
       <div class="flex flex-col gap-2"></div>

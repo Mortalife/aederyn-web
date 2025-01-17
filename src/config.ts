@@ -7,8 +7,8 @@ export { items } from "./config/items";
 export { npcs } from "./config/npcs";
 export * from "./config/types";
 
-export const MAP_WIDTH = 50;
-export const MAP_HEIGHT = 50;
+export const MAP_WIDTH = 20;
+export const MAP_HEIGHT = 20;
 export const VISIBILITY = 5;
 export const MAX_INVENTORY_SIZE = 20;
 export const START_POSITION: Point = {

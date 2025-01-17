@@ -4,7 +4,6 @@ import { client } from "../database";
 import { PubSub, USER_EVENT } from "../sse/pubsub";
 
 export const getUserSync = async (id: string) => {
-  console.log("getUserSync", id);
   if (!id) {
     id = crypto.randomUUID();
     await client.execute({
@@ -42,6 +41,7 @@ export const saveUser = async (id: string, data: GameUserModel) => {
     sql: "UPDATE users SET data = ? WHERE id = ?",
     args: [JSON.stringify(data), id],
   });
+
   PubSub.publish(USER_EVENT, { user_id: id });
 };
 
@@ -71,11 +71,21 @@ export const getPopulatedUser = async (
 
   return {
     ...user,
-    i: user.i.map((item) => ({
-      id: item.id,
-      qty: item.qty,
-      item: items.find((i) => i.id === item.item_id)!,
-    })),
+    i: user.i.map((item) => {
+      const itemObj = items.find((i) => i.id === item.item_id)!;
+      const userObj = structuredClone(itemObj);
+
+      if (userObj.durability) {
+        userObj.durability.current =
+          item.metadata?.currentDurability ?? userObj.durability.current;
+      }
+
+      return {
+        id: item.id,
+        qty: item.qty,
+        item: userObj,
+      };
+    }),
   };
 };
 
@@ -85,5 +95,8 @@ export const transformUser = (user: GameUser): GameUserModel => ({
     id: item.id,
     item_id: item.item.id,
     qty: item.qty,
+    metadata: item.item.durability?.current
+      ? { currentDurability: item.item.durability.current }
+      : undefined,
   })),
 });

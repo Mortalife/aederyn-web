@@ -25,16 +25,16 @@ export const calculateDistance = (point1: Point, point2: Point): number => {
 };
 
 const miscTiles = {
-  "22,30": "tile_castle_wall",
-  "23,29": "tile_castle_wall",
-  "24,29": "tile_castle_wall",
-  "25,30": "tile_castle_wall",
-  "25,31": "tile_castle_wall",
-  "25,32": "tile_castle_wall",
-  "24,32": "tile_castle_wall",
-  "23,33": "tile_castle_wall",
-  "22,32": "tile_castle_wall",
-  "25,27": "tile_basic_workshop",
+  // "22,30": "tile_castle_wall",
+  // "23,29": "tile_castle_wall",
+  // "24,29": "tile_castle_wall",
+  // "25,30": "tile_castle_wall",
+  // "25,31": "tile_castle_wall",
+  // "25,32": "tile_castle_wall",
+  // "24,32": "tile_castle_wall",
+  // "23,33": "tile_castle_wall",
+  // "22,32": "tile_castle_wall",
+  "12,11": "tile_basic_workshop",
 };
 
 export const getTileSelection = (x: number, y: number) => {
@@ -135,6 +135,7 @@ export const getTile = async (x: number, y: number) => {
                 qty: i.qty,
                 item: item,
                 consumed: i.consumed,
+                itemDurabilityReduction: i.itemDurabilityReduction,
               };
             }
           ),

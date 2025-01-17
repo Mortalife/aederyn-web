@@ -8,8 +8,8 @@ export const tutorialQuests: TileQuest[] = [
     giver: {
       entity_id: "npc_village_elder",
       zone_id: "tile_sunny_meadow",
-      x: 23,
-      y: 26,
+      x: 10,
+      y: 9,
     },
     description:
       "Doran the Village Elder wants to teach you the basics of gathering resources. He believes starting with simple tasks will help you learn the fundamentals of survival.",
@@ -23,8 +23,8 @@ export const tutorialQuests: TileQuest[] = [
         dialog:
           "Welcome, newcomer. Every journey begins with small steps. Let's start by learning how to gather basic resources.",
         response: "I'm ready to learn.",
-        x: 23,
-        y: 26,
+        x: 10,
+        y: 9,
         progress: null,
       },
       {
@@ -50,8 +50,8 @@ export const tutorialQuests: TileQuest[] = [
       message:
         "Well done! You've shown a natural talent for gathering. These basic resources will be essential for crafting tools and items.",
       return_message: "Return to Doran in the Sunny Meadow",
-      x: 23,
-      y: 26,
+      x: 10,
+      y: 9,
     },
     rewards: [
       {
@@ -70,8 +70,8 @@ export const tutorialQuests: TileQuest[] = [
     giver: {
       entity_id: "npc_blacksmith",
       zone_id: "tile_rocky_outcrop",
-      x: 27,
-      y: 27,
+      x: 11,
+      y: 10,
     },
     description:
       "Forge the Blacksmith will teach you how to craft your first tool - a simple stone axe that will help you gather more advanced resources.",
@@ -85,8 +85,8 @@ export const tutorialQuests: TileQuest[] = [
         dialog:
           "So, you want to learn the art of crafting? Let's start with something simple but useful - a stone axe.",
         response: "I'd like to learn how to craft tools.",
-        x: 27,
-        y: 27,
+        x: 11,
+        y: 10,
         progress: null,
       },
       {
@@ -112,8 +112,8 @@ export const tutorialQuests: TileQuest[] = [
       message:
         "Excellent work! Your first tool. With this axe, you'll be able to chop trees and gather more advanced resources.",
       return_message: "Return to Forge at the Rocky Outcrop",
-      x: 27,
-      y: 27,
+      x: 11,
+      y: 10,
     },
     rewards: [
       {
@@ -132,8 +132,8 @@ export const tutorialQuests: TileQuest[] = [
     giver: {
       entity_id: "npc_ranger",
       zone_id: "tile_trees",
-      x: 25,
-      y: 23,
+      x: 9,
+      y: 12,
     },
     description:
       "Sylvan the Forest Ranger will guide you in exploring the local area and teach you about finding specific resources in different zones.",
@@ -147,8 +147,8 @@ export const tutorialQuests: TileQuest[] = [
         dialog:
           "The forest holds many secrets. Let me show you how to find what you need in the wilderness.",
         response: "I'm ready to explore.",
-        x: 25,
-        y: 23,
+        x: 9,
+        y: 12,
         progress: null,
       },
       {
@@ -159,8 +159,8 @@ export const tutorialQuests: TileQuest[] = [
         chance: 1,
         found_message:
           "You've discovered a beautiful sunny meadow full of flowers!",
-        x: 23,
-        y: 26,
+        x: 10,
+        y: 9,
         progress: null,
       },
       {
@@ -178,8 +178,8 @@ export const tutorialQuests: TileQuest[] = [
       message:
         "You're becoming quite the explorer! Remember, different resources can be found in different areas. Learning where to look is half the battle.",
       return_message: "Return to Sylvan in the Forest",
-      x: 25,
-      y: 23,
+      x: 9,
+      y: 10,
     },
     rewards: [
       {

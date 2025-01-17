@@ -73,6 +73,9 @@ export type UserInventoryItem = {
   id: string;
   qty: number;
   item_id: string;
+  metadata?: {
+    currentDurability?: number;
+  };
 };
 
 export type RewardItemModel = {
@@ -95,6 +98,7 @@ export type RequiredItem = {
   item: Item;
   qty: number;
   consumed: boolean;
+  itemDurabilityReduction?: number;
 };
 
 export type ResourceModel = {

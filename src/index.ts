@@ -67,9 +67,12 @@ const app = new Hono<{
     session_key_rotation: boolean;
   };
 }>({});
-app.use(
-  "*",
-  sessionMiddleware({
+app.use("*", (c, next) => {
+  if (c.req.path === "/health") {
+    return next();
+  }
+
+  const session = sessionMiddleware({
     store: sessionStore,
     encryptionKey:
       process.env["SESSION_SECRET"] ?? "secret-key-that-should-be-very-secret",
@@ -79,8 +82,10 @@ app.use(
       path: "/", // Required for this library to work properly
       httpOnly: true, // Recommended to avoid XSS attacks
     },
-  })
-);
+  });
+
+  return session(c, next);
+});
 app.use(
   "/static/assets/*",
   serveStatic({

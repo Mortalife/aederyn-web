@@ -98,17 +98,42 @@ export const resourceRequirementsCheck = async (
   const inventory = await getInventory(user_id);
 
   for (const requiredItem of resource.required_items) {
-    const qty = inventory.reduce((acc, i) => {
-      if (i.item_id === requiredItem.item_id) {
-        return acc + i.qty;
-      }
-      return acc;
-    }, 0);
+    const [qty, durability] = inventory.reduce(
+      (acc, i) => {
+        if (i.item_id === requiredItem.item_id) {
+          if (!requiredItem.itemDurabilityReduction) {
+            return [acc[0] + i.qty, 0];
+          }
+
+          const item = items.find((i) => i.id === requiredItem.item_id);
+
+          if (!item) {
+            return acc;
+          }
+
+          return [acc[0] + i.qty, acc[1] + (item.durability?.current ?? 0)];
+        }
+        return acc;
+      },
+      [0, 0]
+    );
 
     if (qty < requiredItem.qty) {
       await addSystemMessage(
         user_id,
         "You do not have the required items.",
+        "error"
+      );
+      return false;
+    }
+
+    if (
+      requiredItem.itemDurabilityReduction &&
+      requiredItem.itemDurabilityReduction > durability
+    ) {
+      await addSystemMessage(
+        user_id,
+        "You do not have enough durability.",
         "error"
       );
       return false;
@@ -127,6 +152,36 @@ export const resourceRequirementsCheck = async (
             requiredQty -= item.qty;
             item.qty = 0;
           }
+        }
+      }
+    }
+
+    //TODO: It should pick the lowest matching itemDurability
+    if (requiredItem.itemDurabilityReduction) {
+      let requiredDurability = requiredItem.itemDurabilityReduction;
+      for (const item of inventory) {
+        if (item.item_id !== requiredItem.item_id) {
+          continue;
+        }
+
+        // Item has all the durability we need left
+        if ((item.metadata?.currentDurability ?? 0) >= requiredDurability) {
+          // Ensure it's there
+          if (typeof item.metadata === "undefined") {
+            item.metadata = { currentDurability: 0 };
+          } else if (typeof item.metadata.currentDurability === "undefined") {
+            item.metadata.currentDurability = 0;
+          }
+
+          item.metadata.currentDurability! -= requiredDurability;
+          requiredDurability = 0;
+
+          if (item.metadata.currentDurability === 0) {
+            item.qty = 0;
+          }
+        } else {
+          requiredDurability -= item.metadata?.currentDurability ?? 0;
+          item.qty = 0;
         }
       }
     }
@@ -175,7 +230,7 @@ export const processActions = async () => {
 
     if (successfullyUsed) {
       for (const reward of resource.reward_items) {
-        addToInventory(action.user_id, {
+        await addToInventory(action.user_id, {
           qty: reward.qty,
           item_id: reward.item_id,
         });

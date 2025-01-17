@@ -119,12 +119,12 @@ export const QuestNPCDialog = (props: {
       class="flex flex-col gap-2"
     >
       <div class="flex flex-col gap-2 p-4 rounded">
-        <span class="font-bold text-sm">You:</span>
+        <span class="font-bold text-sm">${name}</span>
         ${props.interaction.objective.dialog}
       </div>
       ${props.step === 1
         ? html`<div class="flex flex-col gap-2  p-4 rounded">
-            <span class="font-bold text-sm"> ${name}: </span>
+            <span class="font-bold text-sm">You:: </span>
             ${props.interaction.objective.response}
           </div>`
         : null}
