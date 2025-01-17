@@ -839,9 +839,9 @@ app.get("/health", (c) => {
 });
 
 setInterval(() => {
-  const start = Date.now();
   Promise.resolve()
     .then(async () => {
+      const start = Date.now();
       await cleanupResources();
       await processActions();
       await cleanupSystemMessages();
