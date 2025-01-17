@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { SSEStreamingApi, streamSSE } from "hono/streaming";
+import { streamSSE } from "hono/streaming";
 import { Session, sessionMiddleware } from "hono-sessions";
 import { Content } from "./templates/layout";
 import { fragmentEvent } from "./sse";
@@ -54,8 +54,6 @@ import { questProgressManager } from "./user/quest-progress-manager";
 import { questManager } from "./user/quest-generator";
 import { QuestNPCCompleted, QuestNPCDialog } from "./templates/quests";
 import { sessionStore } from "./lib/libsql-store";
-
-let connections = 0;
 
 type SessionDataTypes = {
   user_id: string;
@@ -189,8 +187,6 @@ app.get("/game", async (c) => {
         return;
       }
 
-      connections++;
-
       let user: GameUser = tempUser;
 
       await markUserOnline(user.id);
@@ -283,20 +279,13 @@ app.get("/game", async (c) => {
         if (user.z) {
           await removeUserFromZone(user.id);
         }
-        connections--;
 
         console.log("user offline");
         isAborted = true;
       });
 
-      let work = 0;
       while (!isAborted) {
         await new Promise((resolve) => setTimeout(resolve, 500));
-        work++;
-
-        if (work % 10 === 0) {
-          work = 0;
-        }
       }
     },
     async (err) => {
@@ -863,10 +852,6 @@ setInterval(() => {
     })
     .catch((err) => console.error(err));
 }, 100);
-
-setInterval(() => {
-  console.log(`${new Date().toISOString()}: Connections: ${connections}`);
-}, 60000);
 
 export default {
   fetch: app.fetch,
