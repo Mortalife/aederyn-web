@@ -576,6 +576,10 @@ export const Messages = (messages: SystemMessage[], showLatest = false) => {
     }
   }
 
+  if (showLatest) {
+    return null;
+  }
+
   return html`
     <div class="drawer w-auto">
       <input id="my-drawer" type="checkbox" class="drawer-toggle" />
