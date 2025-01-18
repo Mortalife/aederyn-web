@@ -96,7 +96,7 @@ app.use("/assets/*", serveStatic({ root: "./public" }));
 
 app.get("/", async (c) => {
   return c.html(
-    Content({
+    await Content({
       siteData: {
         title: "Aederyn Online - Web",
         description: "Aederyn Online - Web",

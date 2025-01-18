@@ -8,14 +8,18 @@ interface SiteData {
   image: string;
   children?: any;
 }
-const Layout = (props: SiteData) => {
+const Layout = async (props: SiteData) => {
   let css = "";
 
   if (process.env.NODE_ENV === "production") {
-    const manifest = require(path.join(
-      process.cwd(),
-      "./dist/static/.vite/manifest.json"
-    ));
+    const manifest = await import(
+      path.join(process.cwd(), "./dist/static/.vite/manifest.json"),
+      {
+        assert: {
+          type: "json",
+        },
+      }
+    );
     css = manifest["src/client.ts"].css[0];
   }
 
@@ -54,7 +58,7 @@ const Layout = (props: SiteData) => {
   `;
 };
 
-const Content = (props: { siteData: SiteData; user_id: string }) => {
+const Content = async (props: { siteData: SiteData; user_id: string }) => {
   return Layout({
     ...props.siteData,
     children: GameContainer({ user_id: props.user_id }),
