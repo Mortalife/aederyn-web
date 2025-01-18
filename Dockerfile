@@ -1,38 +1,37 @@
-# use the official Bun image
-# see all versions at https://hub.docker.com/r/oven/bun/tags
-FROM oven/bun:1 AS base
-WORKDIR /usr/src/app
+FROM node:22-slim AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+COPY . /app
+WORKDIR /app
 
-# install dependencies into temp directory
-# this will cache them and speed up future builds
-FROM base AS install
-RUN mkdir -p /temp/dev
-COPY package.json bun.lockb /temp/dev/
-RUN cd /temp/dev && bun install --frozen-lockfile
+FROM base AS prod-deps
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
-# copy node_modules from temp directory
-# then copy all (non-ignored) project files into the image
-FROM base AS prerelease
-COPY --from=install /temp/dev/node_modules node_modules
-COPY . .
+FROM base AS build
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
-# [optional] tests & build
-ENV NODE_ENV=production
-RUN bun run build
+RUN pnpm run build
 
-# copy production dependencies and source code into final image
-FROM base AS release
-COPY --from=prerelease /usr/src/app/game game
-COPY --from=prerelease /usr/src/app/package.json .
-COPY --from=prerelease /usr/src/app/dist dist
-COPY --from=prerelease /usr/src/app/src/backup.ts .
+FROM node:22-slim
 
-RUN apt-get update && apt-get install -y sqlite3 && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y sqlite3 && apt install -y curl && rm -rf /var/lib/apt/lists/*
+
+COPY --from=prod-deps /app/node_modules /app/node_modules
+COPY --from=build /app/dist/static /app/dist/static
+COPY --from=build /app/dist/index.js /app/index.js
+COPY --from=build /app/dist/cron.js /app/cron.js
+COPY --from=build /app/dist/backup.js /app/backup.js
+COPY --from=build /app/package.json /app/package.json
+
+WORKDIR /app
 
 # Create a directory for writable data
 RUN mkdir -p /usr/src/app/data
 
 ENV DATABASE_PATH=/usr/src/app/data/
 
-EXPOSE 3000/tcp
-ENTRYPOINT [ "bun", "run", "./game/index.js" ]
+ENV PORT=3000
+EXPOSE 3000
+
+CMD [ "index.js"]

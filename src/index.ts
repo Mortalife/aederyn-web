@@ -43,7 +43,8 @@ import {
 } from "./user/action";
 import type { GameUser } from "./config";
 import { addUserToZone, removeUserFromZone } from "./user/zone";
-import { serveStatic } from "hono/bun";
+import { serveStatic } from "@hono/node-server/serve-static";
+import { serve } from "@hono/node-server";
 import {
   addSystemMessage,
   cleanupSystemMessages,
@@ -853,7 +854,7 @@ setInterval(() => {
     .catch((err) => console.error(err));
 }, 100);
 
-export default {
+serve({
   fetch: app.fetch,
-  idleTimeout: 0,
-};
+  port: 3000,
+});
