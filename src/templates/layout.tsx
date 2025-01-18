@@ -1,5 +1,23 @@
 import { html, raw } from "hono/html";
 import { GameContainer } from "./game";
+
+let css = "";
+
+if (process.env.NODE_ENV === "production") {
+  const manifest = (
+    await import(
+      path.join(process.cwd(), "./dist/static/.vite/manifest.json"),
+      {
+        with: {
+          type: "json",
+        },
+      }
+    )
+  ).default;
+
+  css = manifest["src/client.ts"].css[0];
+}
+
 import path from "node:path";
 
 interface SiteData {
@@ -9,20 +27,6 @@ interface SiteData {
   children?: any;
 }
 const Layout = async (props: SiteData) => {
-  let css = "";
-
-  if (process.env.NODE_ENV === "production") {
-    const manifest = await import(
-      path.join(process.cwd(), "./dist/static/.vite/manifest.json"),
-      {
-        assert: {
-          type: "json",
-        },
-      }
-    );
-    css = manifest["src/client.ts"].css[0];
-  }
-
   return html`
   <html>
   <head>

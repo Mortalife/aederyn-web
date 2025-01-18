@@ -19,9 +19,7 @@ RUN apt update && apt install -y sqlite3 && apt install -y curl && rm -rf /var/l
 
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=build /app/dist/static /app/dist/static
-COPY --from=build /app/dist/index.js /app/index.js
-COPY --from=build /app/dist/cron.js /app/cron.js
-COPY --from=build /app/dist/backup.js /app/backup.js
+COPY --from=build /app/dist/code /app/
 COPY --from=build /app/package.json /app/package.json
 
 WORKDIR /app
