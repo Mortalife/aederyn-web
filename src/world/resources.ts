@@ -56,42 +56,52 @@ export const getResourceUsage = async (x: number, y: number) => {
 };
 
 export const cleanupResources = async () => {
-  const now = Date.now();
   // Remove anything that's finished
   const deletedResources = await client.execute({
-    sql: "SELECT * FROM resource_usage WHERE refresh_at < ? AND qty = 1",
-    args: [now],
+    sql: "SELECT * FROM resource_usage WHERE refresh_at <  (unixepoch('now','subsec') * 1000) AND qty = 1",
+    args: [],
   });
 
   await client.execute({
-    sql: "DELETE FROM resource_usage WHERE refresh_at < ? AND qty = 1",
-    args: [now],
+    sql: "DELETE FROM resource_usage WHERE refresh_at < (unixepoch('now','subsec') * 1000) AND qty = 1",
+    args: [],
   });
 
   // Update everything else
 
   const updatedResources = await client.execute({
-    sql: "SELECT * FROM resource_usage WHERE refresh_at < ? AND qty > 1",
-    args: [now],
+    sql: "SELECT * FROM resource_usage WHERE refresh_at < (unixepoch('now','subsec') * 1000) AND qty > 1",
+    args: [],
   });
 
   await client.execute({
-    sql: "UPDATE resource_usage SET qty = resource_usage.qty - 1, refresh_at = resource_usage.refresh_at + resource_usage.interval WHERE refresh_at < ?",
-    args: [now],
+    sql: "UPDATE resource_usage SET qty = resource_usage.qty - 1, refresh_at = resource_usage.refresh_at + resource_usage.interval WHERE refresh_at < (unixepoch('now','subsec') * 1000)",
+    args: [],
   });
 
-  const zones = [...deletedResources.rows, ...updatedResources.rows].reduce<
-    Set<{
-      x: number;
-      y: number;
-    }>
-  >((acc, row) => {
+  if (!updatedResources.rows.length && !deletedResources.rows.length) {
+    return;
+  }
+
+  const zones = new Set<string>();
+  for (const row of updatedResources.rows) {
     const usage = row as unknown as ResourceUsage;
-    acc.add({ x: usage.x, y: usage.y });
-    return acc;
-  }, new Set());
+    zones.add(`${usage.x},${usage.y}`);
+  }
+  for (const row of deletedResources.rows) {
+    const usage = row as unknown as ResourceUsage;
+    zones.add(`${usage.x},${usage.y}`);
+  }
 
   zones.forEach((zone) => {
-    PubSub.publish(ZONE_EVENT, zone);
+    const [x, y] = zone.split(",");
+    PubSub.publish(ZONE_EVENT, {
+      x: parseInt(x),
+      y: parseInt(y),
+    });
   });
+
+  zones.clear();
+
+  return;
 };

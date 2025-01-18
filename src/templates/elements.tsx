@@ -260,10 +260,13 @@ export const Zone = (
       <div
         id="chat"
         class="grid grid-cols-1 gap-2"
-        data-signals="${toHtmlJson({ message: "" })}"
+        data-signals__ifmissing="${toHtmlJson({ message: "" })}"
       >
         <h2 class="text-2xl font-bold">Chat</h2>
-        <form class="flex flex-row gap-2" data-on-submit="@post('/game/chat')">
+        <form
+          class="flex flex-row gap-2"
+          data-on-submit="@post('/game/chat'); $message = ''"
+        >
           <input
             type="text"
             class="p-2 border-gray-400 rounded flex-grow"
