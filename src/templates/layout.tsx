@@ -1,5 +1,5 @@
 import { html, raw } from "hono/html";
-import { GameContainer } from "./game";
+import { GameContainer } from "./game.js";
 
 let css = "";
 

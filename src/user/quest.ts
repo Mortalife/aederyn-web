@@ -6,11 +6,27 @@ const NpcReference = z.object({
   zone_id: z.string(),
 });
 
-const ItemReward = z.object({
+const ItemRequirementReward = z.object({
   type: z.literal("item"),
   item_id: z.string(),
   amount: z.number(),
 });
+
+const GoldRequirementReward = z.object({
+  type: z.literal("gold"),
+  amount: z.number(),
+});
+
+const SkillRequirementReward = z.object({
+  type: z.literal("skill"),
+  skill_id: z.string(),
+  amount: z.number(),
+});
+
+// const BuffRequirementReward = z.object({
+//   type: z.literal("buff"),
+//   buff_id: z.string(),
+// });
 
 const Progress = z.object({
   current: z.number(),
@@ -20,7 +36,11 @@ const Progress = z.object({
   completed_at: z.number().nullable(),
 });
 
-const Reward = z.discriminatedUnion("type", [ItemReward]);
+const RequirementReward = z.discriminatedUnion("type", [
+  ItemRequirementReward,
+  GoldRequirementReward,
+  SkillRequirementReward,
+]);
 
 // Base objective that all objective types extend from
 const BaseObjective = z.object({
@@ -149,13 +169,13 @@ const Quest = z.object({
   description: z.string(),
   objectives: z.array(Objective),
   completion: Completion,
-  rewards: z.array(Reward),
+  rewards: z.array(RequirementReward),
 });
 
 // Export types
 export type NpcReference = z.infer<typeof NpcReference>;
 export type Progress = z.infer<typeof Progress>;
-export type Reward = z.infer<typeof Reward>;
+export type RequirementReward = z.infer<typeof RequirementReward>;
 export type Objective = z.infer<typeof Objective>;
 export type Completion = z.infer<typeof Completion>;
 export type Quest = z.infer<typeof Quest>;
@@ -212,7 +232,7 @@ export type TileQuest = z.infer<typeof TileQuest>;
 // Export schemas
 export const schemas = {
   NpcReference,
-  Reward,
+  Reward: RequirementReward,
   Progress,
   BaseObjective,
   GatherObjective,
@@ -233,7 +253,7 @@ export const schemas = {
   TileTalkObjective,
   TileExploreObjective,
   TileObjective,
-  TileCompetion: TileCompletion,
+  TileCompletion,
   TileQuest,
 } as const;
 

@@ -1,6 +1,6 @@
-import type { ResourceModel } from "../config";
-import { client } from "../database";
-import { PubSub, ZONE_EVENT } from "../sse/pubsub";
+import type { ResourceModel } from "../config.js";
+import { client } from "../database.js";
+import { PubSub, ZONE_EVENT } from "../sse/pubsub.js";
 
 export type ResourceUsage = {
   x: number;

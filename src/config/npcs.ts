@@ -1,4 +1,4 @@
-import type { Npc } from "./types";
+import type { Npc } from "./types.js";
 
 export const npcs: Npc[] = [
   {

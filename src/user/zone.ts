@@ -1,7 +1,7 @@
-import type { OtherUser, GameUserModel } from "../config";
-import { client } from "../database";
-import { PubSub, ZONE_EVENT } from "../sse/pubsub";
-import { progressHooks } from "./quest-hooks";
+import type { OtherUser, GameUserModel } from "../config.js";
+import { client } from "../database.js";
+import { PubSub, ZONE_EVENT } from "../sse/pubsub.js";
+import { progressHooks } from "./quest-hooks.js";
 
 export const getZoneUsers = async (
   user_id: string,

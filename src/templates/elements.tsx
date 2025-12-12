@@ -1,5 +1,5 @@
 import { html } from "hono/html";
-import type { WorldTile } from "../world";
+import type { WorldTile } from "../world/index.js";
 import {
   type InventoryItem,
   type GameUser,
@@ -8,18 +8,18 @@ import {
   type RequiredItem,
   MAX_INVENTORY_SIZE,
   type RewardItem,
-} from "../config";
-import { toHtmlJson } from "../lib/datastar";
-import { calculateProgress, type UserAction } from "../user/action";
-import { restrictUserId, type ChatMessage } from "../social/chat";
+} from "../config.js";
+import { toHtmlJson } from "../lib/datastar.js";
+import { calculateProgress, type UserAction } from "../user/action.js";
+import { restrictUserId, type ChatMessage } from "../social/chat.js";
 import { formatDistance } from "date-fns";
-import type { SystemMessage } from "../user/system";
+import type { SystemMessage } from "../user/system.js";
 import type {
   MapIndicator,
   ZoneInteraction,
   ZoneQuests,
-} from "../user/quest-progress-manager";
-import { Quests } from "./quests";
+} from "../user/quest-progress-manager.js";
+import { Quests } from "./quests.js";
 
 export const WorldMap = (
   map: WorldTile[],
@@ -30,8 +30,8 @@ export const WorldMap = (
 >
   <div
     id="map"
-    style="background-color: #333; grid-auto-flow: column;"
-    class="relative w-[500px] md:w-[700px] p-4 grid grid-rows-5 grid-cols-5 aspect-square gap-1"
+    style="background-color: #333;"
+    class="relative w-[500px] md:w-[700px] p-4 grid grid-rows-5 grid-cols-5 grid-flow-col aspect-square gap-1"
   >
     ${map.map((worldTile) => {
       const indicators = mapIndicators.find(

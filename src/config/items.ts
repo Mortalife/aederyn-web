@@ -1,4 +1,4 @@
-import type { Item } from "./types";
+import type { Item } from "./types.js";
 
 export const items: Item[] = [
   {
@@ -324,6 +324,19 @@ export const items: Item[] = [
     equippable: true,
     value: 15,
     weight: 1,
+    durability: { current: 100, max: 100 },
+  },
+  {
+    id: "item_spade",
+    name: "Spade",
+    description: "A basic tool for digging soil and mud.",
+    type: "tool",
+    rarity: "common",
+    stackable: false,
+    maxStackSize: 1,
+    equippable: true,
+    value: 20,
+    weight: 2,
     durability: { current: 100, max: 100 },
   },
   {

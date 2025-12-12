@@ -1,12 +1,12 @@
 import { createClient } from "@libsql/client";
-import { QuestProgressManager } from "./user/quest-progress-manager";
-import { QuestManager } from "./user/quest-generator";
+import { QuestProgressManager } from "./user/quest-progress-manager.js";
+import { QuestManager } from "./user/quest-generator.js";
 
 export const client = createClient({
   url: `file:${process.env["DATABASE_PATH"] ?? ""}local.db`,
 });
 
-await client.execute("PRAGMA journey_mode = WAL;");
+await client.execute("PRAGMA journal_mode = WAL;");
 await client.execute("PRAGMA busy_timeout = 5000;");
 await client.execute("PRAGMA synchronous = NORMAL;");
 await client.execute("PRAGMA cache_size = 2000;");
@@ -31,6 +31,6 @@ if (process.env.NODE_ENV !== "production") {
   console.log((await client.execute("SELECT * FROM users")).toJSON());
 } else {
   console.log(
-    (await client.execute("SELECT count(*) as c FROM users")).rows[0]["c"]
+    (await client.execute("SELECT count(*) as c FROM users")).rows[0]!["c"]
   );
 }

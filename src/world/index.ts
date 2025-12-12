@@ -9,9 +9,9 @@ import {
   type RequiredItem,
   type Resource,
   type RewardItem,
-} from "../config";
-import { getResourceUsage } from "./resources";
-import { selectRandom } from "../lib/random";
+} from "../config.js";
+import { getResourceUsage } from "./resources.js";
+import { selectRandom } from "../lib/random.js";
 
 export type Point = {
   x: number;

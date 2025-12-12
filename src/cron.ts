@@ -1,5 +1,5 @@
-import { client } from "./database";
-import { questManager, QuestManager } from "./user/quest-generator";
+import { client } from "./database.js";
+import { questManager, QuestManager } from "./user/quest-generator.js";
 
 const main = async () => {
   await client.execute("select 1");

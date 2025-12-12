@@ -1,4 +1,4 @@
-import { client } from "../database";
+import { client } from "../database.js";
 
 export type SystemMessage = {
   id: string;

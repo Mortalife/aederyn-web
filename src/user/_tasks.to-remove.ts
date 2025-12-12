@@ -1,8 +1,8 @@
 import { addHours, startOfHour } from "date-fns";
-import { MAP_HEIGHT, MAP_WIDTH, type GameUser, type Tile } from "../config";
-import { randomIndex } from "../lib/random";
-import { getTile, getTileSelection } from "../world";
-import type { Task } from "../ai/quests";
+import { MAP_HEIGHT, MAP_WIDTH, type GameUser, type Tile } from "../config.js";
+import { randomIndex } from "../lib/random.js";
+import { getTile, getTileSelection } from "../world/index.js";
+import type { Task } from "../ai/quests.js";
 
 export type TaskStatus = "available" | "active" | "completed" | "failed";
 export type RewardType = "currency" | "item" | "experience";

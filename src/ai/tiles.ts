@@ -1,8 +1,8 @@
 import { zodResponseFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
-import { npcs, tileTypes, items, resources } from "../config";
-import { openai } from "../lib/openai";
-import { manifest } from "./design-doc";
+import { npcs, tileTypes, items, resources } from "../config.js";
+import { openai } from "../lib/openai.js";
+import { manifest } from "./design-doc.js";
 
 export const ItemSchema = z.object({
   id: z.string().describe("Unique identifier for the item"),
@@ -215,7 +215,7 @@ const Tiles = z
   .strict();
 
 export const generateTiles = async () => {
-  const response = await openai.beta.chat.completions.parse({
+  const response = await openai.chat.completions.parse({
     model: "gpt-4o-mini",
     messages: [
       {

@@ -1,7 +1,11 @@
-import { items, MAX_INVENTORY_SIZE, type UserInventoryItem } from "../config";
-import { client } from "../database";
-import { progressHooks } from "./quest-hooks";
-import { getUser, saveUser } from "./user";
+import {
+  items,
+  MAX_INVENTORY_SIZE,
+  type UserInventoryItem,
+} from "../config.js";
+import { client } from "../database.js";
+import { progressHooks } from "./quest-hooks.js";
+import { getUser, saveUser } from "./user.js";
 
 export const getInventory = async (id: string) => {
   const result = await client.execute({

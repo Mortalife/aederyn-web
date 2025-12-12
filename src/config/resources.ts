@@ -1,4 +1,4 @@
-import type { ResourceModel } from "./types";
+import type { ResourceModel } from "./types.js";
 
 export const resources: ResourceModel[] = [
   {
@@ -147,7 +147,7 @@ export const resources: ResourceModel[] = [
     reward_items: [{ item_id: "item_clay", qty: 1 }],
     required_items: [
       {
-        item_id: "item_bucket",
+        item_id: "item_spade",
         qty: 1,
         consumed: false,
         itemDurabilityReduction: 1,
@@ -515,6 +515,21 @@ export const resources: ResourceModel[] = [
       { item_id: "item_vine", qty: 1, consumed: true }, // For handle binding
     ],
     collectionTime: 15,
+    type: "workbench",
+    verb: "Craft",
+  },
+  {
+    id: "resource_crafting_spade",
+    name: "Spade",
+    limitless: true,
+    amount: 1,
+    reward_items: [{ item_id: "item_spade", qty: 1 }],
+    required_items: [
+      { item_id: "item_stone_01", qty: 1, consumed: true },
+      { item_id: "item_stick_01", qty: 1, consumed: true },
+      { item_id: "item_vine", qty: 1, consumed: true },
+    ],
+    collectionTime: 10,
     type: "workbench",
     verb: "Craft",
   },

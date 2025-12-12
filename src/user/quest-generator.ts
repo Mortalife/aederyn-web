@@ -1,11 +1,11 @@
 import { addHours, startOfHour } from "date-fns";
-import { schemas, type Quest, type TileQuest } from "./quest";
-import { client } from "../database";
-import { generateQuestTemplates } from "../ai/quests";
-import { MAP_HEIGHT, MAP_WIDTH, type Tile } from "../config";
-import { getTileSelection } from "../world";
-import { randomIndex } from "../lib/random";
-import { tutorialQuests } from "../config/quests";
+import { schemas, type Quest, type TileQuest } from "./quest.js";
+import { client } from "../database.js";
+import { generateQuestTemplates } from "../ai/quests.js";
+import { MAP_HEIGHT, MAP_WIDTH, type Tile } from "../config.js";
+import { getTileSelection } from "../world/index.js";
+import { randomIndex } from "../lib/random.js";
+import { tutorialQuests } from "../config/quests.js";
 
 export class QuestManager {
   static VERSION = 1;

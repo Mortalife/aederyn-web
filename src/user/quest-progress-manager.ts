@@ -1,16 +1,16 @@
-import { tutorialQuests } from "../config/quests";
-import { client } from "../database";
-import { getTile, type WorldTile } from "../world";
-import { addToInventory } from "./inventory";
-import { getItemName } from "./items";
+import { tutorialQuests } from "../config/quests.js";
+import { client } from "../database.js";
+import { getTile, type WorldTile } from "../world/index.js";
+import { addToInventory } from "./inventory.js";
+import { getItemName } from "./items.js";
 import type {
   Quest,
   TileObjective,
   TileQuest,
   TileTalkObjective,
-} from "./quest";
-import { questManager, type QuestManager } from "./quest-generator";
-import { addSystemMessage } from "./system";
+} from "./quest.js";
+import { questManager, type QuestManager } from "./quest-generator.js";
+import { addSystemMessage } from "./system.js";
 
 export interface ZoneQuests {
   availableQuests: TileQuest[];

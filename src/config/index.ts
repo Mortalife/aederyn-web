@@ -1,7 +1,7 @@
-import { items } from "./items";
-import { resources } from "./resources";
-import { tileTypes } from "./tiles";
-import type { ResourceModel } from "./types";
+import { items } from "./items.js";
+import { resources } from "./resources.js";
+import { tileTypes } from "./tiles.js";
+import type { ResourceModel } from "./types.js";
 
 const itemsWithoutSources = items.filter(
   (i) =>
@@ -26,26 +26,26 @@ function checkCircularDependencies(resources: ResourceModel[]): boolean {
 
     for (const requiredItem of resource.required_items) {
       const itemId = requiredItem.item_id;
-      if (path.has(itemId)) {
-        console.log(
-          `Circular dependency found: ${Array.from(path).join(
-            " -> "
-          )} -> ${itemId}`
-        );
-        return true; // Circular dependency found
-      }
 
       // Check if this item is a reward of any resource
       const resourceThatRewardsThisItem = resources.find((r) =>
         r.reward_items.some((ri) => ri.item_id === itemId)
       );
 
-      if (
-        resourceThatRewardsThisItem &&
-        !visited.has(resourceThatRewardsThisItem.id)
-      ) {
-        if (dfs(resourceThatRewardsThisItem.id, new Set(path))) {
-          return true;
+      if (resourceThatRewardsThisItem) {
+        if (path.has(resourceThatRewardsThisItem.id)) {
+          console.log(
+            `Circular dependency found: ${Array.from(path).join(" -> ")} -> ${
+              resourceThatRewardsThisItem.id
+            }`
+          );
+          return true; // Circular dependency found
+        }
+
+        if (!visited.has(resourceThatRewardsThisItem.id)) {
+          if (dfs(resourceThatRewardsThisItem.id, new Set(path))) {
+            return true;
+          }
         }
       }
     }

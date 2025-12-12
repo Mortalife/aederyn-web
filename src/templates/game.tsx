@@ -1,16 +1,16 @@
 import { html } from "hono/html";
-import type { WorldTile } from "../world";
-import { Messages, UserInfo, WorldMap, Zone } from "./elements";
-import { toHtmlJson } from "../lib/datastar";
-import type { GameUser, OtherUser } from "../config";
-import type { UserAction } from "../user/action";
-import type { ChatMessage } from "../social/chat";
-import type { SystemMessage } from "../user/system";
+import type { WorldTile } from "../world/index.js";
+import { Messages, UserInfo, WorldMap, Zone } from "./elements.js";
+import { toHtmlJson } from "../lib/datastar.js";
+import type { GameUser, OtherUser } from "../config.js";
+import type { UserAction } from "../user/action.js";
+import type { ChatMessage } from "../social/chat.js";
+import type { SystemMessage } from "../user/system.js";
 import type {
   MapIndicator,
   ZoneInteraction,
   ZoneQuests,
-} from "../user/quest-progress-manager";
+} from "../user/quest-progress-manager.js";
 
 export const Game = (props: {
   map: WorldTile[];

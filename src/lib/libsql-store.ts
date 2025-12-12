@@ -9,8 +9,9 @@ class LibsqlStore implements Store {
       sql: "SELECT * FROM sessions WHERE id = ?",
       args: [sessionId],
     });
+
     return session && session.rows.length
-      ? JSON.parse(session.rows[0]["data"] as string)
+      ? JSON.parse((session.rows[0]!["data"] ?? "") as string)
       : null;
   }
 

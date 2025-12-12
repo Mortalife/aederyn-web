@@ -1,6 +1,6 @@
-import { processActions } from "./user/action";
-import { cleanupSystemMessages } from "./user/system";
-import { cleanupResources } from "./world/resources";
+import { processActions } from "./user/action.js";
+import { cleanupSystemMessages } from "./user/system.js";
+import { cleanupResources } from "./world/resources.js";
 
 // prevents TS errors
 declare var self: Worker;

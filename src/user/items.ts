@@ -1,4 +1,4 @@
-import { items } from "../config";
+import { items } from "../config.js";
 
 export const getItemName = (id: string) => {
   const item = items.find((i) => i.id === id);

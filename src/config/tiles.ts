@@ -31,6 +31,7 @@ export const tileTypes: TileType[] = [
     resources: [
       "resource_crafting_item_stone_axe_01",
       "resource_crafting_bucket",
+      "resource_crafting_spade",
       "resource_crafting_pickaxe",
       "resource_crafting_gloves",
       "resource_crafting_pruning_shears",

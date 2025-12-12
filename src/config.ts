@@ -1,11 +1,11 @@
-import type { GameUserModel } from "./config/types";
-import type { Point } from "./world";
+import type { GameUserModel } from "./config/types.js";
+import type { Point } from "./world/index.js";
 
-export { resources } from "./config/resources";
-export { tileTypes } from "./config/tiles";
-export { items } from "./config/items";
-export { npcs } from "./config/npcs";
-export * from "./config/types";
+export { resources } from "./config/resources.js";
+export { tileTypes } from "./config/tiles.js";
+export { items } from "./config/items.js";
+export { npcs } from "./config/npcs.js";
+export * from "./config/types.js";
 
 export const MAP_WIDTH = 20;
 export const MAP_HEIGHT = 20;

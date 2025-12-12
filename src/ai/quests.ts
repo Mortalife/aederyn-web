@@ -1,9 +1,9 @@
 import { zodResponseFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
-import { npcs, tileTypes, items, resources } from "../config";
-import schemas, { type Quest } from "../user/quest";
-import { anthropic } from "../lib/anthropic";
-import { questManager } from "../user/quest-generator";
+import { npcs, tileTypes, items, resources } from "../config.js";
+import schemas, { type Quest } from "../user/quest.js";
+import { anthropic } from "../lib/anthropic.js";
+import { questManager } from "../user/quest-generator.js";
 
 export const TaskSchema = z.object({
   id: z
@@ -170,7 +170,7 @@ export const generateQuestTemplates = async (
   const quests = await questManager.getQuestTemplateNames();
 
   const msg = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-latest",
+    model: "claude-sonnet-4-5-20250929",
     max_tokens: 4000,
     messages: [
       {

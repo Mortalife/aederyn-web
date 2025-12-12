@@ -1,4 +1,4 @@
-import type { TileQuest } from "../user/quest";
+import type { TileQuest } from "../user/quest.js";
 
 export const tutorialQuests: TileQuest[] = [
   {

@@ -1,20 +1,23 @@
 import type { SSEStreamingApi } from "hono/streaming";
-import type { GameUser } from "../config";
-import { getOnlineStatus, type UserOnlineStatus } from "../social/active";
+import type { GameUser } from "../config.js";
+import { getOnlineStatus, type UserOnlineStatus } from "../social/active.js";
 import {
   calculateMessageHistory,
   getMessages,
   type ChatMessage,
-} from "../social/chat";
-import { getPopulatedUser } from "../user/user";
-import { generateMap, type WorldTile } from "../world";
-import { Game, GameLogin } from "./game";
-import { fragmentEvent } from "../sse";
-import { getInProgressAction } from "../user/action";
-import { getZoneUsers } from "../user/zone";
-import { getSystemMessages } from "../user/system";
-import { questProgressManager } from "../user/quest-progress-manager";
-import { questManager } from "../user/quest-generator";
+} from "../social/chat.js";
+import { getPopulatedUser } from "../user/user.js";
+import { generateMap, type WorldTile } from "../world/index.js";
+import { Game, GameLogin } from "./game.js";
+import { fragmentEvent } from "../sse/index.js";
+import { getInProgressAction } from "../user/action.js";
+import { getZoneUsers } from "../user/zone.js";
+import { getSystemMessages } from "../user/system.js";
+import { questProgressManager } from "../user/quest-progress-manager.js";
+import { questManager } from "../user/quest-generator.js";
+import { HouseMap } from "../config/house-tiles.js";
+import { House } from "../house/templates.js";
+import { getBaseHouse } from "../house/index.js";
 
 export const sendGame = async (
   stream: SSEStreamingApi,
@@ -118,3 +121,29 @@ export const sendUserNotFound = async (
       id
     )
   );
+
+export const sendHouse = async (
+  stream: SSEStreamingApi,
+  {
+    user_id,
+    tile,
+    houseMap,
+  }: {
+    user_id: string;
+    tile?: { x: number; y: number };
+    houseMap?: HouseMap;
+  },
+  id: number = 1
+) => {
+  let start = Date.now();
+
+  if (start % 4 === 0) {
+    console.log(`Game state generated in ${Date.now() - start}ms`);
+  }
+
+  if (!houseMap) {
+    houseMap = getBaseHouse();
+  }
+
+  return stream.writeSSE(fragmentEvent(House(houseMap, tile), 1));
+};

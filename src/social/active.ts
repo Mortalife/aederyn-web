@@ -2,7 +2,7 @@
  *   "CREATE TABLE IF NOT EXISTS online (id INTEGER PRIMARY KEY, user_id TEXT, online_at INT)",
  */
 
-import { client } from "../database";
+import { client } from "../database.js";
 
 export type UserOnlineStatus = {
   user_id: string;

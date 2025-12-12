@@ -1,6 +1,6 @@
-import type { UserInventoryItem } from "../config";
-import { questProgressManager } from "./quest-progress-manager";
-import { addSystemMessage } from "./system";
+import type { UserInventoryItem } from "../config.js";
+import { questProgressManager } from "./quest-progress-manager.js";
+import { addSystemMessage } from "./system.js";
 
 class QuestProgressHooks {
   // Zone change

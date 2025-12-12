@@ -1,12 +1,12 @@
 import { html } from "hono/html";
-import type { TileObjective, TileQuest } from "../user/quest";
+import type { TileObjective, TileQuest } from "../user/quest.js";
 import type {
   ZoneInteraction,
   ZoneQuests,
-} from "../user/quest-progress-manager";
-import { npcs, resources } from "../config";
+} from "../user/quest-progress-manager.js";
+import { npcs, resources } from "../config.js";
 import { formatDistanceToNow } from "date-fns";
-import { getItemName } from "../user/items";
+import { getItemName } from "../user/items.js";
 
 export const Quests = (props: {
   zoneQuests: ZoneQuests;

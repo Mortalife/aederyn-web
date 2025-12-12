@@ -1,10 +1,15 @@
-import { items, resources, type GameUser, type ResourceModel } from "../config";
-import { client } from "../database";
-import { PubSub, USER_EVENT } from "../sse/pubsub";
-import { markResourceUsed } from "../world/resources";
-import { addToInventory, getInventory, updateInventory } from "./inventory";
-import { progressHooks } from "./quest-hooks";
-import { addSystemMessage } from "./system";
+import {
+  items,
+  resources,
+  type GameUser,
+  type ResourceModel,
+} from "../config.js";
+import { client } from "../database.js";
+import { PubSub, USER_EVENT } from "../sse/pubsub.js";
+import { markResourceUsed } from "../world/resources.js";
+import { addToInventory, getInventory, updateInventory } from "./inventory.js";
+import { progressHooks } from "./quest-hooks.js";
+import { addSystemMessage } from "./system.js";
 
 /**
  *   "CREATE TABLE IF NOT EXISTS inprogress (user_id TEXT PRIMARY KEY,x INT, y INT, resource_id TEXT, inprogress_at INT, completed_at INT)",

@@ -1,28 +1,13 @@
 {
   "compilerOptions": {
-    /* Base Options: */
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "target": "es2022",
-    "allowJs": true,
-    "resolveJsonModule": true,
-    "moduleDetection": "force",
-
-    /* Warn explicitly about footguns */
+    "target": "ESNext",
+    "module": "NodeNext",
+    "outDir": "./dist",
     "strict": true,
-    "noUncheckedIndexedAccess": true,
-
-    "declaration": true,
-
-    /* We are transpiling with tsup instead of tsc, so we rely on bundler resolution and set no-emit: */
-    "moduleResolution": "Bundler",
-    "module": "ESNext",
-
-    /* Our code doesn't run in the DOM, so we just use core ES stdlib: */
-    "lib": ["es2022"],
+    "verbatimModuleSyntax": false,
+    "skipLibCheck": true,
+    "types": ["node"],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"
-  },
-  "exclude": ["node_modules"],
-  "include": ["./src/**/*"]
+  }
 }

@@ -1,20 +1,20 @@
-import { Hono } from "hono";
+import { Context, Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { Session, sessionMiddleware } from "hono-sessions";
-import { Content } from "./templates/layout";
-import { fragmentEvent } from "./sse";
-import { getTile, getTileSelection, isOutOfBounds } from "./world";
-import { GameLogin } from "./templates/game";
+import { Content, Layout } from "./templates/layout.js";
+import { fragmentEvent } from "./sse/index.js";
+import { getTile, getTileSelection, isOutOfBounds } from "./world/index.js";
+import { GameLogin } from "./templates/game.js";
 import {
   getPopulatedUser,
   getUser,
   getUserSync,
   saveUser,
   transformUser,
-} from "./user/user";
-import { ChatMessages } from "./templates/elements";
-import { cleanupResources } from "./world/resources";
-import { removeFromInventoryById } from "./user/inventory";
+} from "./user/user.js";
+import { ChatMessages } from "./templates/elements.js";
+import { cleanupResources } from "./world/resources.js";
+import { removeFromInventoryById } from "./user/inventory.js";
 import {
   CHAT_EVENT,
   PubSub,
@@ -23,26 +23,30 @@ import {
   type ChatEvent,
   type UserEvent,
   type ZoneEvent,
-} from "./sse/pubsub";
+} from "./sse/pubsub.js";
 import {
   calculateMessageHistory,
   getMessages,
   saveMessage,
-} from "./social/chat";
+} from "./social/chat.js";
 import {
   getOnlineStatus,
   markUserOffline,
   markUserOnline,
-} from "./social/active";
-import { sendGame, sendUserNotFound } from "./templates/game-update";
+} from "./social/active.js";
+import {
+  sendGame,
+  sendHouse,
+  sendUserNotFound,
+} from "./templates/game-update.js";
 import {
   getInProgressAction,
   markActionComplete,
   markActionInProgress,
   processActions,
-} from "./user/action";
-import type { GameUser } from "./config";
-import { addUserToZone, removeUserFromZone } from "./user/zone";
+} from "./user/action.js";
+import type { GameUser } from "./config.js";
+import { addUserToZone, removeUserFromZone } from "./user/zone.js";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { serve } from "@hono/node-server";
 import {
@@ -50,22 +54,26 @@ import {
   cleanupSystemMessages,
   clearAllUserSystemMessages,
   removeSystemMessage,
-} from "./user/system";
-import { questProgressManager } from "./user/quest-progress-manager";
-import { questManager } from "./user/quest-generator";
-import { QuestNPCCompleted, QuestNPCDialog } from "./templates/quests";
-import { sessionStore } from "./lib/libsql-store";
+} from "./user/system.js";
+import { questProgressManager } from "./user/quest-progress-manager.js";
+import { questManager } from "./user/quest-generator.js";
+import { QuestNPCCompleted, QuestNPCDialog } from "./templates/quests.js";
+import { sessionStore } from "./lib/libsql-store.js";
+// import { houseRoutes } from "./house/routes.js";
 
 type SessionDataTypes = {
   user_id: string;
 };
 
-const app = new Hono<{
+type HonoApp = {
   Variables: {
     session: Session<SessionDataTypes>;
     session_key_rotation: boolean;
   };
-}>({});
+};
+
+const app = new Hono<HonoApp>({});
+
 app.use("*", (c, next) => {
   if (c.req.path === "/health") {
     return next();
@@ -106,6 +114,8 @@ app.get("/", async (c) => {
     })
   );
 });
+
+// app.route("/house", houseRoutes);
 
 app.post("/game/login", async (c) => {
   const { user_id = "" } = await c.req.json<{ user_id: string }>();
@@ -250,7 +260,7 @@ app.get("/game", async (c) => {
 
       const processUserEvent = ({ user_id }: UserEvent) => {
         if (user_id !== user.id) {
-          // No need to process the users own message
+          // Only process our own user
           return;
         }
 

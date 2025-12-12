@@ -1,7 +1,12 @@
 import { deepmerge } from "deepmerge-ts";
-import { BASE_USER, items, type GameUser, type GameUserModel } from "../config";
-import { client } from "../database";
-import { PubSub, USER_EVENT } from "../sse/pubsub";
+import {
+  BASE_USER,
+  items,
+  type GameUser,
+  type GameUserModel,
+} from "../config.js";
+import { client } from "../database.js";
+import { PubSub, USER_EVENT } from "../sse/pubsub.js";
 
 export const getUserSync = async (id: string) => {
   if (!id) {
