@@ -2,10 +2,11 @@ import { html, raw } from "hono/html";
 import { GameContainer } from "./game.js";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
+import { isProduction } from "../lib/runtime.js";
 
 let css = "";
 
-if (process.env.NODE_ENV === "production") {
+if (isProduction()) {
   try {
     const manifestContent = await readFile(
       path.join(process.cwd(), "./dist/static/.vite/manifest.json"),
@@ -40,12 +41,10 @@ const Layout = async (props: SiteData) => {
     
 <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.6/bundles/datastar.js"></script>
     ${
-      process.env.NODE_ENV === "production"
+      isProduction()
         ? raw(`<script type="module" src="/static/assets/client.js"></script>
           <link rel="stylesheet" href="/static/${css}">`)
-        : raw(
-            '<script type="module" src="/src/client.ts"></script>'
-          )
+        : raw('<script type="module" src="/src/client.ts"></script>')
     }
 
     <!-- <link rel="prefetch" href="/assets/textures/cliff-texture.png" as="image">

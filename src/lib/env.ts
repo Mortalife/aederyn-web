@@ -7,6 +7,8 @@ const envSchema = z.object({
     .string()
     .default("true")
     .transform((v) => v === "true"),
+  SESSION_SECRET: z.string().default("super-secret-session-key"),
+  DATABASE_PATH: z.string().optional().default(""), // Default to current directory
 });
 
 export const env = envSchema.parse(process.env);

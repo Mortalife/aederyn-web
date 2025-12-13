@@ -1,6 +1,7 @@
 import { createClient } from "@libsql/client";
 import { QuestProgressManager } from "./user/quest-progress-manager.js";
 import { QuestManager } from "./user/quest-generator.js";
+import { isProduction } from "./lib/runtime.js";
 
 export const client = createClient({
   url: `file:${process.env["DATABASE_PATH"] ?? ""}local.db`,
@@ -27,7 +28,7 @@ await client.migrate([
 ]);
 
 //  await client.execute("DROP TABLE IF EXISTS online");
-if (process.env.NODE_ENV !== "production") {
+if (isProduction()) {
   console.log((await client.execute("SELECT * FROM users")).toJSON());
 } else {
   console.log(

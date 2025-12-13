@@ -1,5 +1,6 @@
 import type { Store, SessionData } from "hono-sessions";
 import { createClient, type Client } from "@libsql/client";
+import { env } from "./env.js";
 
 class LibsqlStore implements Store {
   constructor(private client: Client) {}
@@ -40,7 +41,7 @@ class LibsqlStore implements Store {
 }
 
 export const client = createClient({
-  url: `file:${process.env["DATABASE_PATH"] ?? ""}local.sessions.db`,
+  url: `file:${env.DATABASE_PATH}local.sessions.db`,
 });
 
 await client.execute("PRAGMA journey_mode = WAL;");

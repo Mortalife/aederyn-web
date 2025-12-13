@@ -64,6 +64,7 @@ import { setTimeout as delay } from "timers/promises";
 import { compression } from "./lib/compression.js";
 import { getStream, returnStream } from "./sse/stream.js";
 import { isProduction } from "./lib/runtime.js";
+import { env } from "./lib/env.js";
 
 type SessionDataTypes = {
   user_id: string;
@@ -87,8 +88,7 @@ app.use("*", (c, next) => {
 
   const session = sessionMiddleware({
     store: sessionStore,
-    encryptionKey:
-      process.env["SESSION_SECRET"] ?? "secret-key-that-should-be-very-secret",
+    encryptionKey: env.SESSION_SECRET,
     expireAfterSeconds: 60 * 60 * 24 * 90, // Expire session after 90 days of inactivity
     cookieOptions: {
       sameSite: "Lax", // Recommended for basic CSRF protection in modern browsers
