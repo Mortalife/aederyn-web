@@ -28,6 +28,7 @@ WORKDIR /app
 RUN mkdir -p /usr/src/app/data
 
 ENV DATABASE_PATH=/usr/src/app/data/
+ENV NODE_ENV=production
 
 ENV PORT=3000
 EXPOSE 3000
