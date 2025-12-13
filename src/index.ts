@@ -187,11 +187,11 @@ app.delete("/game/logout", async (c) => {
 
 app.get("/game", async (c) => {
   const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
+  const session_user_id = session.get("user_id") ?? "";
   let id = 0;
 
   const stream = getStream(c);
-  const tempUser = await getPopulatedUser(user_id);
+  const tempUser = await getPopulatedUser(session_user_id);
   if (!tempUser) {
     await stream.writeSSE(
       fragmentEvent(
@@ -220,7 +220,7 @@ app.get("/game", async (c) => {
       await delay(200);
       console.log("chat message", user_id, message);
 
-      const status = await getOnlineStatus(user_id);
+      const status = await getOnlineStatus(session_user_id);
       if (!status) {
         return;
       }
@@ -239,13 +239,13 @@ app.get("/game", async (c) => {
 
   const processZoneUpdate = pDebounce.promise(async ({ x, y }: ZoneEvent) => {
     if (x !== user.p.x || y !== user.p.y) {
-      // No need to process the users own message
+      // No need to process zones the user isn't in
       return;
     }
     await delay(200);
 
     await sendGame(stream, {
-      user_id: user.id,
+      user_id: session_user_id,
     });
     console.log("zone update sent to user");
   });
@@ -253,15 +253,15 @@ app.get("/game", async (c) => {
   PubSub.subscribe(ZONE_EVENT, processZoneUpdate);
 
   const processUserEvent = pDebounce.promise(async ({ user_id }: UserEvent) => {
-    await delay(200);
-    const user = await getPopulatedUser(user_id);
-    if (user === null) {
+    if (user_id !== session_user_id) {
+      // Not for this user
       return;
     }
 
+    await delay(200);
+
     await sendGame(stream, {
-      user_id: user.id,
-      user,
+      user_id: session_user_id,
     });
   });
 
