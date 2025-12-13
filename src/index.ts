@@ -108,8 +108,8 @@ if (isProduction()) {
       rewriteRequestPath: (path) => path.replace("/static/assets", ""),
     })
   );
-  app.use("/assets/*", serveStatic({ root: "./public" }));
 }
+app.use("/assets/*", serveStatic({ root: "./public" }));
 
 app.get("/", async (c) => {
   return c.html(

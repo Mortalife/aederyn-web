@@ -28,7 +28,7 @@ await client.migrate([
 ]);
 
 //  await client.execute("DROP TABLE IF EXISTS online");
-if (isProduction()) {
+if (!isProduction()) {
   console.log((await client.execute("SELECT * FROM users")).toJSON());
 } else {
   console.log(
