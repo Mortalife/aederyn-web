@@ -1,7 +1,6 @@
 import { html } from "hono/html";
 import type { WorldTile } from "../world/index.js";
 import { Messages, UserInfo, WorldMap, Zone } from "./elements.js";
-import { toHtmlJson } from "../lib/datastar.js";
 import type { GameUser, OtherUser } from "../config.js";
 import type { UserAction } from "../user/action.js";
 import type { ChatMessage } from "../social/chat.js";
@@ -27,8 +26,7 @@ export const Game = (props: {
     <div
       class="md:container md:mx-auto grid grid-rows-[50px_1fr_60px] gap-4 h-full items-between"
       id="game"
-      data-signals="${toHtmlJson({ user_id: props.user.id })}"
-      data-persist-user="user_id"
+      data-signals="${JSON.stringify({ user_id: props.user.id })}"
     >
       <div id="info">${UserInfo(props.user, props.messages)}</div>
       <div id="content" class="flex flex-col gap-4">
@@ -47,11 +45,11 @@ export const Game = (props: {
       </div>
       <div
         class="p-4 flex flex-row gap-2 items-center justify-between"
-        data-signals="${toHtmlJson({
+        data-signals="${JSON.stringify({
           _showUserId: false,
         })}"
       >
-        <button class="btn" data-on-click="$_showUserId = !$_showUserId">
+        <button class="btn" data-on:click="$_showUserId = !$_showUserId">
           Toggle User Id
         </button>
         <div class="flex flex-row items-center gap-2" data-show="$_showUserId">
@@ -61,7 +59,7 @@ export const Game = (props: {
         <button
           class="btn btn-ghost"
           id="game-logout"
-          data-on-click="@delete('/game/logout')"
+          data-on:click="@delete('/game/logout')"
         >
           Logout
         </button>
@@ -71,12 +69,11 @@ export const Game = (props: {
 };
 
 export const GameContainer = (props: { user_id: string }) => html`
-  <div id="game-container" class="h-full" data-on-load="@get('/game')">
+  <div id="game-container" class="h-full" data-init="@get('/game')">
     <div
       class="md:container md:mx-auto"
       id="game"
-      data-signals="${toHtmlJson({ user_id: props.user_id })}"
-      data-persist-user="user_id"
+      data-signals="${JSON.stringify({ user_id: props.user_id })}"
     ></div>
   </div>
 `;
@@ -85,14 +82,13 @@ export const GameLogin = (props: { user_id: string; error?: string }) => html`
   <div
     class="container mx-auto"
     id="game"
-    data-signals="${toHtmlJson({ user_id: props.user_id })}"
-    data-persist-user="user_id"
+    data-signals="${JSON.stringify({ user_id: props.user_id })}"
   >
     <div class="grid grid-cols-1 gap-4">
       <h1 class="text-3xl font-bold">Welcome to Aederyn Web!</h1>
       <form
         class="container grid grid-cols-1 gap-4"
-        data-on-submit="@post('/game/login')"
+        data-on:submit="@post('/game/login')"
       >
         <label class="input input-bordered flex items-center gap-2">
           <svg
@@ -132,7 +128,7 @@ export const GameLogin = (props: { user_id: string; error?: string }) => html`
         </div>`}
         <button
           class="btn btn-primary"
-          data-on-click_once="@post('/game/login')"
+          data-on:click_once="@post('/game/login')"
         >
           Join
         </button>

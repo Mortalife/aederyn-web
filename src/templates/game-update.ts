@@ -104,21 +104,19 @@ export const sendGame = async (
     console.log(`Game state generated in ${Date.now() - start}ms`);
   }
 
-  return stream.writeSSE(fragmentEvent(game, id));
+  return stream.writeSSE(fragmentEvent(game));
 };
 
 export const sendUserNotFound = async (
   stream: SSEStreamingApi,
-  user_id: string,
-  id: number = 1
+  user_id: string
 ) =>
   stream.writeSSE(
     fragmentEvent(
       GameLogin({
         user_id,
         error: "User not found",
-      }),
-      id
+      })
     )
   );
 
@@ -132,8 +130,7 @@ export const sendHouse = async (
     user_id: string;
     tile?: { x: number; y: number };
     houseMap?: HouseMap;
-  },
-  id: number = 1
+  }
 ) => {
   let start = Date.now();
 
@@ -145,5 +142,5 @@ export const sendHouse = async (
     houseMap = getBaseHouse();
   }
 
-  return stream.writeSSE(fragmentEvent(House(houseMap, tile), 1));
+  return stream.writeSSE(fragmentEvent(House(houseMap, tile)));
 };

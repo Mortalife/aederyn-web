@@ -1,4 +1,5 @@
 import { client } from "../database.js";
+import { PubSub, USER_EVENT } from "../sse/pubsub.js";
 
 export type SystemMessage = {
   id: string;
@@ -17,12 +18,17 @@ export const addSystemMessage = async (
     sql: "INSERT INTO system_messages (id, user_id, message, type, sent_at) VALUES (null, ?, ?, ?, ?)",
     args: [user_id, message, type, Date.now()],
   });
+  PubSub.publish(USER_EVENT, {
+    user_id,
+  });
 };
-
 export const removeSystemMessage = async (user_id: string, id: string) => {
   await client.execute({
     sql: "DELETE FROM system_messages WHERE user_id = ? AND id = ?",
     args: [user_id, id],
+  });
+  PubSub.publish(USER_EVENT, {
+    user_id,
   });
 };
 
@@ -30,6 +36,9 @@ export const clearAllUserSystemMessages = async (user_id: string) => {
   await client.execute({
     sql: "DELETE FROM system_messages WHERE user_id = ?",
     args: [user_id],
+  });
+  PubSub.publish(USER_EVENT, {
+    user_id,
   });
 };
 

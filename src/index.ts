@@ -57,9 +57,12 @@ import {
 } from "./user/system.js";
 import { questProgressManager } from "./user/quest-progress-manager.js";
 import { questManager } from "./user/quest-generator.js";
-import { QuestNPCCompleted, QuestNPCDialog } from "./templates/quests.js";
 import { sessionStore } from "./lib/libsql-store.js";
 // import { houseRoutes } from "./house/routes.js";
+import pDebounce from "p-debounce";
+import { setTimeout as delay } from "timers/promises";
+import { compression } from "./lib/compression.js";
+import { getStream, returnStream } from "./sse/stream.js";
 
 type SessionDataTypes = {
   user_id: string;
@@ -73,6 +76,8 @@ type HonoApp = {
 };
 
 const app = new Hono<HonoApp>({});
+
+app.use(compression);
 
 app.use("*", (c, next) => {
   if (c.req.path === "/health") {
@@ -135,8 +140,7 @@ app.post("/game/login", async (c) => {
             GameLogin({
               user_id,
               error: "User not found",
-            }),
-            1
+            })
           )
         );
         return;
@@ -167,8 +171,7 @@ app.delete("/game/logout", async (c) => {
         fragmentEvent(
           GameLogin({
             user_id: "",
-          }),
-          1
+          })
         )
       );
     },
@@ -182,137 +185,102 @@ app.get("/game", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
   let id = 0;
-  return streamSSE(
-    c,
-    async (stream) => {
-      const tempUser = await getPopulatedUser(user_id);
-      if (!tempUser) {
-        await stream.writeSSE(
-          fragmentEvent(
-            GameLogin({
-              user_id: "",
-            }),
-            id
-          )
-        );
+
+  const stream = getStream(c);
+  const tempUser = await getPopulatedUser(user_id);
+  if (!tempUser) {
+    await stream.writeSSE(
+      fragmentEvent(
+        GameLogin({
+          user_id: "",
+        })
+      )
+    );
+    return returnStream(c, stream);
+  }
+
+  let user: GameUser = tempUser;
+
+  await markUserOnline(user.id);
+  if (user.z) {
+    await addUserToZone(user.id, user.p.x, user.p.y);
+  }
+
+  await sendGame(stream, {
+    user_id: user.id,
+    user,
+  });
+
+  const processChatEvent = pDebounce.promise(
+    async ({ user_id, message }: ChatEvent) => {
+      await delay(200);
+      console.log("chat message", user_id, message);
+
+      const status = await getOnlineStatus(user_id);
+      if (!status) {
         return;
       }
 
-      let user: GameUser = tempUser;
+      const messages = await getMessages(
+        calculateMessageHistory(status.online_at)
+      );
 
-      await markUserOnline(user.id);
-      if (user.z) {
-        await addUserToZone(user.id, user.p.x, user.p.y);
-      }
-
-      await sendGame(stream, {
-        user_id: user.id,
-        user,
+      stream.writeSSE(fragmentEvent(ChatMessages(messages, user))).then(() => {
+        console.log("chat messages sent to user");
       });
-
-      const processChatEvent = ({ user_id, message }: ChatEvent) => {
-        if (user_id === user.id) {
-          // No need to process the users own message
-          return;
-        }
-        console.log("chat message", user_id, message);
-        id++;
-
-        getOnlineStatus(user_id).then((status) => {
-          if (!status) {
-            return;
-          }
-
-          return getMessages(calculateMessageHistory(status.online_at)).then(
-            (messages) => {
-              stream
-                .writeSSE(fragmentEvent(ChatMessages(messages, user), id))
-                .then(() => {
-                  console.log("chat messages sent to user");
-                });
-            }
-          );
-        });
-      };
-
-      PubSub.subscribe(CHAT_EVENT, processChatEvent);
-
-      const processZoneUpdate = ({ x, y }: ZoneEvent) => {
-        if (x !== user.p.x || y !== user.p.y) {
-          // No need to process the users own message
-          return;
-        }
-
-        id++;
-
-        sendGame(
-          stream,
-          {
-            user_id: user.id,
-          },
-          id
-        ).then(() => {
-          console.log("zone update sent to user");
-        });
-      };
-
-      PubSub.subscribe(ZONE_EVENT, processZoneUpdate);
-
-      const processUserEvent = ({ user_id }: UserEvent) => {
-        if (user_id !== user.id) {
-          // Only process our own user
-          return;
-        }
-
-        getPopulatedUser(user_id).then(async (newUser) => {
-          if (newUser === null) {
-            return;
-          }
-
-          user = newUser!;
-
-          await sendGame(stream, {
-            user_id: user.id,
-            user,
-          });
-        });
-      };
-
-      PubSub.subscribe(USER_EVENT, processUserEvent);
-
-      let isAborted = false;
-
-      stream.onAbort(async () => {
-        PubSub.off(CHAT_EVENT, processChatEvent);
-        PubSub.off(USER_EVENT, processUserEvent);
-        PubSub.off(ZONE_EVENT, processZoneUpdate);
-        await markUserOffline(user.id);
-        if (user.z) {
-          await removeUserFromZone(user.id);
-        }
-
-        console.log("user offline");
-        isAborted = true;
-      });
-
-      while (!isAborted) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-    },
-    async (err) => {
-      console.error(err);
-      if (user_id) {
-        await removeUserFromZone(user_id);
-        await markUserOffline(user_id);
-      }
     }
   );
+
+  const updateGame = pDebounce.promise(async (user: GameUser) => {
+    await sendGame(stream, {
+      user_id: user.id,
+      user,
+    });
+  });
+
+  PubSub.subscribe(CHAT_EVENT, processChatEvent);
+
+  const processZoneUpdate = async ({ x, y }: ZoneEvent) => {
+    if (x !== user.p.x || y !== user.p.y) {
+      // No need to process the users own message
+      return;
+    }
+
+    await updateGame(user);
+  };
+
+  PubSub.subscribe(ZONE_EVENT, processZoneUpdate);
+
+  const processUserEvent = async ({ user_id }: UserEvent) => {
+    const user = await getPopulatedUser(user_id);
+    if (user === null) {
+      return;
+    }
+
+    await updateGame(user);
+  };
+
+  PubSub.subscribe(USER_EVENT, processUserEvent);
+
+  stream.onAbort(async () => {
+    console.log("user aborted");
+    PubSub.off(CHAT_EVENT, processChatEvent);
+    PubSub.off(USER_EVENT, processUserEvent);
+    PubSub.off(ZONE_EVENT, processZoneUpdate);
+    await markUserOffline(user.id);
+    if (user.z) {
+      await removeUserFromZone(user.id);
+    }
+
+    console.log("user offline");
+  });
+
+  return returnStream(c, stream);
 });
 
 app.get("/game/refresh", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
-  let id = 0;
   return streamSSE(
     c,
     async (stream) => {
@@ -324,8 +292,7 @@ app.get("/game/refresh", async (c) => {
             GameLogin({
               user_id: "",
               error: "User not found",
-            }),
-            id
+            })
           )
         );
         return;
@@ -345,66 +312,53 @@ app.post("/game/move/:direction", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
   const direction = c.req.param("direction");
-  return streamSSE(
-    c,
-    async (stream) => {
-      const user = await getPopulatedUser(user_id);
 
-      if (!user) {
-        await sendUserNotFound(stream, user_id);
-        return;
-      }
+  const user = await getPopulatedUser(user_id);
 
-      if (user.z && direction !== "exit") {
-        await sendGame(stream, {
-          user_id: user.id,
-        });
-        return;
-      }
+  if (!user) {
+    return c.redirect("");
+  }
 
-      // Cancel inprogress actions
-      await markActionComplete(user.id, user.p.x, user.p.y);
+  if (user.z && direction !== "exit") {
+    return c.body(null, 204);
+  }
 
-      switch (direction) {
-        case "up":
-          user.p.y -= 1;
-          break;
-        case "down":
-          user.p.y += 1;
-          break;
-        case "left":
-          user.p.x -= 1;
-          break;
-        case "right":
-          user.p.x += 1;
-          break;
-        case "enter":
-          user.z = true;
-          await addUserToZone(user.id, user.p.x, user.p.y);
-          break;
-        case "exit":
-          user.z = false;
-          await removeUserFromZone(user.id);
-          break;
-        default:
-          console.error("Invalid direction");
-          return;
-      }
+  // Cancel inprogress actions
+  await markActionComplete(user.id, user.p.x, user.p.y);
 
-      const mapTile = getTileSelection(user.p.x, user.p.y);
+  switch (direction) {
+    case "up":
+      user.p.y -= 1;
+      break;
+    case "down":
+      user.p.y += 1;
+      break;
+    case "left":
+      user.p.x -= 1;
+      break;
+    case "right":
+      user.p.x += 1;
+      break;
+    case "enter":
+      user.z = true;
+      await addUserToZone(user.id, user.p.x, user.p.y);
+      break;
+    case "exit":
+      user.z = false;
+      await removeUserFromZone(user.id);
+      break;
+    default:
+      console.error("Invalid direction");
+      return c.body(null, 204);
+  }
 
-      if (!isOutOfBounds(user.p.x, user.p.y) && mapTile.accessible) {
-        await saveUser(user.id, transformUser(user));
-      }
+  const mapTile = getTileSelection(user.p.x, user.p.y);
 
-      await sendGame(stream, {
-        user_id: user.id,
-      });
-    },
-    async (err, stream) => {
-      console.error(err);
-    }
-  );
+  if (!isOutOfBounds(user.p.x, user.p.y) && mapTile.accessible) {
+    await saveUser(user.id, transformUser(user));
+  }
+
+  return c.body(null, 204);
 });
 
 app.get("/game/resources/:resource_id", async (c) => {
@@ -412,115 +366,63 @@ app.get("/game/resources/:resource_id", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
 
-  let id = 0;
-  return streamSSE(
-    c,
-    async (stream) => {
-      const user = await getPopulatedUser(user_id);
+  const user = await getPopulatedUser(user_id);
 
-      if (!user) {
-        await sendUserNotFound(stream, user_id, id);
-        return;
-      }
+  if (!user) {
+    return c.redirect("");
+  }
 
-      const mapTile = await getTile(user.p.x, user.p.y);
+  const mapTile = await getTile(user.p.x, user.p.y);
 
-      if (!mapTile) {
-        return;
-      }
+  if (!mapTile) {
+    return c.body(null, 204);
+  }
 
-      const resource = mapTile.resources.find(
-        (resource) => resource.id === resource_id
-      );
-
-      if (!resource) {
-        return;
-      }
-
-      const success = await markActionInProgress(user, resource.id);
-      if (!success) {
-        await addSystemMessage(user.id, "You can't do that yet.", "warning");
-        await sendGame(
-          stream,
-          {
-            user_id,
-          },
-          id
-        );
-      }
-
-      let current = 0;
-
-      let isActive = true;
-
-      while (isActive && current < resource.collectionTime + 1) {
-        await stream.sleep(1000);
-        const action = await getInProgressAction(user.id);
-        current++;
-        id++;
-
-        if (
-          !action ||
-          action.resource_id !== resource.id ||
-          action.x !== user.p.x ||
-          action.y !== user.p.y
-        ) {
-          isActive = false;
-          if (current < resource.collectionTime) {
-            await addSystemMessage(user.id, "Action interrupted", "info");
-          }
-        }
-
-        await sendGame(
-          stream,
-          {
-            user_id,
-          },
-          id
-        );
-      }
-    },
-    async (err) => {
-      console.error(err);
-    }
+  const resource = mapTile.resources.find(
+    (resource) => resource.id === resource_id
   );
+
+  if (!resource) {
+    return c.body(null, 204);
+  }
+
+  const success = await markActionInProgress(user, resource.id);
+  if (!success) {
+    await addSystemMessage(user.id, "You can't do that yet.", "warning");
+    return c.body(null, 204);
+  }
+
+  return c.body(null, 204);
 });
 
 app.delete("/game/resources/:resource_id", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
   const resource_id = c.req.param("resource_id");
-  let id = 0;
-  return streamSSE(
-    c,
-    async (stream) => {
-      const user = await getPopulatedUser(user_id);
 
-      if (!user) {
-        await sendUserNotFound(stream, user_id, id);
-        return;
-      }
+  const user = await getPopulatedUser(user_id);
 
-      const mapTile = await getTile(user.p.x, user.p.y);
+  if (!user) {
+    return c.redirect("");
+  }
 
-      if (!mapTile) {
-        return;
-      }
+  const mapTile = await getTile(user.p.x, user.p.y);
 
-      const resource = mapTile.resources.find(
-        (resource) => resource.id === resource_id
-      );
+  if (!mapTile) {
+    return c.body(null, 204);
+  }
 
-      if (!resource) {
-        return;
-      }
-
-      await markActionComplete(user.id, user.p.x, user.p.y);
-    },
-    async (err, stream) => {
-      console.error(err);
-    }
+  const resource = mapTile.resources.find(
+    (resource) => resource.id === resource_id
   );
+
+  if (!resource) {
+    return c.body(null, 204);
+  }
+
+  await markActionComplete(user.id, user.p.x, user.p.y);
+
+  return c.body(null, 204);
 });
 
 app.post("/game/chat", async (c) => {
@@ -528,26 +430,20 @@ app.post("/game/chat", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
 
-  return streamSSE(c, async (stream) => {
-    const user = await getUser(user_id);
+  const user = await getUser(user_id);
 
-    console.log(user_id, message);
+  if (!user) {
+    return c.redirect("");
+  }
 
-    if (!user) {
-      return;
-    }
+  await saveMessage(user_id, message);
 
-    await saveMessage(user_id, message);
-
-    await sendGame(stream, {
-      user_id,
-    });
-
-    PubSub.publish(CHAT_EVENT, {
-      user_id,
-      message,
-    });
+  PubSub.publish(CHAT_EVENT, {
+    user_id,
+    message,
   });
+
+  return c.body(null, 204);
 });
 
 app.delete("/game/inventory/:inventory_id", async (c) => {
@@ -555,172 +451,79 @@ app.delete("/game/inventory/:inventory_id", async (c) => {
   const user_id = session.get("user_id") ?? "";
   const inventory_id = c.req.param("inventory_id");
 
-  return streamSSE(c, async (stream) => {
-    const user = await getUser(user_id);
+  await removeFromInventoryById(user_id, inventory_id);
 
-    if (!user) {
-      return;
-    }
-
-    await removeFromInventoryById(user_id, inventory_id);
-
-    await sendGame(stream, {
-      user_id,
-    });
-  });
+  return c.body(null, 204);
 });
 
 app.delete("/game/system-messages", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
-  let id = 0;
-  return streamSSE(
-    c,
-    async (stream) => {
-      const user = await getPopulatedUser(user_id);
 
-      if (!user) {
-        await sendUserNotFound(stream, user_id, id);
-        return;
-      }
+  const user = await getPopulatedUser(user_id);
 
-      await clearAllUserSystemMessages(user.id);
+  if (!user) {
+    return c.redirect("");
+  }
 
-      await sendGame(stream, {
-        user_id,
-      });
-    },
-    async (err) => {
-      console.error(err);
-    }
-  );
+  await clearAllUserSystemMessages(user.id);
+
+  return c.body(null, 204);
 });
 
 app.delete("/game/system-messages/:system_message_id", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
   const systemMessageId = c.req.param("system_message_id");
-  let id = 0;
-  return streamSSE(
-    c,
-    async (stream) => {
-      const user = await getPopulatedUser(user_id);
 
-      if (!user) {
-        await sendUserNotFound(stream, user_id, id);
-        return;
-      }
+  const user = await getPopulatedUser(user_id);
 
-      if (!systemMessageId) {
-        return;
-      }
+  if (!user) {
+    return c.redirect("");
+  }
 
-      await removeSystemMessage(user.id, systemMessageId);
+  if (!systemMessageId) {
+    return c.body(null, 204);
+  }
 
-      await sendGame(stream, {
-        user_id,
-      });
-    },
-    async (err) => {
-      console.error(err);
-    }
-  );
+  await removeSystemMessage(user.id, systemMessageId);
+
+  return c.body(null, 204);
 });
 
 app.post("/game/quest/:quest_id", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
   const quest_id = c.req.param("quest_id");
-  return streamSSE(c, async (stream) => {
-    const user = await getUser(user_id);
 
-    if (!user) {
-      return;
-    }
+  const user = await getUser(user_id);
 
-    if (!quest_id) {
-      return;
-    }
+  if (!user) {
+    return c.redirect("");
+  }
 
-    const { availableQuests } = await questProgressManager.getZoneQuestsForUser(
-      user.id,
-      user.p.x,
-      user.p.y,
-      questManager
-    );
+  if (!quest_id) {
+    return c.body(null, 204);
+  }
 
-    const quest = availableQuests.find((q) => q.id === quest_id);
+  const { availableQuests } = await questProgressManager.getZoneQuestsForUser(
+    user.id,
+    user.p.x,
+    user.p.y,
+    questManager
+  );
 
-    if (!quest) {
-      await addSystemMessage(user.id, "No such quest", "error");
-      await sendGame(stream, {
-        user_id,
-      });
-      return;
-    }
+  const quest = availableQuests.find((q) => q.id === quest_id);
 
-    await questProgressManager.startQuest(user.id, quest);
-    await sendGame(stream, {
-      user_id,
-    });
-  });
-});
+  if (!quest) {
+    //TODO: Add update event
+    await addSystemMessage(user.id, "No such quest", "error");
+    return c.body(null, 204);
+  }
 
-app.get("/game/quest/:quest_id/objective/:objective_id", async (c) => {
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-  const quest_id = c.req.param("quest_id");
-  const objective_id = c.req.param("objective_id");
-  return streamSSE(c, async (stream) => {
-    const user = await getUser(user_id);
+  await questProgressManager.startQuest(user.id, quest);
 
-    if (!user) {
-      return;
-    }
-
-    if (!quest_id) {
-      return;
-    }
-
-    const interactions =
-      await questProgressManager.getZoneNPCInteractionsForUser(
-        user.id,
-        user.p.x,
-        user.p.y
-      );
-
-    const interaction = interactions.find(
-      (i) => i.quest_id === quest_id && i.objective.id === objective_id
-    );
-
-    if (!interaction) {
-      return;
-    }
-
-    for (let i = 0; i < 2; i++) {
-      await stream.sleep(i * 1500);
-      await stream.writeSSE(
-        fragmentEvent(
-          QuestNPCDialog({
-            step: i === 0 ? 0 : 1,
-            interaction,
-          }),
-          i
-        )
-      );
-    }
-
-    await stream.writeSSE(
-      fragmentEvent(
-        QuestNPCCompleted({
-          interaction,
-        }),
-        2
-      )
-    );
-
-    return;
-  });
+  return c.body(null, 204);
 });
 
 app.put("/game/quest/:quest_id/objective/:objective_id", async (c) => {
@@ -728,97 +531,84 @@ app.put("/game/quest/:quest_id/objective/:objective_id", async (c) => {
   const user_id = session.get("user_id") ?? "";
   const quest_id = c.req.param("quest_id");
   const objective_id = c.req.param("objective_id");
-  return streamSSE(c, async (stream) => {
-    const user = await getUser(user_id);
 
-    console.log(user_id, quest_id, objective_id);
+  const user = await getUser(user_id);
 
-    if (!user) {
-      return;
-    }
+  console.log(user_id, quest_id, objective_id);
 
-    if (!quest_id) {
-      return;
-    }
+  if (!user) {
+    return c.redirect("");
+  }
 
-    const interactions =
-      await questProgressManager.getZoneNPCInteractionsForUser(
-        user.id,
-        user.p.x,
-        user.p.y
-      );
+  if (!quest_id) {
+    return c.body(null, 204);
+  }
 
-    const interaction = interactions.find(
-      (i) => i.quest_id === quest_id && i.objective.id === objective_id
-    );
+  const interactions = await questProgressManager.getZoneNPCInteractionsForUser(
+    user.id,
+    user.p.x,
+    user.p.y
+  );
 
-    if (!interaction) {
-      await addSystemMessage(
-        user.id,
-        "Not sure what we're doing here...",
-        "error"
-      );
-      await sendGame(stream, {
-        user_id,
-      });
-      return;
-    }
+  const interaction = interactions.find(
+    (i) => i.quest_id === quest_id && i.objective.id === objective_id
+  );
 
-    await questProgressManager.updateObjectiveProgress(
+  if (!interaction || !interaction.objective.progress) {
+    await addSystemMessage(
       user.id,
-      interaction.quest_id,
-      interaction.objective.id,
-      1
+      "Not sure what we're doing here...",
+      "error"
     );
 
-    await sendGame(stream, {
-      user_id,
-    });
-  });
+    return c.body(null, 204);
+  }
+
+  await questProgressManager.updateObjectiveProgress(
+    user.id,
+    interaction.quest_id,
+    interaction.objective.id,
+    interaction.objective.progress?.current + 1
+  );
+
+  return c.body(null, 204);
 });
 
 app.post("/game/quest/:quest_id/complete", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
   const quest_id = c.req.param("quest_id");
-  return streamSSE(c, async (stream) => {
-    const user = await getUser(user_id);
-    console.log(user_id, quest_id);
 
-    if (!user) {
-      return;
-    }
+  const user = await getUser(user_id);
+  console.log(user_id, quest_id);
 
-    if (!quest_id) {
-      return;
-    }
+  if (!user) {
+    return c.redirect("");
+  }
 
-    const status = await questProgressManager.getQuestStatus(user.id, quest_id);
+  if (!quest_id) {
+    return c.body(null, 204);
+  }
 
-    if (!status) {
-      await addSystemMessage(user.id, "No such quest", "error");
-    } else if (status?.status === "in_progress") {
-      await addSystemMessage(user.id, "You're still on this quest!", "error");
-    } else if (status?.status === "completed") {
-      await addSystemMessage(
-        user.id,
-        "You've already completed this quest!",
-        "error"
-      );
-    } else if (status?.status === "available") {
-      await addSystemMessage(
-        user.id,
-        "You haven't started this quest!",
-        "error"
-      );
-    } else if (status?.status === "completable") {
-      await questProgressManager.completeQuest(user.id, quest_id, questManager);
-    }
+  const status = await questProgressManager.getQuestStatus(user.id, quest_id);
 
-    await sendGame(stream, {
-      user_id,
-    });
-  });
+  if (!status) {
+    await addSystemMessage(user.id, "No such quest", "error");
+  } else if (status?.status === "in_progress") {
+    await addSystemMessage(user.id, "You're still on this quest!", "error");
+  } else if (status?.status === "completed") {
+    await addSystemMessage(
+      user.id,
+      "You've already completed this quest!",
+      "error"
+    );
+  } else if (status?.status === "available") {
+    await addSystemMessage(user.id, "You haven't started this quest!", "error");
+  } else if (status?.status === "completable") {
+    await questProgressManager.completeQuest(user.id, quest_id, questManager);
+  }
+
+  return c.body(null, 204);
 });
 
 app.delete("/game/quest/:quest_id", async (c) => {

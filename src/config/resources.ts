@@ -667,3 +667,9 @@ export const resources: ResourceModel[] = [
     verb: "Craft",
   },
 ];
+
+export const resourcesLookup = new Map<string, ResourceModel>();
+
+for (const resource of resources) {
+  resourcesLookup.set(resource.id, resource);
+}

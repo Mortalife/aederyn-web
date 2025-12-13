@@ -7,6 +7,7 @@ import type {
 import { npcs, resources } from "../config.js";
 import { formatDistanceToNow } from "date-fns";
 import { getItemName } from "../user/items.js";
+import { npcsMap } from "../config/npcs.js";
 
 export const Quests = (props: {
   zoneQuests: ZoneQuests;
@@ -24,37 +25,11 @@ export const Quests = (props: {
           <h2 class="text-2xl font-bold">In the area</h2>
           <div class="grid grid-cols-1 gap-2">
             ${props.npcInteractions.map((interaction) => {
-              const npc = npcs.find(
-                (n) => n.entity_id === interaction.objective.entity_id
-              );
-
-              const name = npc?.name ?? "Unknown";
               return html`
                 <div
                   class="flex flex-col gap-4 justify-between p-4 border border-gray-400"
                 >
-                  <div class="flex flex-row gap-4 justify-between">
-                    <div class="flex flex-col gap-2 flex-1">
-                      <div class="flex flex-col justify-between gap-2">
-                        <span>${name}</span>
-                        <span class="text-xs">${npc?.backstory}</span>
-                      </div>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                      <button
-                        class="btn btn-accent"
-                        id="complete_${interaction.objective.id}"
-                        data-on-click="@get('/game/quest/${interaction.quest_id}/objective/${interaction
-                          .objective.id}')"
-                      >
-                        Talk
-                      </button>
-                    </div>
-                  </div>
-                  <div
-                    id="interaction-${interaction.objective.id}"
-                    class="flex flex-col gap-2"
-                  ></div>
+                  ${QuestNPC({ interaction })}
                 </div>
               `;
             })}
@@ -83,64 +58,59 @@ export const Quests = (props: {
   </div>`;
 };
 
-export const QuestNPCDialog = (props: {
-  step: 0 | 1;
-  interaction: ZoneInteraction;
-}) => {
-  const name =
-    npcs.find((n) => n.entity_id === props.interaction.objective.entity_id)
-      ?.name ?? "Unknown";
+export const DialogStep = (entity_id: string | null, dialog: string) => {
+  const speaker = entity_id ? npcsMap.get(entity_id)?.name ?? "Unknown" : "You";
 
-  return html` <button
-      class="btn btn-accent"
-      id="complete_${props.interaction.objective.id}"
-      data-on-click="@get('/game/quest/${props.interaction
-        .quest_id}/objective/${props.interaction.objective.id}')"
-      disabled
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class="animate-spin size-6"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-        />
-      </svg>
-      Talking
-    </button>
+  return html`<div class="flex flex-col gap-2 p-4 rounded">
+    <span class="font-bold text-sm">${speaker}</span>
+    ${dialog}
+  </div>`;
+};
+
+export const QuestNPC = (props: { interaction: ZoneInteraction }) => {
+  const progress = props.interaction.objective.progress;
+  const npc = npcsMap.get(props.interaction.objective.entity_id);
+  const name = npc?.name ?? "Unknown";
+
+  if (!progress) return null;
+
+  return html`
+    <div class="flex flex-row gap-4 justify-between">
+      <div class="flex flex-col gap-2 flex-1">
+        <div class="flex flex-col justify-between gap-2">
+          <span>${name}</span>
+          <span class="text-xs">${npc?.backstory}</span>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button
+          class="btn btn-accent"
+          id="complete_${props.interaction.objective.id}"
+          data-on:click="@put('/game/quest/${props.interaction
+            .quest_id}/objective/${props.interaction.objective.id}')"
+        >
+          ${progress.current === 0
+            ? "Talk"
+            : progress.current === progress.required - 1
+            ? "Finish"
+            : "Continue"}
+        </button>
+      </div>
+    </div>
     <div
       id="interaction-${props.interaction.objective.id}"
       class="flex flex-col gap-2"
     >
-      <div class="flex flex-col gap-2 p-4 rounded">
-        <span class="font-bold text-sm">${name}</span>
-        ${props.interaction.objective.dialog}
-      </div>
-      ${props.step === 1
-        ? html`<div class="flex flex-col gap-2  p-4 rounded">
-            <span class="font-bold text-sm">You:: </span>
-            ${props.interaction.objective.response}
-          </div>`
-        : null}
-    </div>`;
+      ${progress.current > 0 &&
+      Array.from({ length: progress.current }).map((_, i) =>
+        DialogStep(
+          props.interaction.objective.dialog_steps[i]?.entity_id ?? null,
+          props.interaction.objective.dialog_steps[i]?.dialog ?? ""
+        )
+      )}
+    </div>
+  `;
 };
-
-export const QuestNPCCompleted = (props: {
-  interaction: ZoneInteraction;
-}) => html` <button
-  class="btn btn-primary"
-  id="complete_${props.interaction.objective.id}"
-  data-on-click="@put('/game/quest/${props.interaction
-    .quest_id}/objective/${props.interaction.objective.id}')"
->
-  Complete
-</button>`;
 
 export const QuestHeader = (props: { type: keyof ZoneQuests }) => {
   switch (props.type) {
@@ -185,20 +155,20 @@ export const QuestItem = (props: {
     ${props.type === "in_progress"
       ? html`<button
           class="btn btn-warning"
-          data-on-click="@delete('/game/quest/${props.quest.id}')"
+          data-on:click="@delete('/game/quest/${props.quest.id}')"
         >
           Cancel Quest
         </button>`
       : props.type === "available"
       ? html`<button
           class="btn btn-accent"
-          data-on-click="@post('/game/quest/${props.quest.id}')"
+          data-on:click="@post('/game/quest/${props.quest.id}')"
         >
           Start
         </button>`
       : html`<button
           class="btn btn-accent"
-          data-on-click="@post('/game/quest/${props.quest.id}/complete')"
+          data-on:click="@post('/game/quest/${props.quest.id}/complete')"
         >
           Complete
         </button>`}

@@ -298,3 +298,5 @@ export const npcs: Npc[] = [
     },
   },
 ];
+
+export const npcsMap = new Map(npcs.map((n) => [n.entity_id, n]));

@@ -75,6 +75,11 @@ const CollectObjective = z.object({
   amount: z.number(),
 });
 
+const DialogStep = z.object({
+  entity_id: z.string().nullable(),
+  dialog: z.string(),
+});
+
 /**
  * Talk Objective
  * Speak to an NPC in a zone
@@ -86,8 +91,7 @@ const TalkObjective = z.object({
   progress: Progress.nullable(),
   entity_id: z.string(),
   zone_id: z.string(),
-  dialog: z.string(),
-  response: z.string(),
+  dialog_steps: z.array(DialogStep),
 });
 
 // const EscortObjective = BaseObjective.extend({
@@ -110,7 +114,7 @@ const ExploreObjective = z.object({
   progress: Progress.nullable(),
   zone_id: z.string(),
   chance: z.number(),
-  found_message: z.string().optional(),
+  found_message: z.string().nullable(),
 });
 
 // const SearchObjective = BaseObjective.extend({

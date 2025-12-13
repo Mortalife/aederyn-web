@@ -9,7 +9,6 @@ import {
   MAX_INVENTORY_SIZE,
   type RewardItem,
 } from "../config.js";
-import { toHtmlJson } from "../lib/datastar.js";
 import { calculateProgress, type UserAction } from "../user/action.js";
 import { restrictUserId, type ChatMessage } from "../social/chat.js";
 import { formatDistance } from "date-fns";
@@ -57,31 +56,31 @@ export const WorldMap = (
     >
       <button
         class="btn btn-square col-start-2 row-start-1 shadow"
-        data-on-click="@post('/game/move/up')"
+        data-on:click="@post('/game/move/up')"
       >
         Up
       </button>
       <button
         class="btn btn-square col-start-2 row-start-3 shadow"
-        data-on-click="@post('/game/move/down')"
+        data-on:click="@post('/game/move/down')"
       >
         Down
       </button>
       <button
         class="btn btn-square btn-primary col-start-2 row-start-2 shadow"
-        data-on-click="@post('/game/move/enter')"
+        data-on:click="@post('/game/move/enter')"
       >
         Enter
       </button>
       <button
         class="btn btn-square col-start-1 row-start-2 shadow"
-        data-on-click="@post('/game/move/left')"
+        data-on:click="@post('/game/move/left')"
       >
         Left
       </button>
       <button
         class="btn btn-square col-start-3 row-start-2 shadow"
-        data-on-click="@post('/game/move/right')"
+        data-on:click="@post('/game/move/right')"
       >
         Right
       </button>
@@ -169,45 +168,44 @@ export const Zone = (
   return html`<div
     id="zone"
     class="grid grid-cols-1 gap-4"
-    data-signals="${toHtmlJson({
+    data-signals="${JSON.stringify({
       _showActions: true,
       _showQuests: true,
       _showInventory: true,
       _showSocial: true,
     })}"
-    data-persist="_showActions _showQuests _showInventory _showSocial"
   >
     <h1 class="text-3xl font-bold">${worldTile.tile?.name}</h1>
     <div id="actions" class="flex flex-row gap-2">
       <button
         class="btn btn-xs"
-        data-on-click="$_showActions = !$_showActions"
-        data-class-btn-primary="$_showActions"
-        data-class-btn-outline="!$_showActions"
+        data-on:click="$_showActions = !$_showActions"
+        data-class:btn-primary="$_showActions"
+        data-class:btn-outline="!$_showActions"
       >
         Actions
       </button>
       <button
         class="btn btn-primary btn-xs"
-        data-on-click="$_showQuests = !$_showQuests"
-        data-class-btn-primary="$_showQuests"
-        data-class-btn-outline="!$_showQuests"
+        data-on:click="$_showQuests = !$_showQuests"
+        data-class:btn-primary="$_showQuests"
+        data-class:btn-outline="!$_showQuests"
       >
         Quests
       </button>
       <button
         class="btn btn-primary btn-xs"
-        data-on-click="$_showInventory = !$_showInventory"
-        data-class-btn-primary="$_showInventory"
-        data-class-btn-outline="!$_showInventory"
+        data-on:click="$_showInventory = !$_showInventory"
+        data-class:btn-primary="$_showInventory"
+        data-class:btn-outline="!$_showInventory"
       >
         Inventory
       </button>
       <button
         class="btn btn-primary btn-xs"
-        data-on-click="$_showSocial = !$_showSocial"
-        data-class-btn-primary="$_showSocial"
-        data-class-btn-outline="!$_showSocial"
+        data-on:click="$_showSocial = !$_showSocial"
+        data-class:btn-primary="$_showSocial"
+        data-class:btn-outline="!$_showSocial"
       >
         Social
       </button>
@@ -260,12 +258,12 @@ export const Zone = (
       <div
         id="chat"
         class="grid grid-cols-1 gap-2"
-        data-signals__ifmissing="${toHtmlJson({ message: "" })}"
+        data-signals__ifmissing="${JSON.stringify({ message: "" })}"
       >
         <h2 class="text-2xl font-bold">Chat</h2>
         <form
           class="flex flex-row gap-2"
-          data-on-submit="@post('/game/chat'); $message = ''"
+          data-on:submit="@post('/game/chat'); $message = ''"
         >
           <input
             type="text"
@@ -315,7 +313,7 @@ export const UserZoneInfo = (user: GameUser) => html`<div
   <div class="p-2 rounded">
     <span id="user-p">x: ${user.p.x}, y: ${user.p.y}</span>
   </div>
-  <button class="btn btn-neutral" data-on-click="@post('/game/move/exit')">
+  <button class="btn btn-neutral" data-on:click="@post('/game/move/exit')">
     Exit Zone
   </button>
 </div>`;
@@ -329,7 +327,7 @@ export const UserInfo = (
 >
   <div class="flex flex-row gap-2">
     ${messages ? Messages(messages) : null} ${user.z && UserZoneInfo(user)}
-    <button class="btn btn-square" data-on-click="@get('/game/refresh')">
+    <button class="btn btn-square" data-on:click="@get('/game/refresh')">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -410,13 +408,13 @@ export const ResourceItem = (props: {
     ${props.inprogress
       ? html`<button
           class="btn btn-warning"
-          data-on-click="@delete('/game/resources/${props.resource.id}')"
+          data-on:click="@delete('/game/resources/${props.resource.id}')"
         >
           Cancel
         </button>`
       : html`<button
           class="btn btn-accent"
-          data-on-click="@get('/game/resources/${props.resource.id}')"
+          data-on:click="@get('/game/resources/${props.resource.id}')"
         >
           ${props.resource.verb}
         </button>`}
@@ -530,7 +528,7 @@ export const InventorySlot = (props: {
   <div class="flex flex-col gap-2">
     <button
       class="btn btn-error"
-      data-on-click="@delete('/game/inventory/${props.slot.id}') "
+      data-on:click="@delete('/game/inventory/${props.slot.id}') "
     >
       Delete
     </button>
@@ -613,7 +611,7 @@ export const Messages = (messages: SystemMessage[], showLatest = false) => {
         >
           <button
             class="btn btn-sm btn-primary"
-            data-on-click="@delete('/game/system-messages')"
+            data-on:click="@delete('/game/system-messages')"
           >
             Remove All
           </button>
@@ -645,7 +643,7 @@ export const Message = (message: SystemMessage) => html`
     <div>
       <button
         class="btn btn-sm"
-        data-on-click="@delete('/game/system-messages/${message.id}')"
+        data-on:click="@delete('/game/system-messages/${message.id}')"
       >
         Remove
       </button>

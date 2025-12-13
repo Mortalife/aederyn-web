@@ -14,6 +14,21 @@ console.log(
   `${itemsWithoutSources.length}/${items.length}`
 );
 
+const itemsWithoutUses = items.filter((i) => {
+  const hasEffects = i.effects && i.effects.length > 0;
+  const usedInRecipes = resources.some((r) =>
+    r.required_items.some((ri) => ri.item_id === i.id)
+  );
+
+  return !hasEffects && !usedInRecipes;
+});
+
+console.log(
+  "Items without uses:",
+  itemsWithoutUses.map((i) => i.id),
+  `${itemsWithoutUses.length}/${items.length}`
+);
+
 function checkCircularDependencies(resources: ResourceModel[]): boolean {
   const visited = new Set<string>();
 
@@ -76,4 +91,13 @@ console.log(
   "Resources without tiles:",
   resourcesWithoutTiles.map((r) => r.id),
   `${resourcesWithoutTiles.length}/${resources.length}`
+);
+
+const tilesWithoutUses = tileTypes.filter(
+  (t) => t.resources.length === 0 && t.accessible
+);
+console.log(
+  "Tiles without uses (empty & accessible):",
+  tilesWithoutUses.map((t) => t.id),
+  `${tilesWithoutUses.length}/${tileTypes.length}`
 );

@@ -8,7 +8,7 @@ import { randomIndex } from "../lib/random.js";
 import { tutorialQuests } from "../config/quests.js";
 
 export class QuestManager {
-  static VERSION = 1;
+  static VERSION = 2;
   static migrations() {
     // Create tables if they don't exist
     return [
@@ -113,6 +113,8 @@ export class QuestManager {
       args: inactiveQuestIds,
     });
 
+    console.log("Adding new quests", newTileQuests.length);
+
     for (const newTileQuest of newTileQuests) {
       await client.execute({
         sql: `
@@ -170,12 +172,14 @@ export class QuestManager {
   }
 
   private async generateTileQuests(max: number): Promise<TileQuest[]> {
+    console.log("Generating tile quests");
     const quests = await this.getRandomQuests(max);
 
     const tileQuests: TileQuest[] = [];
     const starts_at = startOfHour(new Date());
     const ends_at = addHours(starts_at, 2);
 
+    console.log("Assigning tiles");
     const tiles: Record<string, ({ x: number; y: number } & Tile)[]> = {};
     for (let xAxis = 0; xAxis < MAP_WIDTH; xAxis++) {
       for (let yAxis = 0; yAxis < MAP_HEIGHT; yAxis++) {
@@ -187,6 +191,7 @@ export class QuestManager {
       }
     }
 
+    console.log("Assigning quests");
     for (const quest of quests) {
       //TODO: Ensure the zone_ids are valid
       if (typeof tiles[quest.giver.zone_id] === "undefined") {
@@ -293,6 +298,7 @@ export class QuestManager {
       tileQuests.push(tileQuest.data);
     }
 
+    console.log("Adding tutorial quests");
     for (const tileQuest of tutorialQuests) {
       const clone = structuredClone(tileQuest);
       clone.starts_at = starts_at.getTime();

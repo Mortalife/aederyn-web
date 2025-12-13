@@ -3,9 +3,7 @@ let workerB: Worker | null = null;
 
 const createWorker = (type: string) => {
   console.log("Creating worker:", type);
-  const newWorker = new Worker(new URL("loop.ts", import.meta.url).href, {
-    smol: true,
-  });
+  const newWorker = new Worker(new URL("loop.ts", import.meta.url).href);
 
   newWorker.postMessage(`worker-${type}`);
 

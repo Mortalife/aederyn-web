@@ -20,9 +20,17 @@ export const tutorialQuests: TileQuest[] = [
         description: "Speak with Doran the Village Elder",
         entity_id: "npc_village_elder",
         zone_id: "tile_sunny_meadow",
-        dialog:
-          "Welcome, newcomer. Every journey begins with small steps. Let's start by learning how to gather basic resources.",
-        response: "I'm ready to learn.",
+        dialog_steps: [
+          {
+            entity_id: "npc_village_elder",
+            dialog:
+              "Welcome, newcomer. Every journey begins with small steps. Let's start by learning how to gather basic resources.",
+          },
+          {
+            entity_id: null,
+            dialog: "Thank you, I'm ready to learn!!",
+          },
+        ],
         x: 10,
         y: 9,
         progress: null,
@@ -82,9 +90,18 @@ export const tutorialQuests: TileQuest[] = [
         description: "Speak with Forge the Blacksmith",
         entity_id: "npc_blacksmith",
         zone_id: "tile_rocky_outcrop",
-        dialog:
-          "So, you want to learn the art of crafting? Let's start with something simple but useful - a stone axe.",
-        response: "I'd like to learn how to craft tools.",
+
+        dialog_steps: [
+          {
+            entity_id: "npc_blacksmith",
+            dialog:
+              "So, you want to learn the art of crafting? Let's start with something simple but useful - a stone axe.",
+          },
+          {
+            entity_id: null,
+            dialog: "I'd like to learn how to craft tools.",
+          },
+        ],
         x: 11,
         y: 10,
         progress: null,
@@ -144,9 +161,14 @@ export const tutorialQuests: TileQuest[] = [
         description: "Meet with Sylvan the Ranger",
         entity_id: "npc_ranger",
         zone_id: "tile_trees",
-        dialog:
-          "The forest holds many secrets. Let me show you how to find what you need in the wilderness.",
-        response: "I'm ready to explore.",
+        dialog_steps: [
+          {
+            entity_id: "npc_ranger",
+            dialog:
+              "The forest holds many secrets. Let me show you how to find what you need in the wilderness.",
+          },
+          { entity_id: null, dialog: "I'm ready to explore." },
+        ],
         x: 9,
         y: 12,
         progress: null,

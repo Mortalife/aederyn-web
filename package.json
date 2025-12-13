@@ -3,7 +3,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file=.env --trace-deprecation src/index.ts",
+    "cron": "tsx watch --env-file=.env --trace-deprecation src/cron.ts",
     "resource-circular-deps": "tsx  src/config/index.ts",
+    "check": "tsc --noEmit && pnpm run resource-circular-deps",
     "vite-dev": "vite",
     "build": "vite build --mode client && tsup",
     "db": "pnpx @outerbase/studio local.db --port=3333"
@@ -17,13 +19,15 @@
     "hono": "^4.10.8",
     "hono-sessions": "^0.8.0",
     "openai": "^6.10.0",
+    "p-debounce": "^5.1.0",
+    "p-throttle": "^8.1.0",
     "tsx": "^4.19.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "24",
     "@hono/vite-build": "^1.2.1",
     "@types/bun": "latest",
+    "@types/node": "24",
     "autoprefixer": "^10.4.20",
     "daisyui": "^4.12.23",
     "postcss": "^8.4.49",

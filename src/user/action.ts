@@ -4,6 +4,7 @@ import {
   type GameUser,
   type ResourceModel,
 } from "../config.js";
+import { resourcesLookup } from "../config/resources.js";
 import { client } from "../database.js";
 import { PubSub, USER_EVENT } from "../sse/pubsub.js";
 import { markResourceUsed } from "../world/resources.js";
@@ -200,18 +201,25 @@ export const resourceRequirementsCheck = async (
 };
 
 export const processActions = async () => {
+  const now = Date.now();
   const response = await client.execute({
-    sql: "SELECT * FROM inprogress WHERE completed_at < ? LIMIT 500",
-    args: [Date.now()],
+    sql: "SELECT * FROM inprogress LIMIT 500",
+    args: [],
   });
 
   const actions = response.rows as unknown as UserAction[];
 
   for (const action of actions) {
-    const resource = resources.find((r) => r.id === action.resource_id);
+    if (action.completed_at > now) {
+      PubSub.publish(USER_EVENT, { user_id: action.user_id });
+      continue;
+    }
+
+    const resource = resourcesLookup.get(action.resource_id);
 
     if (!resource) {
       await markActionComplete(action.user_id, action.x, action.y);
+      PubSub.publish(USER_EVENT, { user_id: action.user_id });
       continue;
     }
 
@@ -222,6 +230,8 @@ export const processActions = async () => {
 
     if (!canPerformAction) {
       await markActionComplete(action.user_id, action.x, action.y);
+      PubSub.publish(USER_EVENT, { user_id: action.user_id });
+
       continue;
     }
 

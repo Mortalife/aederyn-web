@@ -11,7 +11,7 @@ interface Event {
 class EventBus extends EventEmitter {
   private client: Client;
   private lastProcessedEventId: number = 0;
-  private pollingInterval: NodeJS.Timer | null = null;
+  private pollingInterval: NodeJS.Timeout | null = null;
 
   constructor(url: string, authToken: string) {
     super();

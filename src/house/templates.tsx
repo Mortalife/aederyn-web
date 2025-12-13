@@ -1,12 +1,11 @@
 import { html } from "hono/html";
 import { classes } from "../templates/helpers.js";
-import { toHtmlJson } from "../lib/datastar.js";
 import { HouseMap, HouseMapTile } from "../config/house-tiles.js";
 
 export const HouseContainer = (houseMap?: HouseMap) => html`<div
   class="h-full"
   id="house-container"
-  data-on-load="@get('/house/feed')"
+  data-init="@get('/house/feed')"
 >
   ${houseMap
     ? House(houseMap)
@@ -41,7 +40,7 @@ export const Tile = (tile: HouseMapTile, isSelected?: boolean) => {
       isSelected || tile.actionInProgress ? "relative" : null,
       isSelected ? "border-2 border-black group" : null
     )}"
-    data-on-click="@post('/house/tile/${x}/${y}')"
+    data-on:click="@post('/house/tile/${x}/${y}')"
   >
     ${tile.actionInProgress ? TileActionInProgress(tile) : null}
     ${isSelected ? TileOptions(tile) : null} ${x}/${y}
@@ -77,9 +76,9 @@ export const TileOptions = (tile: HouseMapTile) => html`<div
       ? "top-[65px] -right-[115px] md:-top-4 md:-right-[295px]"
       : "top-[65px] -left-[115px] md:-top-4 md:-left-[295px]"
   )}"
-  data-signals="${toHtmlJson({ _show: false })}"
+  data-signals="${JSON.stringify({ _show: false })}"
   data-class="{'group-hover:opacity-100 group-hover:visible': $_show}"
-  data-on-load="setTimeout(() => $_show = true, 50)"
+  data-init="setTimeout(() => $_show = true, 50)"
 >
   <ul>
     ${tile.type.availableActions.map((action) => {
@@ -92,7 +91,7 @@ export const TileOptions = (tile: HouseMapTile) => html`<div
         <span class="font-bold">${action.description}</span>
         <button
           class="btn btn-sm"
-          data-on-click="@post('/house/tile/${tile.position.x}/${tile.position
+          data-on:click="@post('/house/tile/${tile.position.x}/${tile.position
             .y}/${action.id}')"
         >
           ${action.name}

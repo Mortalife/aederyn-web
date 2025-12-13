@@ -4,6 +4,7 @@ import { npcs, tileTypes, items, resources } from "../config.js";
 import schemas, { type Quest } from "../user/quest.js";
 import { anthropic } from "../lib/anthropic.js";
 import { questManager } from "../user/quest-generator.js";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 
 export const TaskSchema = z.object({
   id: z
@@ -124,9 +125,7 @@ export type Task = z.infer<typeof TaskSchema>;
 
 const RPGTask = z
   .object({
-    quests: z
-      .array(schemas.Quest)
-      .describe("The quests that the user can complete"),
+    quest: schemas.Quest.describe("The quest that the user can complete"),
   })
   .strict();
 
@@ -154,9 +153,10 @@ ${JSON.stringify(
 ${JSON.stringify(quests)}
 </existing-quests>
 
-Using the provided information about the game, and the required output schema, generate a set of quests complex quests which involved multiple objectives that the user can complete and fit into the world.
-Start with describing what the quest is about before outputting the json
-Ensure the json output is placed between <quests> and </quests>
+Using the provided information about the game, and the required output schema, generate a complex quest which involves multiple objectives that the user can complete and that fits into the world.
+Start with describing what the quest is about netweem <description></description> tags.
+Ensure the json output is placed between <quest> and </quest>
+You MUST output valid json ONLY between the <quest> and </quest> tags.
 `;
 
 export const generateQuestTemplates = async (
@@ -169,9 +169,9 @@ export const generateQuestTemplates = async (
 
   const quests = await questManager.getQuestTemplateNames();
 
-  const msg = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
-    max_tokens: 4000,
+  const msg = await anthropic.beta.messages.parse({
+    model: "claude-sonnet-4-5",
+    max_tokens: 8000,
     messages: [
       {
         role: "user",
@@ -185,16 +185,25 @@ export const generateQuestTemplates = async (
     return generateQuestTemplates(attempt + 1);
   }
 
-  const start = msg.content[0].text.indexOf("<quests>") + "<quests>".length;
-  const end = msg.content[0].text.indexOf("</quests>");
+  const start = msg.content[0].text.indexOf("<quest>") + "<quest>".length;
+  const end = msg.content[0].text.indexOf("</quest>");
+
+  console.log(start, end);
+  if (start === -1 || end === -1) {
+    console.log("Trying again...", attempt);
+    return generateQuestTemplates(attempt + 1);
+  }
   const questsText = msg.content[0].text.substring(start, end);
+
+  const fs = await import("fs/promises");
+  await fs.writeFile("quest-output.json", JSON.stringify(msg));
 
   const output = JSON.parse(questsText);
 
-  if (output && output.quests) {
+  if (output && output.quest) {
     const parsed = RPGTask.safeParse(output);
     if (parsed.success) {
-      return parsed.data.quests;
+      return [parsed.data.quest];
     }
   }
 

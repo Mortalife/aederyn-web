@@ -11,6 +11,7 @@ import type {
 } from "./quest.js";
 import { questManager, type QuestManager } from "./quest-generator.js";
 import { addSystemMessage } from "./system.js";
+import { PubSub, USER_EVENT } from "../sse/pubsub.js";
 
 export interface ZoneQuests {
   availableQuests: TileQuest[];
@@ -562,6 +563,10 @@ export class QuestProgressManager {
         args: [userId, quest.id, objective.id, required, Date.now()],
       });
     }
+
+    PubSub.publish(USER_EVENT, {
+      user_id: userId,
+    });
   }
 
   async completeQuest(
@@ -618,6 +623,10 @@ export class QuestProgressManager {
         .join(", ")}`,
       "success"
     );
+
+    PubSub.publish(USER_EVENT, {
+      user_id: userId,
+    });
   }
 
   private getDefaultRequiredAmount(objective: TileObjective): number {
@@ -627,6 +636,7 @@ export class QuestProgressManager {
       case "craft":
         return objective.amount;
       case "talk":
+        return objective.dialog_steps.length + 1; // 0 is not started, 1-length are steps - User needs to complete all dialog steps
       case "explore":
         return 1;
       default:
@@ -701,6 +711,10 @@ export class QuestProgressManager {
         args: [userId, questId],
       });
     }
+
+    PubSub.publish(USER_EVENT, {
+      user_id: userId,
+    });
   }
 
   async getQuestProgress(
