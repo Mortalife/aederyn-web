@@ -32,9 +32,6 @@ importers:
       hono-sessions:
         specifier: ^0.8.0
         version: 0.8.0
-      openai:
-        specifier: ^6.10.0
-        version: 6.10.0(ws@8.18.3)(zod@3.25.76)
       p-debounce:
         specifier: ^5.1.0
         version: 5.1.0
@@ -47,6 +44,9 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+      zod-to-json-schema:
+        specifier: ^3.25.0
+        version: 3.25.0(zod@3.25.76)
     devDependencies:
       '@hono/vite-build':
         specifier: ^1.2.1
@@ -981,18 +981,6 @@ packages:
   ohash@2.0.11:
     resolution: {integrity: sha512-RdR9FQrFwNBNXAr4GixM8YaRZRJ5PUWbKYbE5eOsrwAjJW0q2REGcf79oYPsLyskQCZG1PLN+S/K1V00joZAoQ==}
 
-  openai@6.10.0:
-    resolution: {integrity: sha512-ITxOGo7rO3XRMiKA5l7tQ43iNNu+iXGFAcf2t+aWVzzqRaS0i7m1K2BhxNdaveB+5eENhO0VY1FkiZzhBk4v3A==}
-    hasBin: true
-    peerDependencies:
-      ws: ^8.18.0
-      zod: ^3.25 || ^4.0
-    peerDependenciesMeta:
-      ws:
-        optional: true
-      zod:
-        optional: true
-
   p-debounce@5.1.0:
     resolution: {integrity: sha512-3DNQmB7HPRMSuZ9P8JQFzEr7156s1S5Lqpi3mSrsZe5AHvl4ONfGrdB5azWqeOpNejQiemgQBkyU+IDKR5nwyg==}
     engines: {node: '>=20'}
@@ -1269,6 +1257,11 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
+
+  zod-to-json-schema@3.25.0:
+    resolution: {integrity: sha512-HvWtU2UG41LALjajJrML6uQejQhNJx+JBO9IflpSja4R03iNWfKXrj6W2h7ljuLyc1nKS+9yDyL/9tD1U/yBnQ==}
+    peerDependencies:
+      zod: ^3.25 || ^4
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
@@ -1967,11 +1960,6 @@ snapshots:
 
   ohash@2.0.11: {}
 
-  openai@6.10.0(ws@8.18.3)(zod@3.25.76):
-    optionalDependencies:
-      ws: 8.18.3
-      zod: 3.25.76
-
   p-debounce@5.1.0: {}
 
   p-throttle@8.1.0: {}
@@ -2229,5 +2217,9 @@ snapshots:
   web-streams-polyfill@3.3.3: {}
 
   ws@8.18.3: {}
+
+  zod-to-json-schema@3.25.0(zod@3.25.76):
+    dependencies:
+      zod: 3.25.76
 
   zod@3.25.76: {}

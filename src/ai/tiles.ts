@@ -1,8 +1,8 @@
-import { zodResponseFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
 import { npcs, tileTypes, items, resources } from "../config.js";
-import { openai } from "../lib/openai.js";
 import { manifest } from "./design-doc.js";
+import { anthropic } from "../lib/anthropic.js";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 export const ItemSchema = z.object({
   id: z.string().describe("Unique identifier for the item"),
@@ -214,58 +214,82 @@ const Tiles = z
   })
   .strict();
 
-export const generateTiles = async () => {
-  const response = await openai.chat.completions.parse({
-    model: "gpt-4o-mini",
+const message = () => `
+You are a tile generator that generates RPG tiles based on a users request.
+You should take strictly into account the game items, zones, and NPC personalities.
+
+<manifest>
+${manifest}
+</manifest>
+<npcs>
+${JSON.stringify(npcs)}
+</npcs>
+<zones>
+${JSON.stringify(tileTypes)}
+</zones>
+<items>
+${JSON.stringify(items)}
+</items>
+<resources>
+${JSON.stringify(resources)}
+</resources>
+
+<output-schema>
+${JSON.stringify(zodToJsonSchema(Tiles, "tile_response").$schema)}
+</output-schema>
+
+Generate 10 new tiles which fit with the theme of the game. The tiles should be unique and not already exist in the game. They can be upgraded versions of existing tiles so long as they can be thematically explained.
+
+Ensure the json output is placed between <tiles> and </tiles> tags.
+You MUST output valid json ONLY between the <tiles> and </tiles> tags.
+`;
+
+export const generateTiles = async (
+  attempt: number = 0
+): Promise<z.infer<typeof Tiles>["tiles"] | null> => {
+  if (attempt > 3) {
+    console.log("Tried too many times...", attempt);
+    return null;
+  }
+
+  const msg = await anthropic.beta.messages.parse({
+    model: "claude-sonnet-4-5",
+    max_tokens: 8000,
     messages: [
       {
-        role: "system",
-        content: `You are a tile generator that generates RPG tiles based on a users request.
-          You should take strictly into account the game items, zones, and NPC personalities. 
-          <manifest>
-          ${manifest}
-          </manifest>
-          <npcs>
-          ${JSON.stringify(npcs)}
-          </npcs>
-          <zones>
-          ${JSON.stringify(tileTypes)}
-          </zones>
-          <items>
-          ${JSON.stringify(items)}
-          </items>
-          <resources>
-          ${JSON.stringify(resources)}
-          </resources>
-          `,
-      },
-      {
         role: "user",
-        content:
-          "Generate 10 new tiles which fit with the theme of the game. The tiles should be unique and not already exist in the game. The can be upgraded versions of existing tiles so long as they can be thematically explained.",
+        content: message(),
       },
     ],
-    max_tokens: 3000,
-    top_p: 1,
-    frequency_penalty: 0,
-    presence_penalty: 0,
-    response_format: zodResponseFormat(Tiles, "tile_response"),
   });
 
-  const tile_response = response.choices[0]?.message;
-  if (!tile_response) {
-    return null;
+  if (msg.content[0].type !== "text") {
+    console.log("Trying again...", attempt);
+    return generateTiles(attempt + 1);
   }
 
-  if (tile_response.parsed) {
-    const { tiles } = tile_response.parsed;
-    console.log(JSON.stringify(tiles, null, 2));
-    return tiles;
-  } else if (tile_response.refusal) {
-    // handle refusal
-    console.log("Task refused:", tile_response.refusal);
-    return null;
+  const start = msg.content[0].text.indexOf("<tiles>") + "<tiles>".length;
+  const end = msg.content[0].text.indexOf("</tiles>");
+
+  if (start === -1 || end === -1) {
+    console.log("Trying again...", attempt);
+    return generateTiles(attempt + 1);
   }
+
+  const tilesText = msg.content[0].text.substring(start, end);
+
+  try {
+    const output = JSON.parse(tilesText);
+    const parsed = Tiles.safeParse(output);
+    if (parsed.success) {
+      console.log(JSON.stringify(parsed.data.tiles, null, 2));
+      return parsed.data.tiles;
+    }
+  } catch (e) {
+    console.log("JSON parse error, trying again...", attempt);
+  }
+
+  return generateTiles(attempt + 1);
 };
 
 await generateTiles();

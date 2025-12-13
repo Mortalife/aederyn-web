@@ -11,7 +11,7 @@ A web-based multiplayer RPG built with modern web standards, focusing on simplic
 - **Templating**: TSX (JSX for server-side HTML generation).
 - **Database**: [LibSQL](https://turso.tech/libsql) (SQLite compatible).
 - **Styling**: [TailwindCSS](https://tailwindcss.com/) + [DaisyUI](https://daisyui.com/).
-- **AI Integration**: Anthropic & OpenAI SDKs for dynamic content generation.
+- **AI Integration**: Anthropic integration for dynamic content generation.
 - **Build Tooling**: [Vite](https://vitejs.dev/) & [tsup](https://tsup.egoist.dev/).
 
 ## 🛠️ Prerequisites
@@ -44,7 +44,6 @@ A web-based multiplayer RPG built with modern web standards, focusing on simplic
     Edit `.env` and provide the following:
 
     - `ANTHROPIC_API_KEY`: Required for AI generation features.
-    - `OPENAI_API_KEY`: Required for AI generation features.
     - `GENERATION_ENABLED`: Set to `true` to enable dynamic quest/content generation.
     - `SESSION_SECRET`: A random string for securing sessions.
     - `DATABASE_PATH`: (Optional) Path to the database file (defaults to current directory).

@@ -1,10 +1,9 @@
-import { zodResponseFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
 import { npcs, tileTypes, items, resources } from "../config.js";
 import schemas, { type Quest } from "../user/quest.js";
 import { anthropic } from "../lib/anthropic.js";
 import { questManager } from "../user/quest-generator.js";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 export const TaskSchema = z.object({
   id: z
@@ -144,9 +143,7 @@ ${JSON.stringify(resources)}
 </resources>
 
 <output-schema>
-${JSON.stringify(
-  zodResponseFormat(RPGTask, "quest_response").json_schema.schema
-)}
+${JSON.stringify(zodToJsonSchema(RPGTask, "quest_response").$schema)}
 </output-schema>
 
 <existing-quests>
