@@ -4,10 +4,10 @@ import { questManager, QuestManager } from "./user/quest-generator.js";
 const main = async () => {
   await client.execute("select 1");
   const now = new Date();
-  // if (now.getHours() === 0 && now.getMinutes() < 60) {
+  if (now.getHours() === 0 && now.getMinutes() < 60) {
     console.log("Adding new templates");
     await QuestManager.addNewTemplates();
-  // }
+  }
   console.log("Rotating active quests");
   await questManager.rotateActiveQuests();
 };

@@ -231,34 +231,35 @@ app.get("/game", async (c) => {
     }
   );
 
-  const updateGame = pDebounce.promise(async (user: GameUser) => {
-    await sendGame(stream, {
-      user_id: user.id,
-      user,
-    });
-  });
-
   PubSub.subscribe(CHAT_EVENT, processChatEvent);
 
-  const processZoneUpdate = async ({ x, y }: ZoneEvent) => {
+  const processZoneUpdate = pDebounce.promise(async ({ x, y }: ZoneEvent) => {
     if (x !== user.p.x || y !== user.p.y) {
       // No need to process the users own message
       return;
     }
+    await delay(200);
 
-    await updateGame(user);
-  };
+    await sendGame(stream, {
+      user_id: user.id,
+    });
+    console.log("zone update sent to user");
+  });
 
   PubSub.subscribe(ZONE_EVENT, processZoneUpdate);
 
-  const processUserEvent = async ({ user_id }: UserEvent) => {
+  const processUserEvent = pDebounce.promise(async ({ user_id }: UserEvent) => {
+    await delay(200);
     const user = await getPopulatedUser(user_id);
     if (user === null) {
       return;
     }
 
-    await updateGame(user);
-  };
+    await sendGame(stream, {
+      user_id: user.id,
+      user,
+    });
+  });
 
   PubSub.subscribe(USER_EVENT, processUserEvent);
 
