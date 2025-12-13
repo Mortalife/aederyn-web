@@ -163,9 +163,9 @@ export class QuestManager {
   private async getRandomQuests(amount: number): Promise<Quest[]> {
     const { rows } = await client.execute({
       sql: `
-        SELECT * FROM quests_templates ORDER BY RANDOM() LIMIT ?
+        SELECT * FROM quests_templates WHERE version = ? ORDER BY RANDOM() LIMIT ?
       `,
-      args: [amount],
+      args: [QuestManager.VERSION, amount],
     });
 
     return rows.map((row) => JSON.parse(row["data"] as string) as Quest);

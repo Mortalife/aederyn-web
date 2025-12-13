@@ -195,9 +195,6 @@ export const generateQuestTemplates = async (
   }
   const questsText = msg.content[0].text.substring(start, end);
 
-  const fs = await import("fs/promises");
-  await fs.writeFile("quest-output.json", JSON.stringify(msg));
-
   const output = JSON.parse(questsText);
 
   if (output && output.quest) {
