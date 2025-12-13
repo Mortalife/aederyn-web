@@ -1,24 +1,22 @@
 import { html, raw } from "hono/html";
 import { GameContainer } from "./game.js";
+import path from "node:path";
+import { readFile } from "node:fs/promises";
 
 let css = "";
 
 if (process.env.NODE_ENV === "production") {
-  const manifest = (
-    await import(
+  try {
+    const manifestContent = await readFile(
       path.join(process.cwd(), "./dist/static/.vite/manifest.json"),
-      {
-        with: {
-          type: "json",
-        },
-      }
-    )
-  ).default;
-
-  css = manifest["src/client.ts"].css[0];
+      "utf-8"
+    );
+    const manifest = JSON.parse(manifestContent);
+    css = manifest["src/client.ts"].css[0];
+  } catch (e) {
+    console.error("Failed to load production manifest:", e);
+  }
 }
-
-import path from "node:path";
 
 interface SiteData {
   title: string;
@@ -46,7 +44,7 @@ const Layout = async (props: SiteData) => {
         ? raw(`<script type="module" src="/static/assets/client.js"></script>
           <link rel="stylesheet" href="/static/${css}">`)
         : raw(
-            '<script type="module" src="http://localhost:5173/src/client.ts"></script>'
+            '<script type="module" src="/src/client.ts"></script>'
           )
     }
 

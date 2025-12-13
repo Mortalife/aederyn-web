@@ -36,37 +36,42 @@ export class QuestManager {
   }
 
   static async addNewTemplates() {
-    const templates = await generateQuestTemplates();
+    try {
+      const templates = await generateQuestTemplates();
 
-    if (!templates) {
-      return;
-    }
-
-    for (const template of templates) {
-      let id = template.id;
-      const { rows } = await client.execute({
-        sql: `
-          SELECT * FROM quests_templates WHERE quest_id = ?
-        `,
-        args: [id],
-      });
-
-      if (rows.length) {
-        id = `${id}-$v${Date.now()}`;
+      if (!templates) {
+        return;
       }
 
-      console.log("Adding new template", id, template.name);
+      for (const template of templates) {
+        let id = template.id;
+        const { rows } = await client.execute({
+          sql: `
+          SELECT * FROM quests_templates WHERE quest_id = ?
+        `,
+          args: [id],
+        });
 
-      await client.execute({
-        sql: `
+        if (rows.length) {
+          id = `${id}-$v${Date.now()}`;
+        }
+
+        console.log("Adding new template", id, template.name);
+
+        await client.execute({
+          sql: `
         INSERT INTO quests_templates (quest_id, version, data) VALUES (?, ?, ?) ON CONFLICT (quest_id) DO NOTHING;
       `,
-        args: [
-          template.id,
-          QuestManager.VERSION,
-          JSON.stringify({ ...template, id }),
-        ],
-      });
+          args: [
+            template.id,
+            QuestManager.VERSION,
+            JSON.stringify({ ...template, id }),
+          ],
+        });
+      }
+    } catch (error) {
+      console.error("Failed to generate quest templates", error);
+      return;
     }
   }
 

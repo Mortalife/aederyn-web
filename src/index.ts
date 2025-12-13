@@ -63,6 +63,7 @@ import pDebounce from "p-debounce";
 import { setTimeout as delay } from "timers/promises";
 import { compression } from "./lib/compression.js";
 import { getStream, returnStream } from "./sse/stream.js";
+import { isProduction } from "./lib/runtime.js";
 
 type SessionDataTypes = {
   user_id: string;
@@ -98,14 +99,17 @@ app.use("*", (c, next) => {
 
   return session(c, next);
 });
-app.use(
-  "/static/assets/*",
-  serveStatic({
-    root: "./dist/static/assets",
-    rewriteRequestPath: (path) => path.replace("/static/assets", ""),
-  })
-);
-app.use("/assets/*", serveStatic({ root: "./public" }));
+
+if (isProduction()) {
+  app.use(
+    "/static/assets/*",
+    serveStatic({
+      root: "./dist/static/assets",
+      rewriteRequestPath: (path) => path.replace("/static/assets", ""),
+    })
+  );
+  app.use("/assets/*", serveStatic({ root: "./public" }));
+}
 
 app.get("/", async (c) => {
   return c.html(
@@ -655,7 +659,11 @@ setInterval(() => {
     .catch((err) => console.error(err));
 }, 100);
 
-serve({
-  fetch: app.fetch,
-  port: 3000,
-});
+if (isProduction()) {
+  serve({
+    fetch: app.fetch,
+    port: 3000,
+  });
+}
+
+export default app;

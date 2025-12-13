@@ -2,12 +2,12 @@
   "name": "game-html",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --env-file=.env --trace-deprecation src/index.ts",
+    "dev": "vite",
     "cron": "tsx watch --env-file=.env --trace-deprecation src/cron.ts",
     "resource-circular-deps": "tsx  src/config/index.ts",
     "check": "tsc --noEmit && pnpm run resource-circular-deps",
-    "vite-dev": "vite",
     "build": "vite build --mode client && tsup",
+    "start": "NODE_ENV=production node --env-file=.env dist/code/index.js",
     "db": "pnpx @outerbase/studio local.db --port=3333"
   },
   "dependencies": {
@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@hono/vite-build": "^1.2.1",
+    "@hono/vite-dev-server": "^0.23.0",
     "@types/bun": "latest",
     "@types/node": "24",
     "autoprefixer": "^10.4.20",
@@ -34,7 +35,7 @@
     "tailwindcss": "^3.4.17",
     "tsup": "^8.3.5",
     "typescript": "^5.7.3",
-    "vite": "^6.0.7"
+    "vite": "^6.4.1"
   },
   "pnpm": {
     "overrides": {
