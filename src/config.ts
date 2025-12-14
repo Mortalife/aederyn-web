@@ -17,8 +17,11 @@ export const START_POSITION: Point = {
   y: Math.ceil(MAP_HEIGHT / 2),
 };
 
+export const USER_VERSION = 1;
+
 export const BASE_USER: GameUserModel = {
   id: "",
+  v: USER_VERSION,
   p: {
     // Position
     ...START_POSITION,

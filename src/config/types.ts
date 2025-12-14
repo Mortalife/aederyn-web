@@ -1,5 +1,6 @@
 export type GameUserModel = {
   id: string;
+  v: number;
   p: {
     x: number;
     y: number;

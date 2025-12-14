@@ -34,13 +34,8 @@ import {
   markUserOffline,
   markUserOnline,
 } from "./social/active.js";
+import { sendGame } from "./templates/game-update.js";
 import {
-  sendGame,
-  sendHouse,
-  sendUserNotFound,
-} from "./templates/game-update.js";
-import {
-  getInProgressAction,
   markActionComplete,
   markActionInProgress,
   processActions,

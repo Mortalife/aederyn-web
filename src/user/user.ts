@@ -1,13 +1,9 @@
 import { deepmerge } from "deepmerge-ts";
-import {
-  BASE_USER,
-  items,
-  type GameUser,
-  type GameUserModel,
-} from "../config.js";
+import { BASE_USER, type GameUser, type GameUserModel } from "../config.js";
 import { client } from "../database.js";
 import { PubSub, USER_EVENT } from "../sse/pubsub.js";
 import { itemsMap } from "../config/items.js";
+import { migrateUser, needsMigration } from "./migrations.js";
 
 export const getUserSync = async (id: string) => {
   if (!id) {
@@ -30,16 +26,20 @@ export const getUserSync = async (id: string) => {
   const user = result.rows[0];
   const data = JSON.parse(user["data"] as string) as typeof BASE_USER;
 
-  const newUser = deepmerge(BASE_USER, data, {
+  let newUser = deepmerge(BASE_USER, data, {
     id: user["id"],
-  });
+  }) as GameUserModel;
+
+  if (needsMigration(newUser)) {
+    newUser = migrateUser(newUser);
+  }
 
   await client.execute({
     sql: "UPDATE users SET data = ? WHERE id = ?",
     args: [JSON.stringify(newUser), id],
   });
 
-  return newUser as unknown as GameUserModel;
+  return newUser;
 };
 
 export const saveUser = async (id: string, data: GameUserModel) => {
@@ -62,8 +62,17 @@ export const getUser = async (id: string) => {
   }
 
   const data = result.rows[0]["data"];
-  const user = JSON.parse(data as string);
-  return user as GameUserModel;
+  let user = JSON.parse(data as string) as GameUserModel;
+
+  if (needsMigration(user)) {
+    user = migrateUser(user);
+    await client.execute({
+      sql: "UPDATE users SET data = ? WHERE id = ?",
+      args: [JSON.stringify(user), id],
+    });
+  }
+
+  return user;
 };
 
 export const getPopulatedUser = async (
