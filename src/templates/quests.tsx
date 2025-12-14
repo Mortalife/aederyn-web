@@ -4,9 +4,7 @@ import type {
   ZoneInteraction,
   ZoneQuests,
 } from "../user/quest-progress-manager.js";
-import { npcs, resources } from "../config.js";
 import { formatDistanceToNow } from "date-fns";
-import { getItemName } from "../user/items.js";
 import { npcsMap } from "../config/npcs.js";
 import { resourcesMap } from "../config/resources.js";
 import type { SystemMessage } from "../user/system.js";
@@ -57,6 +55,13 @@ const getQuestTypeStyle = (type: keyof ZoneQuests) => {
         bg: "bg-gray-500/10",
         border: "border-gray-500/30",
       };
+    case "discoverableQuests":
+      return {
+        icon: "",
+        color: "text-gray-400",
+        bg: "bg-gray-500/10",
+        border: "border-gray-500/30",
+      };
   }
 };
 
@@ -96,7 +101,6 @@ export const Quests = (props: {
 
     <!-- Quest Contextual Flash Messages -->
     ${ContextualFlash({ message: props.flashMessage })}
-
     ${hasNpcInteractions
       ? html`
           <div class="flex flex-col gap-3">
@@ -137,6 +141,8 @@ export const Quests = (props: {
     ${Object.entries(props.zoneQuests).map(
       ([type, quests]: [string, TileQuest[]]) => {
         if (!quests.length) return null;
+        if (type === "discoverableQuests") return null;
+
         const style = getQuestTypeStyle(type as keyof ZoneQuests);
         return html`
           <div class="flex flex-col gap-3">
@@ -303,22 +309,28 @@ export const QuestItem = (props: {
     }
     return null;
   };
-  const elsewhereLocation = props.type === "elsewhere" ? getObjectiveLocation() : null;
+  const elsewhereLocation =
+    props.type === "elsewhere" ? getObjectiveLocation() : null;
 
   return html`<div
     id="quest-${props.quest.id}"
     class="flex flex-col gap-3 p-4 rounded-lg ${style.bg} ${style.border} border"
   >
     <!-- Quest Header -->
-    <div class="flex flex-row items-start justify-between gap-4">
+    <div class="flex flex-col md:flex-row items-start justify-between gap-4">
       <div class="flex flex-col gap-1 flex-1">
         <div class="flex items-center gap-2">
           <span class="font-bold text-lg">${props.quest.name}</span>
-          <span
-            class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-gray-400"
-          >
-            ${formatDistanceToNow(props.quest.ends_at)} left
-          </span>
+          ${props.quest.is_tutorial
+            ? html`<span
+                class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                >Tutorial</span
+              >`
+            : html`<span
+                class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-gray-400"
+              >
+                ${formatDistanceToNow(props.quest.ends_at)} left
+              </span>`}
         </div>
         <p class="text-sm text-gray-300">${props.quest.description}</p>
       </div>
@@ -379,7 +391,8 @@ export const QuestItem = (props: {
       : null}
 
     <!-- Turn-in reminder -->
-    ${!props.quest.currentObjective && (props.type === "in_progress" || props.type === "elsewhere")
+    ${!props.quest.currentObjective &&
+    (props.type === "in_progress" || props.type === "elsewhere")
       ? html`<div
           class="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/20 border border-yellow-500/30"
         >

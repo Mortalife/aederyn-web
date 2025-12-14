@@ -127,7 +127,10 @@ export class QuestManager {
           INSERT INTO quests 
           (quest_id, version, startX, startY, endX, endY, starts_at, ends_at, data) 
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT (quest_id) DO NOTHING;
+          ON CONFLICT (quest_id) DO UPDATE SET
+            starts_at = excluded.starts_at,
+            ends_at = excluded.ends_at,
+            data = excluded.data;
         `,
         args: [
           newTileQuest.id,

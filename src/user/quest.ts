@@ -224,6 +224,7 @@ const TileQuest = Quest.extend({
   completion: TileCompletion,
   starts_at: z.number(),
   ends_at: z.number(),
+  is_tutorial: z.boolean().optional(),
 });
 
 export type TileNpcReference = z.infer<typeof TileNpcReference>;

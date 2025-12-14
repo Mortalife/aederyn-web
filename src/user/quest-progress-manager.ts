@@ -30,6 +30,7 @@ export interface ZoneQuests {
   inProgressQuests: TileQuest[];
   completableQuests: TileQuest[];
   elsewhereQuests: TileQuest[];
+  discoverableQuests: TileQuest[];
 }
 
 interface QuestProgress {
@@ -127,6 +128,7 @@ export class QuestProgressManager {
       inProgressQuests: [],
       completableQuests: [],
       elsewhereQuests: [],
+      discoverableQuests: [],
     };
 
     const tile = await getTile(x, y);
@@ -172,6 +174,8 @@ export class QuestProgressManager {
       if (!userQuestProgress) {
         if (quest.giver.x === x && quest.giver.y === y) {
           result.availableQuests.push(quest);
+        } else {
+          result.discoverableQuests.push(quest);
         }
 
         continue;

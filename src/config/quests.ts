@@ -74,6 +74,7 @@ export const tutorialQuests: TileQuest[] = [
     ],
     starts_at: 0,
     ends_at: 0,
+    is_tutorial: true,
   },
   {
     id: "quest_tutorial_crafting",
@@ -145,6 +146,7 @@ export const tutorialQuests: TileQuest[] = [
     ],
     starts_at: 0,
     ends_at: 0,
+    is_tutorial: true,
   },
   {
     id: "quest_tutorial_exploration",
@@ -216,5 +218,6 @@ export const tutorialQuests: TileQuest[] = [
     ],
     starts_at: 0,
     ends_at: 0,
+    is_tutorial: true,
   },
 ];

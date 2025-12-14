@@ -27,6 +27,11 @@ export const getOnlineUsers = async () => {
   return result.rows as unknown as UserOnlineStatus[];
 };
 
+export const getOnlineUsersCount = async () => {
+  const result = await client.execute("SELECT COUNT(*) as count FROM online");
+  return Number((result.rows[0] as unknown as { count: number }).count);
+};
+
 export const getOnlineStatus = async (user_id: string) => {
   const result = await client.execute({
     sql: "SELECT * FROM online WHERE user_id = ?",

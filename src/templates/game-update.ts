@@ -1,6 +1,10 @@
 import type { SSEStreamingApi } from "hono/streaming";
 import type { GameUser } from "../config.js";
-import { getOnlineStatus, type UserOnlineStatus } from "../social/active.js";
+import {
+  getOnlineStatus,
+  getOnlineUsersCount,
+  type UserOnlineStatus,
+} from "../social/active.js";
 import {
   calculateMessageHistory,
   getMessages,
@@ -71,6 +75,7 @@ export const sendGame = async (
 
   const players = await getZoneUsers(user.id, user.p.x, user.p.y);
   const messages = await getSystemMessages(user.id);
+  const totalPlayersOnline = await getOnlineUsersCount();
 
   const quests = await questProgressManager.getZoneQuestsForUser(
     user.id,
@@ -137,6 +142,7 @@ export const sendGame = async (
     isMobile,
     resourceObjectives,
     contextFlashes,
+    totalPlayersOnline,
   });
 
   if (start % 4 === 0) {

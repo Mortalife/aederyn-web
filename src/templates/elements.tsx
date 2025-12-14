@@ -30,7 +30,7 @@ import {
 } from "./icons.js";
 
 export const KeyboardShortcut = (shortcut: string) => html`<span
-  class="h-4 flex items-center justify-center text-[0.4rem] text-gray-400 font-mono p-[0.2rem] rounded-sm border border-gray-400 mix-blend-color-dodge"
+  class="h-4 hidden md:flex items-center justify-center text-[0.4rem] text-gray-400 font-mono p-[0.2rem] rounded-sm border border-gray-400 mix-blend-color-dodge"
   >${shortcut}</span
 >`;
 
@@ -68,8 +68,17 @@ export const MapIndicatorIcons = (indicator: MapIndicator) => html` <div
 
 export const MobileWorldMap = (
   map: WorldTile[],
-  mapIndicators: MapIndicator[]
+  mapIndicators: MapIndicator[],
+  quests?: ZoneQuests
 ) => {
+  const totalQuests = quests
+    ? quests.availableQuests.length +
+      quests.inProgressQuests.length +
+      quests.completableQuests.length +
+      quests.elsewhereQuests.length +
+      quests.discoverableQuests.length
+    : 0;
+
   return html`<div
     id="world-map"
     class="flex flex-col md:flex-row gap-3 px-4 items-center md:justify-between"
@@ -82,7 +91,9 @@ export const MobileWorldMap = (
     >
       ${MapInner(map, mapIndicators)}
     </div>
-    ${MapControls()}
+    <div class="flex flex-col gap-4 items-center">
+      ${MapControls()} ${totalQuests > 0 ? MapQuestsSummary(quests!) : null}
+    </div>
   </div>`;
 };
 
@@ -150,6 +161,134 @@ const MapTile = (
           ? "rounded-2xl"
           : "rounded-lg"} border border-white/20 pointer-events-none"
       ></div>
+    </div>
+  `;
+};
+
+const MapQuestsSummary = (quests: ZoneQuests) => {
+  const {
+    availableQuests,
+    inProgressQuests,
+    completableQuests,
+    elsewhereQuests,
+    discoverableQuests,
+  } = quests;
+
+  return html`
+    <div
+      class="flex flex-col gap-2 p-3 rounded-xl bg-black/20 border border-white/10 min-w-[220px] max-w-[280px]"
+    >
+      <div class="flex items-center gap-2 pb-2 border-b border-white/10">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+          />
+        </svg>
+        <span class="font-semibold text-sm">Quests</span>
+      </div>
+      <div class="flex flex-col gap-2 text-xs">
+        ${availableQuests.length > 0
+          ? html`<div class="flex flex-col gap-1">
+              <div
+                class="flex items-center gap-2 text-yellow-400 font-semibold"
+              >
+                <span class="font-bold size-4 text-center">!</span>
+                <span>Available</span>
+              </div>
+              ${availableQuests.map(
+                (q) =>
+                  html`<div
+                    class="pl-5 text-yellow-300/80 truncate"
+                    title="${q.name}"
+                  >
+                    ${q.name}
+                  </div>`
+              )}
+            </div>`
+          : null}
+        ${inProgressQuests.length > 0
+          ? html`<div class="flex flex-col gap-1">
+              <div
+                class="flex items-center gap-2 text-orange-400 font-semibold"
+              >
+                <span class="font-bold size-4 text-center">◆</span>
+                <span>In Progress</span>
+              </div>
+              ${inProgressQuests.map(
+                (q) =>
+                  html`<div
+                    class="pl-5 text-orange-300/80 truncate"
+                    title="${q.name}"
+                  >
+                    ${q.name}
+                  </div>`
+              )}
+            </div>`
+          : null}
+        ${completableQuests.length > 0
+          ? html`<div class="flex flex-col gap-1">
+              <div class="flex items-center gap-2 text-green-400 font-semibold">
+                <span class="font-bold size-4 text-center">?</span>
+                <span>Ready to Complete</span>
+              </div>
+              ${completableQuests.map(
+                (q) =>
+                  html`<div
+                    class="pl-5 text-green-300/80 truncate"
+                    title="${q.name}"
+                  >
+                    ${q.name}
+                  </div>`
+              )}
+            </div>`
+          : null}
+        ${elsewhereQuests.length > 0
+          ? html`<div class="flex flex-col gap-1">
+              <div class="flex items-center gap-2 text-gray-400 font-semibold">
+                <span class="font-bold size-4 text-center">→</span>
+                <span>Elsewhere</span>
+              </div>
+              ${elsewhereQuests.map(
+                (q) =>
+                  html`<div
+                    class="pl-5 text-gray-400/80 truncate"
+                    title="${q.name}"
+                  >
+                    ${q.name}
+                  </div>`
+              )}
+            </div>`
+          : null}
+        ${discoverableQuests.length > 0
+          ? html`<div class="flex flex-col gap-1 pt-2 border-white/10">
+              <div
+                class="flex items-center gap-2 text-purple-400 font-semibold"
+              >
+                <span
+                  class="flex items-center justify-center size-4 text-xs animate-pulse"
+                  >✦</span
+                >
+                <span class="italic"
+                  >${discoverableQuests.length} hidden
+                  ${discoverableQuests.length === 1 ? "quest" : "quests"}
+                  await...</span
+                >
+              </div>
+              <div class="pl-5 text-purple-300/60 text-[0.65rem] italic">
+                Explore the world to find them!
+              </div>
+            </div>`
+          : null}
+      </div>
     </div>
   `;
 };
@@ -305,11 +444,19 @@ export const MapControls = () => {
 export const WorldMap = (
   map: WorldTile[],
   mapIndicators: MapIndicator[],
-  isMobile = false
+  isMobile = false,
+  quests?: ZoneQuests
 ) => {
   if (isMobile) {
-    return MobileWorldMap(map, mapIndicators);
+    return MobileWorldMap(map, mapIndicators, quests);
   }
+
+  const totalQuests = quests
+    ? quests.availableQuests.length +
+      quests.inProgressQuests.length +
+      quests.completableQuests.length +
+      quests.elsewhereQuests.length
+    : 0;
 
   return html`<div
     id="world-map"
@@ -321,7 +468,8 @@ export const WorldMap = (
     >
       ${MapInner(map, mapIndicators)}
     </div>
-    ${MapControls()}
+    <div class="flex flex-col gap-4 items-center">${MapControls()}</div>
+    ${totalQuests > 0 ? MapQuestsSummary(quests!) : null}
   </div>`;
 };
 
@@ -484,12 +632,11 @@ const ZoneNavButton = (
   hasNotification = false
 ) => html`
   <button
-    class="flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all duration-200 min-w-[80px]
-           border border-transparent
-           hover:bg-white/10 hover:border-white/20
-           data-[active=true]:bg-white/15 data-[active=true]:border-white/30 data-[active=true]:shadow-lg"
+    class="flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all duration-200 min-w-[60px] md:min-w-[80px]
+           border border-transparent md:hover:bg-white/10 md:hover:border-white/20"
+    data-class="{'bg-white/15 border-gray/20 shadow-lg': $${signalName}}"
+    data-attr="{'data-active': $${signalName}}"
     data-on:click="$${signalName} = !$${signalName}"
-    data-attr:data-active="$${signalName}"
     data-on-keys:${shortcut.toLowerCase()}="el.click()"
   >
     <div class="relative">
@@ -500,12 +647,14 @@ const ZoneNavButton = (
           ></span>`
         : null}
     </div>
-    <span class="text-xs font-medium"
+    <span class="text-xs font-medium hidden md:inline"
       >${label}${count !== null
         ? html` <span class="opacity-60">(${count})</span>`
         : ""}</span
     >
-    <span class="text-[0.6rem] text-gray-400 font-mono">${shortcut}</span>
+    <span class="text-[0.6rem] text-gray-400 font-mono hidden md:inline"
+      >${shortcut}</span
+    >
   </button>
 `;
 
@@ -536,6 +685,7 @@ export const Zone = (
     inProgressQuests: [],
     completableQuests: [],
     elsewhereQuests: [],
+    discoverableQuests: [],
   },
   npcInteractions: ZoneInteraction[] = [],
   messages: SystemMessage[] = [],
@@ -558,7 +708,7 @@ export const Zone = (
     zoneQuests.completableQuests.length > 0 ||
     npcInteractions.length > 0;
 
-  return html`<div id="zone" class="flex flex-col gap-4">
+  return html`<div id="zone" class="flex flex-col gap-4 pr-1">
     <!-- Zone Header -->
     <div class="${theme.bg} ${theme.border} border rounded-xl p-4">
       <div
@@ -625,7 +775,7 @@ export const Zone = (
     <!-- Navigation Tabs -->
     <div
       id="zone-nav"
-      class="flex flex-wrap justify-center gap-2 p-2 rounded-xl bg-black/20 border border-white/10"
+      class="sticky top-0 md:top-auto flex justify-center md:justify-start gap-1 md:gap-2 p-2 rounded-xl bg-[#0d0d0d] md:bg-black/20 border-b border-white/10 md:border"
     >
       ${ZoneNavButton(
         "Actions",
@@ -1091,7 +1241,8 @@ export const GameMenu = (user: GameUser, messages?: SystemMessage[]) => {
 
 export const UserInfo = (
   user: GameUser,
-  messages?: SystemMessage[]
+  messages?: SystemMessage[],
+  totalPlayersOnline?: number
 ) => html`<div
   id="user-info"
   class="w-full flex flex-row justify-between items-center px-2"
@@ -1107,6 +1258,27 @@ export const UserInfo = (
           class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30"
           >World Map</span
         >`}
+    ${totalPlayersOnline !== undefined
+      ? html`<span
+          class="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center gap-1"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="size-3"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+            />
+          </svg>
+          ${totalPlayersOnline} online</span
+        >`
+      : null}
   </div>
   ${GameMenu(user, messages)}
 </div>`;

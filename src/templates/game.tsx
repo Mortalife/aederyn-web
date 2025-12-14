@@ -24,6 +24,7 @@ export const Game = (props: {
   isMobile?: boolean;
   resourceObjectives?: Set<string>;
   contextFlashes?: Map<string, SystemMessage>;
+  totalPlayersOnline?: number;
 }) => {
   return html`
     <div
@@ -39,10 +40,10 @@ export const Game = (props: {
         _showSocial: true,
       })}"
     >
-      <div id="info">${UserInfo(props.user, props.messages)}</div>
+      <div id="info">${UserInfo(props.user, props.messages, props.totalPlayersOnline)}</div>
       <div id="content" class="flex-1 flex flex-col gap-4 overflow-auto">
         ${!props.user.z
-          ? WorldMap(props.map, props.mapIndicators, props.isMobile)
+          ? WorldMap(props.map, props.mapIndicators, props.isMobile, props.quests)
           : Zone(
               props.user,
               props.map.find((z) => z.here)!,
