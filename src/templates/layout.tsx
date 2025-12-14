@@ -54,10 +54,12 @@ const Layout = async (props: SiteData) => {
         : raw('<script type="module" src="/src/client.ts"></script>')
     }
 
-    <!-- <link rel="prefetch" href="/assets/textures/cliff-texture.png" as="image">
-    <link rel="prefetch" href="/assets/textures/grass-texture.png" as="image">
-    <link rel="prefetch" href="/assets/textures/tree-texture.png" as="image">
-    <link rel="prefetch" href="/assets/textures/water-texture.png" as="image"> -->
+    <link rel="prefetch" href="/textures/cliff-texture.webp" as="image">
+    <link rel="prefetch" href="/textures/grass-texture.webp" as="image">
+    <link rel="prefetch" href="/textures/tree-texture.webp" as="image">
+    <link rel="prefetch" href="/textures/water-texture.webp" as="image">
+    <link rel="prefetch" href="/textures/camp-texture.webp" as="image">
+    <link rel="prefetch" href="/textures/settlement-texture.webp" as="image">
   </head>
   <body class="p-4">
     ${props.children}

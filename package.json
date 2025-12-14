@@ -7,7 +7,8 @@
     "cron": "tsx watch --env-file=.env --trace-deprecation src/cron.ts",
     "resource-circular-deps": "tsx  src/config/index.ts",
     "check": "tsc --noEmit && pnpm run resource-circular-deps",
-    "build": "vite build --mode client && tsup",
+    "build": "pnpm run textures && vite build --mode client && tsup",
+    "textures": "tsx scripts/optimize-textures.ts",
     "start": "NODE_ENV=production node --env-file=.env dist/code/index.js",
     "db": "pnpx @outerbase/studio local.db --port=3333"
   },
@@ -32,6 +33,7 @@
     "autoprefixer": "^10.4.20",
     "daisyui": "^4.12.23",
     "postcss": "^8.4.49",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.17",
     "tsup": "^8.3.5",
     "typescript": "^5.7.3",
@@ -40,6 +42,9 @@
   "pnpm": {
     "overrides": {
       "whatwg-url": "13.0.0"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "sharp"
+    ]
   }
 }

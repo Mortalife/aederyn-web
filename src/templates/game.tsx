@@ -21,12 +21,15 @@ export const Game = (props: {
   chatMessages?: ChatMessage[];
   quests?: ZoneQuests;
   npcInteractions?: ZoneInteraction[];
+  isMobile?: boolean;
 }) => {
   return html`
     <div
-      class="md:container md:mx-auto grid grid-rows-[50px_1fr_60px] gap-4 h-full items-between"
       id="game"
-      data-signals="${JSON.stringify({ user_id: props.user.id })}"
+      class="md:container md:mx-auto grid grid-rows-[50px_1fr_60px] gap-4 h-full items-between"
+      data-signals="${JSON.stringify({
+        user_id: props.user.id,
+      })}"
       data-signals__if-missing="${JSON.stringify({
         _showActions: true,
         _showQuests: true,
@@ -37,17 +40,17 @@ export const Game = (props: {
       <div id="info">${UserInfo(props.user, props.messages)}</div>
       <div id="content" class="flex flex-col gap-4">
         ${props.messages?.length ? Messages(props.messages, true) : null}
-        ${!props.user.z && WorldMap(props.map, props.mapIndicators)}
-        ${props.user.z &&
-        Zone(
-          props.user,
-          props.map.find((z) => z.here)!,
-          props.inprogress,
-          props.players,
-          props.chatMessages,
-          props.quests,
-          props.npcInteractions
-        )}
+        ${!props.user.z
+          ? WorldMap(props.map, props.mapIndicators, props.isMobile)
+          : Zone(
+              props.user,
+              props.map.find((z) => z.here)!,
+              props.inprogress,
+              props.players,
+              props.chatMessages,
+              props.quests,
+              props.npcInteractions
+            )}
       </div>
       <div
         class="p-4 flex flex-row gap-2 items-center justify-between"
@@ -75,7 +78,14 @@ export const Game = (props: {
 };
 
 export const GameContainer = (props: { user_id: string }) => html`
-  <div id="game-container" class="h-full" data-init="@get('/game')">
+  <div
+    id="game-container"
+    class="h-full"
+    data-signals="{
+      isMobile: window.innerWidth < 1024,
+    }"
+    data-init="@get('/game')"
+  >
     <div
       class="md:container md:mx-auto"
       id="game"

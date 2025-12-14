@@ -122,7 +122,10 @@ app.get("/", async (c) => {
 // app.route("/house", houseRoutes);
 
 app.post("/game/login", async (c) => {
-  const { user_id = "" } = await c.req.json<{ user_id: string }>();
+  const { user_id = "", isMobile = false } = await c.req.json<{
+    user_id: string;
+    isMobile: boolean;
+  }>();
   const user = await getUserSync(user_id);
 
   if (user) {
@@ -147,6 +150,7 @@ app.post("/game/login", async (c) => {
 
       await sendGame(stream, {
         user_id: user.id,
+        isMobile,
       });
     },
     async (err) => {
@@ -185,6 +189,10 @@ app.get("/game", async (c) => {
   const session_user_id = session.get("user_id") ?? "";
   let id = 0;
 
+  const datastarParam = c.req.query("datastar");
+  const signals = datastarParam ? JSON.parse(datastarParam) : {};
+  const isMobile = signals.isMobile as boolean | undefined;
+
   const stream = getStream(c);
   const tempUser = await getPopulatedUser(session_user_id);
   if (!tempUser) {
@@ -208,6 +216,7 @@ app.get("/game", async (c) => {
   await sendGame(stream, {
     user_id: user.id,
     user,
+    isMobile,
   });
 
   const processChatEvent = pDebounce.promise(
@@ -237,6 +246,7 @@ app.get("/game", async (c) => {
 
     await sendGame(stream, {
       user_id: session_user_id,
+      isMobile,
     });
   });
 
@@ -281,6 +291,11 @@ app.get("/game", async (c) => {
 app.get("/game/refresh", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
+
+  const datastarParam = c.req.query("datastar");
+  const signals = datastarParam ? JSON.parse(datastarParam) : {};
+  const isMobile = signals.isMobile as boolean | undefined;
+
   return streamSSE(
     c,
     async (stream) => {
@@ -300,6 +315,7 @@ app.get("/game/refresh", async (c) => {
       await sendGame(stream, {
         user_id: user.id,
         user,
+        isMobile,
       });
     },
     async (err, stream) => {
@@ -621,24 +637,20 @@ app.delete("/game/quest/:quest_id", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
   const quest_id = c.req.param("quest_id");
-  return streamSSE(c, async (stream) => {
-    const user = await getUser(user_id);
-    console.log(user_id, quest_id);
+  const user = await getUser(user_id);
+  console.log(user_id, quest_id);
 
-    if (!user) {
-      return;
-    }
+  if (!user) {
+    return c.redirect("");
+  }
 
-    if (!quest_id) {
-      return;
-    }
+  if (!quest_id) {
+    return c.body(null, 204);
+  }
 
-    await questProgressManager.cancelQuest(user.id, quest_id);
+  await questProgressManager.cancelQuest(user.id, quest_id);
 
-    await sendGame(stream, {
-      user_id,
-    });
-  });
+  return c.body(null, 204);
 });
 
 app.get("/health", (c) => {

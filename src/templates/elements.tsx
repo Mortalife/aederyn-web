@@ -1,4 +1,5 @@
 import { html } from "hono/html";
+import { textureMap } from "../config/tiles.js";
 import type { WorldTile } from "../world/index.js";
 import {
   type InventoryItem,
@@ -25,43 +26,159 @@ export const KeyboardShortcut = (shortcut: string) => html`<span
   >${shortcut}</span
 >`;
 
-export const WorldMap = (
+export const MapIndicatorIcons = (indicator: MapIndicator) => html` <div
+  class="flex flex-row gap-1"
+>
+  ${indicator.available
+    ? html`<svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="3"
+        stroke="currentColor"
+        class="size-6 text-yellow-300"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+        />
+      </svg> `
+    : null}
+  ${indicator.objective
+    ? html`<svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="size-6 text-orange-600"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+        />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+        />
+      </svg> `
+    : null}
+  ${indicator.completable
+    ? html`<svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="size-6 text-green-600"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
+        />
+      </svg> `
+    : null}
+</div>`;
+
+export const MobileWorldMap = (
   map: WorldTile[],
   mapIndicators: MapIndicator[]
-) => html`<div
-  id="world-map"
-  class="grid grid-rows-1 justify-center items-center"
->
-  <div
+) => {
+  return html`<div
+    id="world-map"
+    class="flex flex-col md:flex-row gap-3 px-4 items-center md:justify-between"
+    data-signal="${JSON.stringify({ _mapControlIndicator: false })}"
+  >
+    <!-- Full 5x5 grid with overflow hidden, grid centered in viewport -->
+    <div
+      class="max-w-[80vw] md:max-w-[60vw] max-h-[80vh] aspect-square overflow-hidden rounded-lg border border-gray-600 flex items-center justify-center"
+      style="background-color: #222;"
+    >
+      ${Map(map, mapIndicators)}
+    </div>
+    ${MapControls()}
+  </div>`;
+};
+
+const getTileTexture = (texture: string | undefined): string | null => {
+  return texture ? textureMap[texture] ?? null : null;
+};
+
+const MapTile = (
+  worldTile: WorldTile,
+  indicators: MapIndicator | undefined
+) => {
+  const bgColor = worldTile?.tile?.backgroundColor ?? "#333";
+  const textColor = worldTile?.tile?.color ?? "#fff";
+  const texture = getTileTexture(worldTile?.tile?.texture);
+  const isHere = worldTile.here;
+
+  const baseClasses = `
+    relative overflow-hidden
+    transition-all duration-300 ease-out
+    flex flex-col items-center justify-center text-center
+    ${isHere ? "rounded-2xl scale-110 z-10 ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-900 shadow-xl shadow-yellow-400/30" : "rounded-lg hover:scale-105 hover:z-5"}
+  `;
+
+  const textureStyle = texture
+    ? `background-image: url('${texture}'); background-size: cover; background-position: center;`
+    : `background-color: ${bgColor};`;
+
+  return html`
+    <div
+      class="${baseClasses}"
+      style="${textureStyle}"
+    >
+      <!-- Gradient overlay for readability -->
+      <div
+        class="absolute inset-0 ${isHere ? 'rounded-2xl' : 'rounded-lg'}"
+        style="background: linear-gradient(135deg, ${bgColor}ee 0%, ${bgColor}cc 50%, ${bgColor}aa 100%);"
+      ></div>
+      
+      <!-- Content layer -->
+      <div class="relative z-10 flex flex-col items-center justify-center p-2 gap-1" style="color: ${textColor};">
+        <span class="font-bold text-sm leading-tight drop-shadow-md ${isHere ? 'text-base' : ''}">
+          ${worldTile?.tile?.name ?? "Unknown"}
+        </span>
+        <span class="text-xs opacity-75 font-mono ${isHere ? 'font-semibold opacity-100' : ''}">
+          ${worldTile.x}, ${worldTile.y}
+        </span>
+        ${indicators ? MapIndicatorIcons(indicators) : null}
+      </div>
+      
+      <!-- Subtle inner border -->
+      <div class="absolute inset-0 ${isHere ? 'rounded-2xl' : 'rounded-lg'} border border-white/20 pointer-events-none"></div>
+    </div>
+  `;
+};
+
+export const Map = (map: WorldTile[], mapIndicators: MapIndicator[]) => {
+  return html`<div
     id="map"
-    style="background-color: #333;"
-    class="relative w-[500px] md:w-[700px] p-4 grid grid-rows-5 grid-cols-5 grid-flow-col aspect-square gap-1"
+    class="min-w-[500px] relative p-4 grid grid-rows-5 grid-cols-5 grid-flow-col aspect-square gap-2 bg-gray-900 rounded-xl"
   >
     ${map.map((worldTile) => {
       const indicators = mapIndicators.find(
         (indicator) =>
           indicator.x === worldTile.x && indicator.y === worldTile.y
       );
-      return html`<div
-        class="${worldTile.here
-          ? "rounded-full scale-125 border-4 shadow-lg"
-          : ""} transition duration-500 text-sm flex flex-col items-center justify-center text-center p-4 border border-gray-400"
-        style=" background-color: ${worldTile?.tile?.backgroundColor ??
-        "#333"}; color: ${worldTile?.tile?.color ?? "#000"};"
-      >
-        <span class="font-bold">${worldTile?.tile?.name}</span>
-        <span class="text-sm ${worldTile.here ? "font-bold" : ""}"
-          >${worldTile.x}, ${worldTile.y}</span
-        >
-        ${indicators ? MapIndicatorIcons(indicators) : null}
-      </div>`;
+      return MapTile(worldTile, indicators);
     })}
+  </div>`;
+};
+
+export const MapControls = () => {
+  return html`
     <div
       id="map-controls"
       data-signal="${JSON.stringify({
         _mapControlIndicator: false,
       })}"
-      class="bg-black/10 p-2 rounded-full w-[172px] h-[172px] absolute bottom-10 right-10 grid grid-cols-3 grid-rows-3 gap-2"
+      class="sticky bg-black/10 p-2 rounded-full w-[172px] h-[172px]  grid grid-cols-3 grid-rows-3 gap-2"
     >
       <button
         class="btn btn-square col-start-2 row-start-1 shadow"
@@ -184,66 +301,31 @@ export const WorldMap = (
         <span class="sr-only">Right</span>
       </button>
     </div>
-  </div>
-</div>`;
+  `;
+};
 
-export const MapIndicatorIcons = (indicator: MapIndicator) => html` <div
-  class="flex flex-row gap-1"
->
-  ${indicator.available
-    ? html`<svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="3"
-        stroke="currentColor"
-        class="size-6 text-yellow-300"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
-        />
-      </svg> `
-    : null}
-  ${indicator.objective
-    ? html`<svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class="size-6 text-orange-600"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-        />
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-        />
-      </svg> `
-    : null}
-  ${indicator.completable
-    ? html`<svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class="size-6 text-green-600"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
-        />
-      </svg> `
-    : null}
-</div>`;
+export const WorldMap = (
+  map: WorldTile[],
+  mapIndicators: MapIndicator[],
+  isMobile = false
+) => {
+  if (isMobile) {
+    return MobileWorldMap(map, mapIndicators);
+  }
+
+  return html`<div
+    id="world-map"
+    class="flex flex-col gap-4 justify-center items-center"
+  >
+    <div
+      class="max-w-[50vw] max-h-[50vh] aspect-square overflow-hidden rounded-lg border border-gray-600 flex items-center justify-center"
+      style="background-color: #222;"
+    >
+      ${Map(map, mapIndicators)}
+    </div>
+    ${MapControls()}
+  </div>`;
+};
 
 export const Zone = (
   user: GameUser,

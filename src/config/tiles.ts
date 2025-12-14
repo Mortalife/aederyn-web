@@ -1,9 +1,20 @@
+export const textureMap: Record<string, string> = {
+  tree: "/textures/tree-texture.webp",
+  grass: "/textures/grass-texture.webp",
+  water: "/textures/water-texture.webp",
+  cliff: "/textures/cliff-texture.webp",
+  camp: "/textures/camp-texture.webp",
+  settlement: "/textures/settlement-texture.webp",
+  bridge: "/textures/bridge-texture.webp",
+};
+
 export type TileType = {
   id: string;
   name: string;
   color: string;
   backgroundColor: string;
   theme: string;
+  texture?: keyof typeof textureMap;
   resources: string[];
   rarity: number;
   accessible: boolean;
@@ -18,6 +29,7 @@ export const tileTypes: TileType[] = [
     color: "#a6adbb",
     backgroundColor: "#2f1e1e",
     theme: "storm",
+    texture: "cliff",
     resources: [],
     rarity: 0,
     accessible: false,
@@ -28,6 +40,7 @@ export const tileTypes: TileType[] = [
     color: "#1d201d",
     backgroundColor: "#7f54cd",
     theme: "storm",
+    texture: "settlement",
     resources: [
       "resource_crafting_item_stone_axe_01",
       "resource_crafting_bucket",
@@ -48,6 +61,7 @@ export const tileTypes: TileType[] = [
     color: "#006400",
     backgroundColor: "#90EE90",
     theme: "lemonade",
+    texture: "grass",
     resources: ["resource_grass_01"],
     rarity: 0.3,
     accessible: true,
@@ -58,6 +72,7 @@ export const tileTypes: TileType[] = [
     color: "#ffdfcb",
     backgroundColor: "#1f691f",
     theme: "forest",
+    texture: "tree",
     resources: ["item_stick_01", "resource_trees_01", "resource_trees_oak_02"],
     rarity: 0.3,
     accessible: true,
@@ -68,6 +83,7 @@ export const tileTypes: TileType[] = [
     color: "#F0F0F0",
     backgroundColor: "#696969",
     theme: "coffee",
+    texture: "cliff",
     resources: ["resource_stones_01", "resource_quartz_deposit"],
     rarity: 0.3,
     accessible: true,
@@ -78,6 +94,7 @@ export const tileTypes: TileType[] = [
     color: "#8B4513",
     backgroundColor: "#FFFF00",
     theme: "meadow",
+    texture: "grass",
     resources: ["resource_blooming_flower", "resource_fresh_grass"],
     rarity: 0.3,
     accessible: true,
@@ -88,6 +105,7 @@ export const tileTypes: TileType[] = [
     color: "#ADFF2F",
     backgroundColor: "#006400",
     theme: "forest",
+    texture: "tree",
     resources: [
       "resource_thicket_branches",
       "resource_vine_growth",
@@ -103,6 +121,7 @@ export const tileTypes: TileType[] = [
     color: "#ADFF2F",
     backgroundColor: "#2F4F4F",
     theme: "swamp",
+    texture: "water",
     resources: ["resource_mud", "resource_cattails"],
     rarity: 0.25,
     accessible: true,
@@ -113,6 +132,7 @@ export const tileTypes: TileType[] = [
     color: "#FFD700",
     backgroundColor: "#228B22",
     theme: "forest",
+    texture: "tree",
     resources: ["resource_enchanted_trees", "resource_fairy_flower"],
     rarity: 0.2,
     accessible: true,
@@ -124,6 +144,7 @@ export const tileTypes: TileType[] = [
     color: "#FFD700",
     backgroundColor: "#8B4513",
     theme: "mine",
+    texture: "cliff",
     resources: [
       "resource_mine_ore",
       "resource_dust",
@@ -138,6 +159,7 @@ export const tileTypes: TileType[] = [
     color: "#FFFFFF",
     backgroundColor: "#4169E1",
     theme: "waterfall",
+    texture: "water",
     resources: ["resource_spring_water", "resource_water_plants"],
     rarity: 0.2,
     accessible: true,
@@ -148,6 +170,7 @@ export const tileTypes: TileType[] = [
     color: "#FFD700",
     backgroundColor: "#800080",
     theme: "city",
+    texture: "settlement",
     resources: [],
     rarity: 0.2,
     accessible: true,
@@ -159,6 +182,7 @@ export const tileTypes: TileType[] = [
     color: "#FFFFFF",
     backgroundColor: "#A9A9A9",
     theme: "mountain",
+    texture: "cliff",
     resources: ["resource_mountain_rock", "resource_rare_mineral"],
     rarity: 0.15,
     accessible: true,
@@ -169,6 +193,7 @@ export const tileTypes: TileType[] = [
     color: "#FFFFFF",
     backgroundColor: "#A9A9A9",
     theme: "mountain",
+    texture: "cliff",
     resources: ["resource_mountain_rock", "resource_rare_mineral"],
     rarity: 0.15,
     accessible: true,
@@ -179,6 +204,7 @@ export const tileTypes: TileType[] = [
     color: "#191970",
     backgroundColor: "#E0FFFF",
     theme: "frozen",
+    texture: "water",
     resources: ["resource_ice_crystal", "resource_frozen_rock"],
     rarity: 0.1,
     accessible: true,
@@ -189,6 +215,7 @@ export const tileTypes: TileType[] = [
     color: "#DDA0DD",
     backgroundColor: "#2F4F4F",
     theme: "cave",
+    texture: "cliff",
     resources: ["resource_ruby", "resource_cave_fungus"],
     rarity: 0.1,
     accessible: true,
@@ -199,6 +226,7 @@ export const tileTypes: TileType[] = [
     color: "#FF69B4",
     backgroundColor: "#4B0082",
     theme: "cave",
+    texture: "cliff",
     resources: [
       "resource_amethyst",
       "resource_crystal_gems",
@@ -213,6 +241,7 @@ export const tileTypes: TileType[] = [
     color: "#FFD700",
     backgroundColor: "#8B4513",
     theme: "retro",
+    texture: "camp",
     resources: ["resource_campfire_01"],
     rarity: 0.02,
     accessible: true,
@@ -223,6 +252,7 @@ export const tileTypes: TileType[] = [
     color: "#F0E68C",
     backgroundColor: "#708090",
     theme: "nord",
+    texture: "settlement",
     resources: [
       "resource_crafting_item_broom_01",
       "resource_crafting_advanced_pickaxe",

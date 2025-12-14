@@ -27,12 +27,14 @@ export const sendGame = async (
     user,
     map,
     chatMessages,
+    isMobile,
   }: {
     user_id: string;
     status?: UserOnlineStatus;
     user?: GameUser;
     map?: WorldTile[];
     chatMessages?: ChatMessage[];
+    isMobile?: boolean;
   },
   id: number = 1
 ) => {
@@ -98,6 +100,7 @@ export const sendGame = async (
     chatMessages,
     quests,
     npcInteractions,
+    isMobile,
   });
 
   if (start % 4 === 0) {

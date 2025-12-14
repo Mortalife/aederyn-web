@@ -664,6 +664,10 @@ export class QuestProgressManager {
         quest_id: questId,
       },
     });
+
+    PubSub.publish(USER_EVENT, {
+      user_id: userId,
+    });
   }
 
   async updateObjectiveProgress(
