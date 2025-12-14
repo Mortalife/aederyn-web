@@ -104,7 +104,13 @@ if (isProduction()) {
     })
   );
 }
-app.use("/assets/*", serveStatic({ root: "./public" }));
+app.use(
+  "/assets/*",
+  serveStatic({
+    root: "./public",
+    rewriteRequestPath: (path) => path.replace("/assets", ""),
+  })
+);
 
 app.get("/", async (c) => {
   return c.html(
