@@ -1,12 +1,4 @@
-export const textureMap: Record<string, string> = {
-  tree: "/textures/tree-texture.webp",
-  grass: "/textures/grass-texture.webp",
-  water: "/textures/water-texture.webp",
-  cliff: "/textures/cliff-texture.webp",
-  camp: "/textures/camp-texture.webp",
-  settlement: "/textures/settlement-texture.webp",
-  bridge: "/textures/bridge-texture.webp",
-};
+import { textureMap } from "./assets.js";
 
 export type TileType = {
   id: string;

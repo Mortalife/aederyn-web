@@ -1,5 +1,5 @@
 import { html } from "hono/html";
-import { textureMap } from "../config/tiles.js";
+import { textureMap } from "../config/assets.js";
 import type { WorldTile } from "../world/index.js";
 import {
   type InventoryItem,
@@ -20,6 +20,7 @@ import type {
   ZoneQuests,
 } from "../user/quest-progress-manager.js";
 import { Quests } from "./quests.js";
+import { getPublicPath } from "../config/assets.js";
 
 export const KeyboardShortcut = (shortcut: string) => html`<span
   class="h-4 flex items-center justify-center text-[0.4rem] text-gray-400 font-mono p-[0.2rem] rounded-sm border border-gray-400 mix-blend-color-dodge"
@@ -105,7 +106,7 @@ export const MobileWorldMap = (
 };
 
 const getTileTexture = (texture: string | undefined): string | null => {
-  return texture ? textureMap[texture] ?? null : null;
+  return texture ? getPublicPath(textureMap[texture]) ?? null : null;
 };
 
 const MapTile = (
@@ -121,7 +122,11 @@ const MapTile = (
     relative overflow-hidden
     transition-all duration-300 ease-out
     flex flex-col items-center justify-center text-center
-    ${isHere ? "rounded-2xl scale-110 z-10 ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-900 shadow-xl shadow-yellow-400/30" : "rounded-lg hover:scale-105 hover:z-5"}
+    ${
+      isHere
+        ? "rounded-2xl scale-110 z-10 ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-900 shadow-xl shadow-yellow-400/30"
+        : "rounded-lg hover:scale-105 hover:z-5"
+    }
   `;
 
   const textureStyle = texture
@@ -129,29 +134,41 @@ const MapTile = (
     : `background-color: ${bgColor};`;
 
   return html`
-    <div
-      class="${baseClasses}"
-      style="${textureStyle}"
-    >
+    <div class="${baseClasses}" style="${textureStyle}">
       <!-- Gradient overlay for readability -->
       <div
-        class="absolute inset-0 ${isHere ? 'rounded-2xl' : 'rounded-lg'}"
+        class="absolute inset-0 ${isHere ? "rounded-2xl" : "rounded-lg"}"
         style="background: linear-gradient(135deg, ${bgColor}ee 0%, ${bgColor}cc 50%, ${bgColor}aa 100%);"
       ></div>
-      
+
       <!-- Content layer -->
-      <div class="relative z-10 flex flex-col items-center justify-center p-2 gap-1" style="color: ${textColor};">
-        <span class="font-bold text-sm leading-tight drop-shadow-md ${isHere ? 'text-base' : ''}">
+      <div
+        class="relative z-10 flex flex-col items-center justify-center p-2 gap-1"
+        style="color: ${textColor};"
+      >
+        <span
+          class="font-bold text-sm leading-tight drop-shadow-md ${isHere
+            ? "text-base"
+            : ""}"
+        >
           ${worldTile?.tile?.name ?? "Unknown"}
         </span>
-        <span class="text-xs opacity-75 font-mono ${isHere ? 'font-semibold opacity-100' : ''}">
+        <span
+          class="text-xs opacity-75 font-mono ${isHere
+            ? "font-semibold opacity-100"
+            : ""}"
+        >
           ${worldTile.x}, ${worldTile.y}
         </span>
         ${indicators ? MapIndicatorIcons(indicators) : null}
       </div>
-      
+
       <!-- Subtle inner border -->
-      <div class="absolute inset-0 ${isHere ? 'rounded-2xl' : 'rounded-lg'} border border-white/20 pointer-events-none"></div>
+      <div
+        class="absolute inset-0 ${isHere
+          ? "rounded-2xl"
+          : "rounded-lg"} border border-white/20 pointer-events-none"
+      ></div>
     </div>
   `;
 };

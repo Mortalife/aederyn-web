@@ -3,6 +3,7 @@ import { GameContainer } from "./game.js";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { isProduction } from "../lib/runtime.js";
+import { getPublicPath, textureMap } from "../config/assets.js";
 
 let css = "";
 
@@ -54,12 +55,14 @@ const Layout = async (props: SiteData) => {
         : raw('<script type="module" src="/src/client.ts"></script>')
     }
 
-    <link rel="prefetch" href="/textures/cliff-texture.webp" as="image">
-    <link rel="prefetch" href="/textures/grass-texture.webp" as="image">
-    <link rel="prefetch" href="/textures/tree-texture.webp" as="image">
-    <link rel="prefetch" href="/textures/water-texture.webp" as="image">
-    <link rel="prefetch" href="/textures/camp-texture.webp" as="image">
-    <link rel="prefetch" href="/textures/settlement-texture.webp" as="image">
+    ${Object.values(textureMap).map(
+      (texture) =>
+        html`<link
+          rel="prefetch"
+          href="${getPublicPath(texture)}"
+          as="image"
+        />`
+    )}
   </head>
   <body class="p-4">
     ${props.children}
