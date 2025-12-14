@@ -1,6 +1,6 @@
-import { items } from "../config.js";
+import { itemsMap } from "../config/items.js";
 
 export const getItemName = (id: string) => {
-  const item = items.find((i) => i.id === id);
+  const item = itemsMap.get(id);
   return item ? item.name : "Unknown Item";
 };

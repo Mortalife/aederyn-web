@@ -35,9 +35,6 @@ importers:
       p-debounce:
         specifier: ^5.1.0
         version: 5.1.0
-      p-throttle:
-        specifier: ^8.1.0
-        version: 8.1.0
       tsx:
         specifier: ^4.19.2
         version: 4.21.0
@@ -983,10 +980,6 @@ packages:
 
   p-debounce@5.1.0:
     resolution: {integrity: sha512-3DNQmB7HPRMSuZ9P8JQFzEr7156s1S5Lqpi3mSrsZe5AHvl4ONfGrdB5azWqeOpNejQiemgQBkyU+IDKR5nwyg==}
-    engines: {node: '>=20'}
-
-  p-throttle@8.1.0:
-    resolution: {integrity: sha512-c1wmXavsHZIC4g1OLhOsafK6jZSAeMo0Ap3yivj59PUcCkpacy5YgWdgIp/dB4vp1JZrfBSsPCR0YuADB+ENLQ==}
     engines: {node: '>=20'}
 
   path-parse@1.0.7:
@@ -1961,8 +1954,6 @@ snapshots:
   ohash@2.0.11: {}
 
   p-debounce@5.1.0: {}
-
-  p-throttle@8.1.0: {}
 
   path-parse@1.0.7: {}
 

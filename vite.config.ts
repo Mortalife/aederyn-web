@@ -13,17 +13,31 @@ export default defineConfig(({ mode }) => {
       devServer({
         entry: "src/index.ts",
         exclude: [
-          /.*\.css$/,
-          /.*\.ts$/,
-          /.*\.tsx$/,
           /^\/@.+$/,
+          /^\/src\/client\.ts$/,
+          /^\/src\/style\.css$/,
           /\?t\=\d+$/,
           /^\/favicon\.ico$/,
           /^\/static\/.+$/,
-          /^\/node_modules\/.+$/,
+          /^\/node_modules\/.*/,
         ],
         injectClientScript: false,
       }),
+      {
+        name: "full-reload-on-server-change",
+        handleHotUpdate({ file, server }) {
+          // Trigger full reload for server-side TS files (excluding client.ts)
+          if (
+            file.endsWith(".ts") &&
+            !file.endsWith("client.ts") &&
+            !file.includes("node_modules")
+          ) {
+            console.log(`\n[vite] server file changed: ${file}`);
+            server.hot.send({ type: "full-reload" });
+            return [];
+          }
+        },
+      },
     ],
     build: {
       manifest: true,

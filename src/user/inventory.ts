@@ -3,6 +3,7 @@ import {
   MAX_INVENTORY_SIZE,
   type UserInventoryItem,
 } from "../config.js";
+import { itemsMap } from "../config/items.js";
 import { client } from "../database.js";
 import { progressHooks } from "./quest-hooks.js";
 import { getUser, saveUser } from "./user.js";
@@ -21,7 +22,7 @@ export const addToInventory = async (
 ) => {
   const inventory = await getInventory(id);
 
-  const item = items.find((i) => i.id === inventoryItem.item_id)!;
+  const item = itemsMap.get(inventoryItem.item_id)!;
   const existing = inventory.find(
     (i) =>
       i.item_id === inventoryItem.item_id &&
@@ -108,6 +109,19 @@ export const updateInventory = async (
 
   await saveUser(user_id, user);
   await progressHooks.onInventoryChange(user_id, user.i);
+
+  return true;
+};
+
+export const addGold = async (user_id: string, amount: number) => {
+  const user = await getUser(user_id);
+
+  if (!user) {
+    return false;
+  }
+
+  user.$ += amount;
+  await saveUser(user_id, user);
 
   return true;
 };

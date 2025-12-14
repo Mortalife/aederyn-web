@@ -34,4 +34,5 @@ export const BASE_USER: GameUserModel = {
   h: 100, // Health
   po: 100, // Power
   m: 100, // Magic
+  $: 0, // Gold
 };

@@ -101,7 +101,9 @@ export const sendGame = async (
   });
 
   if (start % 4 === 0) {
-    console.log(`Game state generated in ${Date.now() - start}ms`);
+    console.log(
+      `Game state generated in ${Date.now() - start}ms (shown 1 in 4)`
+    );
   }
 
   return stream.writeSSE(fragmentEvent(game));

@@ -531,3 +531,5 @@ export const items: Item[] = [
     weight: 0.2,
   },
 ];
+
+export const itemsMap = new Map(items.map((item) => [item.id, item]));

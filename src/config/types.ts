@@ -13,6 +13,7 @@ export type GameUserModel = {
   h: number;
   po: number;
   m: number;
+  $: number;
 };
 
 export type GameUser = Omit<GameUserModel, "i"> & {

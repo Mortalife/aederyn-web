@@ -7,6 +7,7 @@ import {
 } from "../config.js";
 import { client } from "../database.js";
 import { PubSub, USER_EVENT } from "../sse/pubsub.js";
+import { itemsMap } from "../config/items.js";
 
 export const getUserSync = async (id: string) => {
   if (!id) {
@@ -77,7 +78,7 @@ export const getPopulatedUser = async (
   return {
     ...user,
     i: user.i.map((item) => {
-      const itemObj = items.find((i) => i.id === item.item_id)!;
+      const itemObj = itemsMap.get(item.item_id)!;
       const userObj = structuredClone(itemObj);
 
       if (userObj.durability) {

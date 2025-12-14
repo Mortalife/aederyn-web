@@ -241,7 +241,7 @@ export const Zone = (
       data-show="$_showInventory"
     >
       <h2 class="text-2xl font-bold">
-        Inventory (${user.i.length}/${MAX_INVENTORY_SIZE})
+        Inventory (${user.i.length}/${MAX_INVENTORY_SIZE}) - ${user.$} Gold
       </h2>
       ${user.i.map((item, index) =>
         InventorySlot({

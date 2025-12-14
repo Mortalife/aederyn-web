@@ -668,8 +668,6 @@ export const resources: ResourceModel[] = [
   },
 ];
 
-export const resourcesLookup = new Map<string, ResourceModel>();
-
-for (const resource of resources) {
-  resourcesLookup.set(resource.id, resource);
-}
+export const resourcesMap = new Map<string, ResourceModel>(
+  resources.map((r) => [r.id, r])
+);

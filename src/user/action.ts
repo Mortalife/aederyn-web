@@ -4,7 +4,8 @@ import {
   type GameUser,
   type ResourceModel,
 } from "../config.js";
-import { resourcesLookup } from "../config/resources.js";
+import { itemsMap } from "../config/items.js";
+import { resourcesMap } from "../config/resources.js";
 import { client } from "../database.js";
 import { PubSub, USER_EVENT } from "../sse/pubsub.js";
 import { markResourceUsed } from "../world/resources.js";
@@ -30,7 +31,7 @@ export const markActionInProgress = async (
   user: GameUser,
   resource_id: string
 ) => {
-  const resource = resources.find((r) => r.id === resource_id);
+  const resource = resourcesMap.get(resource_id);
 
   if (!resource) {
     return false;
@@ -111,7 +112,7 @@ export const resourceRequirementsCheck = async (
             return [acc[0] + i.qty, 0];
           }
 
-          const item = items.find((i) => i.id === requiredItem.item_id);
+          const item = itemsMap.get(requiredItem.item_id);
 
           if (!item) {
             return acc;
@@ -215,7 +216,7 @@ export const processActions = async () => {
       continue;
     }
 
-    const resource = resourcesLookup.get(action.resource_id);
+    const resource = resourcesMap.get(action.resource_id);
 
     if (!resource) {
       await markActionComplete(action.user_id, action.x, action.y);
@@ -257,15 +258,18 @@ export const processActions = async () => {
         `You have completed: ${
           resource.name
         } and acquired ${resource.reward_items
-          .map(
-            (item) =>
-              `${item.qty} x ${items.find((i) => i.id === item.item_id)?.name}`
-          )
+          .map((item) => `${item.qty} x ${itemsMap.get(item.item_id)?.name}`)
           .join(", ")}`,
         "success"
       );
-
-      PubSub.publish(USER_EVENT, { user_id: action.user_id });
+    } else {
+      await addSystemMessage(
+        action.user_id,
+        `This resource is depleted.`,
+        "error"
+      );
     }
+
+    PubSub.publish(USER_EVENT, { user_id: action.user_id });
   }
 };

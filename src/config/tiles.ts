@@ -233,3 +233,5 @@ export const tileTypes: TileType[] = [
     accessible: true,
   },
 ];
+
+export const tileTypesMap = new Map(tileTypes.map((t) => [t.id, t]));

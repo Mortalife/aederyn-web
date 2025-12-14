@@ -8,6 +8,7 @@ import { npcs, resources } from "../config.js";
 import { formatDistanceToNow } from "date-fns";
 import { getItemName } from "../user/items.js";
 import { npcsMap } from "../config/npcs.js";
+import { resourcesMap } from "../config/resources.js";
 
 export const Quests = (props: {
   zoneQuests: ZoneQuests;
@@ -213,7 +214,7 @@ export const QuestObjectiveProgress = (props: { objective: TileObjective }) => {
       return null;
     case "craft":
     case "gather": {
-      const resource = resources.find((r) => r.id === objective.resource_id);
+      const resource = resourcesMap.get(objective.resource_id);
 
       if (!resource) {
         return null;

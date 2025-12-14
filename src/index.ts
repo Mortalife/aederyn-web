@@ -238,7 +238,7 @@ app.get("/game", async (c) => {
   PubSub.subscribe(CHAT_EVENT, processChatEvent);
 
   const sendUpdate = pDebounce.promise(async () => {
-    await delay(200);
+    await delay(500);
 
     await sendGame(stream, {
       user_id: session_user_id,

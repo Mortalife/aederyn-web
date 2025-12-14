@@ -67,6 +67,10 @@ export const tutorialQuests: TileQuest[] = [
         item_id: "item_stone_01",
         amount: 2,
       },
+      {
+        type: "gold",
+        amount: 10,
+      },
     ],
     starts_at: 0,
     ends_at: 0,

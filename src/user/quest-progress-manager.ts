@@ -1,10 +1,11 @@
 import { tutorialQuests } from "../config/quests.js";
 import { client } from "../database.js";
 import { getTile, type WorldTile } from "../world/index.js";
-import { addToInventory } from "./inventory.js";
+import { addGold, addToInventory } from "./inventory.js";
 import { getItemName } from "./items.js";
 import type {
   Quest,
+  RequirementReward,
   TileObjective,
   TileQuest,
   TileTalkObjective,
@@ -12,6 +13,17 @@ import type {
 import { questManager, type QuestManager } from "./quest-generator.js";
 import { addSystemMessage } from "./system.js";
 import { PubSub, USER_EVENT } from "../sse/pubsub.js";
+
+const getRewardDisplayName = (reward: RequirementReward): string => {
+  switch (reward.type) {
+    case "item":
+      return getItemName(reward.item_id);
+    case "gold":
+      return "Gold";
+    case "skill":
+      return reward.skill_id;
+  }
+};
 
 export interface ZoneQuests {
   availableQuests: TileQuest[];
@@ -608,18 +620,15 @@ export class QuestProgressManager {
           qty: reward.amount,
           item_id: reward.item_id,
         });
+      } else if (reward.type === "gold") {
+        await addGold(userId, reward.amount);
       }
     }
 
     await addSystemMessage(
       userId,
       `Quest completed - You have gained ${quest.rewards
-        .map(
-          (r) =>
-            `${r.amount} x ${
-              r.type === "item" ? getItemName(r.item_id) : r.type
-            }`
-        )
+        .map((r) => `${r.amount} x ${getRewardDisplayName(r)}`)
         .join(", ")}`,
       "success"
     );

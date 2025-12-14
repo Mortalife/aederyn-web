@@ -12,6 +12,9 @@ import {
 } from "../config.js";
 import { getResourceUsage } from "./resources.js";
 import { selectRandom } from "../lib/random.js";
+import { resourcesMap } from "../config/resources.js";
+import { itemsMap } from "../config/items.js";
+import { tileTypesMap } from "../config/tiles.js";
 
 export type Point = {
   x: number;
@@ -41,9 +44,7 @@ export const getTileSelection = (x: number, y: number) => {
   const coords = `${x},${y}`;
 
   if (miscTiles[coords as keyof typeof miscTiles]) {
-    const tile = tileTypes.find(
-      (t) => t.id === miscTiles[coords as keyof typeof miscTiles]
-    );
+    const tile = tileTypesMap.get(miscTiles[coords as keyof typeof miscTiles]);
 
     if (!tile) {
       throw new Error(
@@ -56,7 +57,7 @@ export const getTileSelection = (x: number, y: number) => {
 
   const center = START_POSITION;
   if (center.x === x && center.y === y) {
-    const camp = tileTypes.find((t) => t.id === "tile_campsite");
+    const camp = tileTypesMap.get("tile_campsite");
 
     if (!camp) {
       throw new Error("Campsite not found");
@@ -106,7 +107,7 @@ export const getTile = async (x: number, y: number) => {
     ...tile,
     resources: tile.resources
       .map<Resource | null>((r) => {
-        const resourceModel = resources.find((a) => a.id === r);
+        const resourceModel = resourcesMap.get(r);
         if (!resourceModel) {
           return null;
         }
@@ -125,7 +126,7 @@ export const getTile = async (x: number, y: number) => {
           // Convert item_ids to items
           required_items: resourceModel.required_items.map<RequiredItem>(
             (i) => {
-              const item = items.find((a) => a.id === i.item_id);
+              const item = itemsMap.get(i.item_id);
               if (!item) {
                 isValid = false;
                 return {} as RequiredItem;
@@ -142,7 +143,7 @@ export const getTile = async (x: number, y: number) => {
 
           // Convert item_ids to items
           reward_items: resourceModel.reward_items.map<RewardItem>((i) => {
-            const item = items.find((a) => a.id === i.item_id);
+            const item = itemsMap.get(i.item_id);
             if (!item) {
               isValid = false;
               return {} as RewardItem;
