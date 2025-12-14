@@ -2,7 +2,7 @@ import { Context, Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { Session, sessionMiddleware } from "hono-sessions";
 import { Content, Layout } from "./templates/layout.js";
-import { fragmentEvent } from "./sse/index.js";
+import { fragmentEvent, redirectEvent } from "./sse/index.js";
 import { getTile, getTileSelection, isOutOfBounds } from "./world/index.js";
 import { GameLogin } from "./templates/game.js";
 import {
@@ -139,31 +139,24 @@ app.post("/game/login", async (c) => {
     session.set("user_id", user.id);
   }
 
-  return streamSSE(
-    c,
-    async (stream) => {
-      if (!user) {
-        await stream.writeSSE(
-          fragmentEvent(
-            GameLogin({
-              user_id,
-              error: "User not found",
-            })
-          )
-        );
-        return;
-      }
+  const stream = getStream(c);
 
-      await sendGame(stream, {
-        user_id: user.id,
-        isMobile,
-      });
-    },
-    async (err) => {
-      console.error(err);
-    }
-  );
+  if (!user) {
+    await stream.writeSSE(
+      fragmentEvent(
+        GameLogin({
+          user_id,
+          error: "User not found",
+        })
+      )
+    );
+  } else {
+    await stream.writeSSE(redirectEvent("/"));
+  }
+
+  return returnStream(c, stream);
 });
+
 app.delete("/game/logout", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
@@ -172,22 +165,11 @@ app.delete("/game/logout", async (c) => {
   if (user) {
     session.deleteSession();
   }
+  const stream = getStream(c);
 
-  return streamSSE(
-    c,
-    async (stream) => {
-      await stream.writeSSE(
-        fragmentEvent(
-          GameLogin({
-            user_id: "",
-          })
-        )
-      );
-    },
-    async (err) => {
-      console.error(err);
-    }
-  );
+  await stream.writeSSE(redirectEvent("/"));
+
+  return returnStream(c, stream);
 });
 
 app.get("/game", async (c) => {
@@ -410,7 +392,10 @@ app.get("/game/resources/:resource_id", async (c) => {
 
   const success = await markActionInProgress(user, resource.id);
   if (!success) {
-    await addSystemMessage(user.id, "You can't do that yet.", "warning", { action_type: "resource", action_id: resource.id });
+    await addSystemMessage(user.id, "You can't do that yet.", "warning", {
+      action_type: "resource",
+      action_id: resource.id,
+    });
     return c.body(null, 204);
   }
 
@@ -545,7 +530,10 @@ app.post("/game/quest/:quest_id", async (c) => {
 
   if (!quest) {
     //TODO: Add update event
-    await addSystemMessage(user.id, "No such quest", "error", { action_type: "quest", action_id: quest_id });
+    await addSystemMessage(user.id, "No such quest", "error", {
+      action_type: "quest",
+      action_id: quest_id,
+    });
     return c.body(null, 204);
   }
 
@@ -622,9 +610,15 @@ app.post("/game/quest/:quest_id/complete", async (c) => {
   const status = await questProgressManager.getQuestStatus(user.id, quest_id);
 
   if (!status) {
-    await addSystemMessage(user.id, "No such quest", "error", { action_type: "quest", action_id: quest_id });
+    await addSystemMessage(user.id, "No such quest", "error", {
+      action_type: "quest",
+      action_id: quest_id,
+    });
   } else if (status?.status === "in_progress") {
-    await addSystemMessage(user.id, "You're still on this quest!", "error", { action_type: "quest", action_id: quest_id });
+    await addSystemMessage(user.id, "You're still on this quest!", "error", {
+      action_type: "quest",
+      action_id: quest_id,
+    });
   } else if (status?.status === "completed") {
     await addSystemMessage(
       user.id,
@@ -633,7 +627,12 @@ app.post("/game/quest/:quest_id/complete", async (c) => {
       { action_type: "quest", action_id: quest_id }
     );
   } else if (status?.status === "available") {
-    await addSystemMessage(user.id, "You haven't started this quest!", "error", { action_type: "quest", action_id: quest_id });
+    await addSystemMessage(
+      user.id,
+      "You haven't started this quest!",
+      "error",
+      { action_type: "quest", action_id: quest_id }
+    );
   } else if (status?.status === "completable") {
     await questProgressManager.completeQuest(user.id, quest_id, questManager);
   }

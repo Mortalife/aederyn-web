@@ -8,3 +8,15 @@ export const fragmentEvent = (
     event: "datastar-patch-elements",
   };
 };
+
+export const redirectEvent = (url: string) => {
+  return {
+    data: [
+      "mode append",
+      "selector body",
+      `elements <script>window.location = "${url}"</script>
+`,
+    ].join("\n"),
+    event: "datastar-patch-elements",
+  };
+};
