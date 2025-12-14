@@ -27,6 +27,12 @@ export const Game = (props: {
       class="md:container md:mx-auto grid grid-rows-[50px_1fr_60px] gap-4 h-full items-between"
       id="game"
       data-signals="${JSON.stringify({ user_id: props.user.id })}"
+      data-signals__if-missing="${JSON.stringify({
+        _showActions: true,
+        _showQuests: true,
+        _showInventory: true,
+        _showSocial: true,
+      })}"
     >
       <div id="info">${UserInfo(props.user, props.messages)}</div>
       <div id="content" class="flex flex-col gap-4">

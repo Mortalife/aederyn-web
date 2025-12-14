@@ -436,11 +436,17 @@ app.post("/game/chat", async (c) => {
     return c.redirect("");
   }
 
-  await saveMessage(user_id, message);
+  const trimmedMessage = message.trim().slice(0, 100);
+
+  if (trimmedMessage.length === 0) {
+    return c.body(null, 204);
+  }
+
+  await saveMessage(user_id, trimmedMessage);
 
   PubSub.publish(CHAT_EVENT, {
     user_id,
-    message,
+    message: trimmedMessage,
   });
 
   return c.body(null, 204);

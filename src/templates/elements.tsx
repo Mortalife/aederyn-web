@@ -20,6 +20,11 @@ import type {
 } from "../user/quest-progress-manager.js";
 import { Quests } from "./quests.js";
 
+export const KeyboardShortcut = (shortcut: string) => html`<span
+  class="h-4 flex items-center justify-center text-[0.4rem] text-gray-400 font-mono p-[0.2rem] rounded-sm border border-gray-400 mix-blend-color-dodge"
+  >${shortcut}</span
+>`;
+
 export const WorldMap = (
   map: WorldTile[],
   mapIndicators: MapIndicator[]
@@ -52,37 +57,131 @@ export const WorldMap = (
       </div>`;
     })}
     <div
+      id="map-controls"
+      data-signal="${JSON.stringify({
+        _mapControlIndicator: false,
+      })}"
       class="bg-black/10 p-2 rounded-full w-[172px] h-[172px] absolute bottom-10 right-10 grid grid-cols-3 grid-rows-3 gap-2"
     >
       <button
         class="btn btn-square col-start-2 row-start-1 shadow"
         data-on:click="@post('/game/move/up')"
+        data-indicator="_mapControlIndicator"
+        data-attr:disabled="$_mapControlIndicator"
+        data-on-keys:up="el.click()"
       >
-        Up
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"
+          />
+        </svg>
+
+        <span class="sr-only">Up</span>
       </button>
       <button
         class="btn btn-square col-start-2 row-start-3 shadow"
         data-on:click="@post('/game/move/down')"
+        data-indicator="_mapControlIndicator"
+        data-attr:disabled="$_mapControlIndicator"
+        data-on-keys:down="el.click()"
       >
-        Down
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3"
+          />
+        </svg>
+
+        <span class="sr-only">Down</span>
       </button>
       <button
         class="btn btn-square btn-primary col-start-2 row-start-2 shadow"
         data-on:click="@post('/game/move/enter')"
+        data-indicator="_mapControlIndicator"
+        data-attr:disabled="$_mapControlIndicator"
+        data-on-keys:enter="el.click()"
       >
-        Enter
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15"
+          />
+        </svg>
+
+        <span class="sr-only">Enter</span>
       </button>
       <button
         class="btn btn-square col-start-1 row-start-2 shadow"
         data-on:click="@post('/game/move/left')"
+        data-indicator="_mapControlIndicator"
+        data-attr:disabled="$_mapControlIndicator"
+        data-on-keys:left="el.click()"
       >
-        Left
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+          />
+        </svg>
+
+        <span class="sr-only">Left</span>
       </button>
       <button
         class="btn btn-square col-start-3 row-start-2 shadow"
         data-on:click="@post('/game/move/right')"
+        data-indicator="_mapControlIndicator"
+        data-attr:disabled="$_mapControlIndicator"
+        data-on-keys:right="el.click()"
       >
-        Right
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+          />
+        </svg>
+
+        <span class="sr-only">Right</span>
       </button>
     </div>
   </div>
@@ -165,16 +264,7 @@ export const Zone = (
     (resource) => resource.type
   );
 
-  return html`<div
-    id="zone"
-    class="grid grid-cols-1 gap-4"
-    data-signals="${JSON.stringify({
-      _showActions: true,
-      _showQuests: true,
-      _showInventory: true,
-      _showSocial: true,
-    })}"
-  >
+  return html`<div id="zone" class="grid grid-cols-1 gap-4">
     <h1 class="text-3xl font-bold">${worldTile.tile?.name}</h1>
     <div id="actions" class="flex flex-row gap-2">
       <button
@@ -182,32 +272,36 @@ export const Zone = (
         data-on:click="$_showActions = !$_showActions"
         data-class:btn-primary="$_showActions"
         data-class:btn-outline="!$_showActions"
+        data-on-keys:a="el.click()"
       >
-        Actions
+        Actions ${KeyboardShortcut("A")}
       </button>
       <button
         class="btn btn-primary btn-xs"
         data-on:click="$_showQuests = !$_showQuests"
         data-class:btn-primary="$_showQuests"
         data-class:btn-outline="!$_showQuests"
+        data-on-keys:q="el.click()"
       >
-        Quests
+        Quests ${KeyboardShortcut("Q")}
       </button>
       <button
         class="btn btn-primary btn-xs"
         data-on:click="$_showInventory = !$_showInventory"
         data-class:btn-primary="$_showInventory"
         data-class:btn-outline="!$_showInventory"
+        data-on-keys:i="el.click()"
       >
-        Inventory
+        Inventory ${KeyboardShortcut("I")}
       </button>
       <button
         class="btn btn-primary btn-xs"
         data-on:click="$_showSocial = !$_showSocial"
         data-class:btn-primary="$_showSocial"
         data-class:btn-outline="!$_showSocial"
+        data-on-keys:s="el.click()"
       >
-        Social
+        Social ${KeyboardShortcut("S")}
       </button>
     </div>
     <div
@@ -271,6 +365,7 @@ export const Zone = (
             autocomplete="off"
             data-bind="message"
             maxlength="100"
+            data-on-keys__el__stop="1"
             placeholder="Enter your message"
           />
           <button class="btn btn-primary">Send</button>
@@ -313,8 +408,12 @@ export const UserZoneInfo = (user: GameUser) => html`<div
   <div class="p-2 rounded">
     <span id="user-p">x: ${user.p.x}, y: ${user.p.y}</span>
   </div>
-  <button class="btn btn-neutral" data-on:click="@post('/game/move/exit')">
-    Exit Zone
+  <button
+    class="btn btn-neutral"
+    data-on:click="@post('/game/move/exit')"
+    data-on-keys:escape="el.click()"
+  >
+    Exit Zone ${KeyboardShortcut("esc")}
   </button>
 </div>`;
 

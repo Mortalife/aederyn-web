@@ -39,7 +39,14 @@ const Layout = async (props: SiteData) => {
     <meta property="og:title" content="${props.title}">
     <meta property="og:image" content="${props.image}">
     
-<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.6/bundles/datastar.js"></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "datastar": "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0-RC.6/bundles/datastar.js"
+      }
+    }
+    </script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mbolli/datastar-attribute-on-keys@v1.1.0/dist/index.js"></script>
     ${
       isProduction()
         ? raw(`<script type="module" src="/static/assets/client.js"></script>
