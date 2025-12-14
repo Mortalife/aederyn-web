@@ -27,7 +27,8 @@ class QuestProgressHooks {
           user_id,
           quest.currentObjective.found_message ??
             `Discovered: ${quest.currentObjective.description}`,
-          "success"
+          "success",
+          { action_type: "quest", action_id: quest.id, location_x: newX, location_y: newY }
         );
       }
     }

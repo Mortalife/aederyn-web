@@ -1,10 +1,10 @@
 import { html } from "hono/html";
 import type { WorldTile } from "../world/index.js";
-import { Messages, UserInfo, WorldMap, Zone } from "./elements.js";
+import { UserInfo, WorldMap, Zone } from "./elements.js";
 import type { GameUser, OtherUser } from "../config.js";
 import type { UserAction } from "../user/action.js";
 import type { ChatMessage } from "../social/chat.js";
-import type { SystemMessage } from "../user/system.js";
+import type { SystemMessage, SystemMessageActionType } from "../user/system.js";
 import type {
   MapIndicator,
   ZoneInteraction,
@@ -22,11 +22,13 @@ export const Game = (props: {
   quests?: ZoneQuests;
   npcInteractions?: ZoneInteraction[];
   isMobile?: boolean;
+  resourceObjectives?: Set<string>;
+  contextFlashes?: Map<string, SystemMessage>;
 }) => {
   return html`
     <div
       id="game"
-      class="md:container md:mx-auto grid grid-rows-[50px_1fr_60px] gap-4 h-full items-between"
+      class="md:container md:mx-auto flex flex-col gap-4 h-full"
       data-signals="${JSON.stringify({
         user_id: props.user.id,
       })}"
@@ -38,8 +40,7 @@ export const Game = (props: {
       })}"
     >
       <div id="info">${UserInfo(props.user, props.messages)}</div>
-      <div id="content" class="flex flex-col gap-4">
-        ${props.messages?.length ? Messages(props.messages, true) : null}
+      <div id="content" class="flex-1 flex flex-col gap-4 overflow-auto">
         ${!props.user.z
           ? WorldMap(props.map, props.mapIndicators, props.isMobile)
           : Zone(
@@ -49,29 +50,11 @@ export const Game = (props: {
               props.players,
               props.chatMessages,
               props.quests,
-              props.npcInteractions
+              props.npcInteractions,
+              props.messages,
+              props.resourceObjectives,
+              props.contextFlashes
             )}
-      </div>
-      <div
-        class="p-4 flex flex-row gap-2 items-center justify-between"
-        data-signals="${JSON.stringify({
-          _showUserId: false,
-        })}"
-      >
-        <button class="btn" data-on:click="$_showUserId = !$_showUserId">
-          Toggle User Id
-        </button>
-        <div class="flex flex-row items-center gap-2" data-show="$_showUserId">
-          Your user is:
-          <input class="input" type="text" value="${props.user.id}" />
-        </div>
-        <button
-          class="btn btn-ghost"
-          id="game-logout"
-          data-on:click="@delete('/game/logout')"
-        >
-          Logout
-        </button>
       </div>
     </div>
   `;

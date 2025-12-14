@@ -109,6 +109,7 @@ export class QuestManager {
 
     const inactiveQuestIds = inactiveQuests.map((quest) => quest.id);
 
+    console.log("Removing old quests", inactiveQuestIds);
     await client.execute({
       sql: `
         DELETE FROM quests WHERE quest_id IN (${inactiveQuestIds
@@ -144,22 +145,26 @@ export class QuestManager {
   }
 
   async getActiveQuests() {
+    const activeQuestsTimeout = Date.now();
     const { rows } = await client.execute({
       sql: `
         SELECT * FROM quests WHERE ends_at > ?
       `,
-      args: [Date.now()],
+      args: [activeQuestsTimeout],
     });
 
     return rows.map((row) => JSON.parse(row["data"] as string) as TileQuest);
   }
 
   private async getInactiveQuests() {
+    const inactiveQuestTmeout = Date.now() - 1000 * 60 * 60;
+
+    console.log("Removing inactive quests", inactiveQuestTmeout);
     const { rows } = await client.execute({
       sql: `
         SELECT * FROM quests WHERE ends_at < ?
       `,
-      args: [Date.now() - 1000 * 60 * 60],
+      args: [inactiveQuestTmeout],
     });
 
     return rows.map((row) => JSON.parse(row["data"] as string) as TileQuest);

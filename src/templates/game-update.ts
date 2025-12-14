@@ -12,7 +12,7 @@ import { Game, GameLogin } from "./game.js";
 import { fragmentEvent } from "../sse/index.js";
 import { getInProgressAction } from "../user/action.js";
 import { getZoneUsers } from "../user/zone.js";
-import { getSystemMessages } from "../user/system.js";
+import { getSystemMessages, type SystemMessage } from "../user/system.js";
 import { questProgressManager } from "../user/quest-progress-manager.js";
 import { questManager } from "../user/quest-generator.js";
 import { HouseMap } from "../config/house-tiles.js";
@@ -90,6 +90,40 @@ export const sendGame = async (
     );
 
   const inprogress = await getInProgressAction(user_id);
+
+  // Pre-compute contextual flashes map to avoid filtering on every render
+  // Keys are either "action_type" or "action_type:action_id"
+  const contextFlashes = new Map<string, SystemMessage>();
+  const now = Date.now();
+  for (const msg of messages) {
+    if (msg.action_type && msg.sent_at > now - 5000) {
+      // Store by action_type:action_id if action_id exists
+      if (msg.action_id) {
+        const key = `${msg.action_type}:${msg.action_id}`;
+        if (!contextFlashes.has(key)) {
+          contextFlashes.set(key, msg);
+        }
+      }
+      // Also store by action_type alone (first one wins)
+      if (!contextFlashes.has(msg.action_type)) {
+        contextFlashes.set(msg.action_type, msg);
+      }
+    }
+  }
+
+  // Pre-compute resource objectives map to avoid looping on every render
+  const resourceObjectives = new Set<string>();
+  for (const quest of quests.inProgressQuests) {
+    if (
+      quest.currentObjective &&
+      (quest.currentObjective.type === "gather" ||
+        quest.currentObjective.type === "craft") &&
+      quest.currentObjective.resource_id
+    ) {
+      resourceObjectives.add(quest.currentObjective.resource_id);
+    }
+  }
+
   const game = Game({
     map,
     mapIndicators,
@@ -101,6 +135,8 @@ export const sendGame = async (
     quests,
     npcInteractions,
     isMobile,
+    resourceObjectives,
+    contextFlashes,
   });
 
   if (start % 4 === 0) {

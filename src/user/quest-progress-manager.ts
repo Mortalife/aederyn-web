@@ -594,7 +594,10 @@ export class QuestProgressManager {
       quest = tutorialQuests.find((q) => q.id === questId);
 
       if (!quest) {
-        await addSystemMessage(userId, "Quest not found", "error");
+        await addSystemMessage(userId, "Quest not found", "error", {
+          action_type: "quest",
+          action_id: questId,
+        });
         return;
       }
     }
@@ -630,7 +633,8 @@ export class QuestProgressManager {
       `Quest completed - You have gained ${quest.rewards
         .map((r) => `${r.amount} x ${getRewardDisplayName(r)}`)
         .join(", ")}`,
-      "success"
+      "success",
+      { action_type: "quest", action_id: questId }
     );
 
     PubSub.publish(USER_EVENT, {
@@ -676,27 +680,61 @@ export class QuestProgressManager {
     objectiveId: string,
     current: number
   ): Promise<void> {
-    //TODO: Chat that that current required check works on the new current value not the old one, might need to replace
-    //current with the value of the new current
+    // Get current objective state to determine completion
+    const { rows: beforeRows } = await client.execute({
+      sql: `SELECT current, required, completed FROM objective_progress WHERE user_id = ? AND quest_id = ? AND objective_id = ?`,
+      args: [userId, questId, objectiveId],
+    });
+    const beforeState = beforeRows[0] as unknown as
+      | { current: number; required: number; completed: number }
+      | undefined;
+
+    if (!beforeState) {
+      return;
+    }
+
+    const wasCompleted = beforeState.completed === 1;
+    const isNowCompleted = current >= beforeState.required;
+    const now = Date.now();
+
     await client.execute({
       sql: `
       UPDATE objective_progress 
       SET 
         current = :current,
-        completed = CASE WHEN :current >= required THEN 1 ELSE 0 END,
+        completed = :completed,
         updated_at = :updated_at,
-        completed_at = CASE WHEN :current >= required THEN :completed_at ELSE NULL END
+        completed_at = :completed_at
       WHERE user_id = :user_id AND quest_id = :quest_id AND objective_id = :objective_id
     `,
       args: {
         current,
-        updated_at: Date.now(),
-        completed_at: Date.now(),
+        completed: isNowCompleted ? 1 : 0,
+        updated_at: now,
+        completed_at: isNowCompleted ? now : null,
         user_id: userId,
         quest_id: questId,
         objective_id: objectiveId,
       },
     });
+
+    // Send system message when objective is newly completed
+    if (isNowCompleted && !wasCompleted) {
+      const quests = await questManager.getActiveQuests();
+      const quest =
+        quests.find((q) => q.id === questId) ??
+        tutorialQuests.find((q) => q.id === questId);
+      const objective = quest?.objectives.find((o) => o.id === objectiveId);
+
+      if (quest && objective) {
+        await addSystemMessage(
+          userId,
+          `Step complete: ${objective.description}`,
+          "success",
+          { action_type: "quest", action_id: questId }
+        );
+      }
+    }
 
     // Check if all objectives are complete
     const { rows: allCompleteRows } = await client.execute({

@@ -60,7 +60,7 @@ export const tileTypes: TileType[] = [
   },
   {
     id: "tile_trees",
-    name: "Trees",
+    name: "Forest",
     color: "#ffdfcb",
     backgroundColor: "#1f691f",
     theme: "forest",

@@ -410,7 +410,7 @@ app.get("/game/resources/:resource_id", async (c) => {
 
   const success = await markActionInProgress(user, resource.id);
   if (!success) {
-    await addSystemMessage(user.id, "You can't do that yet.", "warning");
+    await addSystemMessage(user.id, "You can't do that yet.", "warning", { action_type: "resource", action_id: resource.id });
     return c.body(null, 204);
   }
 
@@ -545,7 +545,7 @@ app.post("/game/quest/:quest_id", async (c) => {
 
   if (!quest) {
     //TODO: Add update event
-    await addSystemMessage(user.id, "No such quest", "error");
+    await addSystemMessage(user.id, "No such quest", "error", { action_type: "quest", action_id: quest_id });
     return c.body(null, 204);
   }
 
@@ -586,7 +586,8 @@ app.put("/game/quest/:quest_id/objective/:objective_id", async (c) => {
     await addSystemMessage(
       user.id,
       "Not sure what we're doing here...",
-      "error"
+      "error",
+      { action_type: "quest", action_id: quest_id }
     );
 
     return c.body(null, 204);
@@ -621,17 +622,18 @@ app.post("/game/quest/:quest_id/complete", async (c) => {
   const status = await questProgressManager.getQuestStatus(user.id, quest_id);
 
   if (!status) {
-    await addSystemMessage(user.id, "No such quest", "error");
+    await addSystemMessage(user.id, "No such quest", "error", { action_type: "quest", action_id: quest_id });
   } else if (status?.status === "in_progress") {
-    await addSystemMessage(user.id, "You're still on this quest!", "error");
+    await addSystemMessage(user.id, "You're still on this quest!", "error", { action_type: "quest", action_id: quest_id });
   } else if (status?.status === "completed") {
     await addSystemMessage(
       user.id,
       "You've already completed this quest!",
-      "error"
+      "error",
+      { action_type: "quest", action_id: quest_id }
     );
   } else if (status?.status === "available") {
-    await addSystemMessage(user.id, "You haven't started this quest!", "error");
+    await addSystemMessage(user.id, "You haven't started this quest!", "error", { action_type: "quest", action_id: quest_id });
   } else if (status?.status === "completable") {
     await questProgressManager.completeQuest(user.id, quest_id, questManager);
   }

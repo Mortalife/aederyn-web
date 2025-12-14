@@ -129,7 +129,8 @@ export const resourceRequirementsCheck = async (
       await addSystemMessage(
         user_id,
         "You do not have the required items.",
-        "error"
+        "error",
+        { action_type: "resource", action_id: resource.id }
       );
       return false;
     }
@@ -141,7 +142,8 @@ export const resourceRequirementsCheck = async (
       await addSystemMessage(
         user_id,
         "You do not have enough durability.",
-        "error"
+        "error",
+        { action_type: "resource", action_id: resource.id }
       );
       return false;
     }
@@ -260,13 +262,15 @@ export const processActions = async () => {
         } and acquired ${resource.reward_items
           .map((item) => `${item.qty} x ${itemsMap.get(item.item_id)?.name}`)
           .join(", ")}`,
-        "success"
+        "success",
+        { action_type: "resource", action_id: resource.id, location_x: action.x, location_y: action.y }
       );
     } else {
       await addSystemMessage(
         action.user_id,
         `This resource is depleted.`,
-        "error"
+        "error",
+        { action_type: "resource", action_id: resource.id, location_x: action.x, location_y: action.y }
       );
     }
 

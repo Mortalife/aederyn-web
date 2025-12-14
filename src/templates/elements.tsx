@@ -13,7 +13,7 @@ import {
 import { calculateProgress, type UserAction } from "../user/action.js";
 import { restrictUserId, type ChatMessage } from "../social/chat.js";
 import { formatDistance } from "date-fns";
-import type { SystemMessage } from "../user/system.js";
+import type { SystemMessage, SystemMessageActionType } from "../user/system.js";
 import type {
   MapIndicator,
   ZoneInteraction,
@@ -21,6 +21,13 @@ import type {
 } from "../user/quest-progress-manager.js";
 import { Quests } from "./quests.js";
 import { getPublicPath } from "../config/assets.js";
+import {
+  GoldIcon,
+  ActionsIcon,
+  QuestsIcon,
+  InventoryIcon,
+  SocialIcon,
+} from "./icons.js";
 
 export const KeyboardShortcut = (shortcut: string) => html`<span
   class="h-4 flex items-center justify-center text-[0.4rem] text-gray-400 font-mono p-[0.2rem] rounded-sm border border-gray-400 mix-blend-color-dodge"
@@ -73,7 +80,7 @@ export const MobileWorldMap = (
       class="max-w-[80vw] md:max-w-[60vw] max-h-[80vh] aspect-square overflow-hidden rounded-lg border border-gray-600 flex items-center justify-center"
       style="background-color: #222;"
     >
-      ${Map(map, mapIndicators)}
+      ${MapInner(map, mapIndicators)}
     </div>
     ${MapControls()}
   </div>`;
@@ -147,7 +154,7 @@ const MapTile = (
   `;
 };
 
-export const Map = (map: WorldTile[], mapIndicators: MapIndicator[]) => {
+export const MapInner = (map: WorldTile[], mapIndicators: MapIndicator[]) => {
   return html`<div
     id="map"
     class="min-w-[500px] relative p-4 grid grid-rows-5 grid-cols-5 grid-flow-col aspect-square gap-2 bg-gray-900 rounded-xl"
@@ -312,11 +319,211 @@ export const WorldMap = (
       class="max-w-[50vw] max-h-[50vh] aspect-square overflow-hidden rounded-lg border border-gray-600 flex items-center justify-center"
       style="background-color: #222;"
     >
-      ${Map(map, mapIndicators)}
+      ${MapInner(map, mapIndicators)}
     </div>
     ${MapControls()}
   </div>`;
 };
+
+const getResourceTypeIcon = (type: string) => {
+  switch (type) {
+    case "resource":
+      return html`<svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="size-5"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+        />
+      </svg>`;
+    case "workbench":
+      return html`<svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="size-5"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"
+        />
+      </svg>`;
+    default:
+      return html`<svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="size-5"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"
+        />
+      </svg>`;
+  }
+};
+
+const getThemeColors = (theme: string | undefined) => {
+  const themes: Record<
+    string,
+    { bg: string; border: string; accent: string; text: string }
+  > = {
+    forest: {
+      bg: "bg-emerald-950/50",
+      border: "border-emerald-700",
+      accent: "text-emerald-400",
+      text: "text-emerald-100",
+    },
+    lemonade: {
+      bg: "bg-lime-950/50",
+      border: "border-lime-600",
+      accent: "text-lime-400",
+      text: "text-lime-100",
+    },
+    meadow: {
+      bg: "bg-yellow-950/50",
+      border: "border-yellow-600",
+      accent: "text-yellow-400",
+      text: "text-yellow-100",
+    },
+    swamp: {
+      bg: "bg-teal-950/50",
+      border: "border-teal-700",
+      accent: "text-teal-400",
+      text: "text-teal-100",
+    },
+    mountain: {
+      bg: "bg-slate-800/50",
+      border: "border-slate-500",
+      accent: "text-slate-300",
+      text: "text-slate-100",
+    },
+    cave: {
+      bg: "bg-purple-950/50",
+      border: "border-purple-700",
+      accent: "text-purple-400",
+      text: "text-purple-100",
+    },
+    mine: {
+      bg: "bg-amber-950/50",
+      border: "border-amber-700",
+      accent: "text-amber-400",
+      text: "text-amber-100",
+    },
+    frozen: {
+      bg: "bg-cyan-950/50",
+      border: "border-cyan-500",
+      accent: "text-cyan-300",
+      text: "text-cyan-100",
+    },
+    waterfall: {
+      bg: "bg-blue-950/50",
+      border: "border-blue-500",
+      accent: "text-blue-400",
+      text: "text-blue-100",
+    },
+    city: {
+      bg: "bg-violet-950/50",
+      border: "border-violet-600",
+      accent: "text-violet-400",
+      text: "text-violet-100",
+    },
+    storm: {
+      bg: "bg-gray-800/50",
+      border: "border-gray-500",
+      accent: "text-gray-300",
+      text: "text-gray-100",
+    },
+    retro: {
+      bg: "bg-orange-950/50",
+      border: "border-orange-600",
+      accent: "text-orange-400",
+      text: "text-orange-100",
+    },
+    nord: {
+      bg: "bg-indigo-950/50",
+      border: "border-indigo-500",
+      accent: "text-indigo-400",
+      text: "text-indigo-100",
+    },
+    coffee: {
+      bg: "bg-stone-800/50",
+      border: "border-stone-500",
+      accent: "text-stone-300",
+      text: "text-stone-100",
+    },
+  };
+  return (
+    themes[theme ?? ""] ?? {
+      bg: "bg-gray-900/50",
+      border: "border-gray-600",
+      accent: "text-gray-300",
+      text: "text-gray-100",
+    }
+  );
+};
+
+const ZoneNavButton = (
+  label: string,
+  shortcut: string,
+  signalName: string,
+  count: number | null,
+  icon: ReturnType<typeof html>,
+  hasNotification = false
+) => html`
+  <button
+    class="flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all duration-200 min-w-[80px]
+           border border-transparent
+           hover:bg-white/10 hover:border-white/20
+           data-[active=true]:bg-white/15 data-[active=true]:border-white/30 data-[active=true]:shadow-lg"
+    data-on:click="$${signalName} = !$${signalName}"
+    data-attr:data-active="$${signalName}"
+    data-on-keys:${shortcut.toLowerCase()}="el.click()"
+  >
+    <div class="relative">
+      ${icon}
+      ${hasNotification
+        ? html`<span
+            class="absolute -top-1 -right-1 size-2 bg-yellow-400 rounded-full animate-pulse"
+          ></span>`
+        : null}
+    </div>
+    <span class="text-xs font-medium"
+      >${label}${count !== null
+        ? html` <span class="opacity-60">(${count})</span>`
+        : ""}</span
+    >
+    <span class="text-[0.6rem] text-gray-400 font-mono">${shortcut}</span>
+  </button>
+`;
+
+const ZoneSectionHeader = (
+  title: string,
+  subtitle: string | null,
+  icon: ReturnType<typeof html>
+) => html`
+  <div class="flex items-center gap-3 pb-2 border-b border-white/10">
+    <div class="p-2 rounded-lg bg-white/5">${icon}</div>
+    <div>
+      <h2 class="text-xl font-bold">${title}</h2>
+      ${subtitle
+        ? html`<p class="text-sm text-gray-400">${subtitle}</p>`
+        : null}
+    </div>
+  </div>
+`;
 
 export const Zone = (
   user: GameUser,
@@ -330,116 +537,270 @@ export const Zone = (
     completableQuests: [],
     elsewhereQuests: [],
   },
-  npcInteractions: ZoneInteraction[] = []
+  npcInteractions: ZoneInteraction[] = [],
+  messages: SystemMessage[] = [],
+  resourceObjectives: Set<string> = new Set([]),
+  contextFlashes: Map<string, SystemMessage> = new Map([])
 ) => {
   const groupedResources = Object.groupBy(
     worldTile.tile?.resources ?? [],
     (resource) => resource.type
   );
 
-  return html`<div id="zone" class="grid grid-cols-1 gap-4">
-    <h1 class="text-3xl font-bold">${worldTile.tile?.name}</h1>
-    <div id="actions" class="flex flex-row gap-2">
-      <button
-        class="btn btn-xs"
-        data-on:click="$_showActions = !$_showActions"
-        data-class:btn-primary="$_showActions"
-        data-class:btn-outline="!$_showActions"
-        data-on-keys:a="el.click()"
+  const theme = getThemeColors(worldTile.tile?.theme);
+  const totalResources = worldTile.tile?.resources?.length ?? 0;
+  const totalQuests =
+    zoneQuests.availableQuests.length +
+    zoneQuests.inProgressQuests.length +
+    zoneQuests.completableQuests.length;
+  const hasQuestNotification =
+    zoneQuests.availableQuests.length > 0 ||
+    zoneQuests.completableQuests.length > 0 ||
+    npcInteractions.length > 0;
+
+  return html`<div id="zone" class="flex flex-col gap-4">
+    <!-- Zone Header -->
+    <div class="${theme.bg} ${theme.border} border rounded-xl p-4">
+      <div
+        class="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
-        Actions ${KeyboardShortcut("A")}
-      </button>
-      <button
-        class="btn btn-primary btn-xs"
-        data-on:click="$_showQuests = !$_showQuests"
-        data-class:btn-primary="$_showQuests"
-        data-class:btn-outline="!$_showQuests"
-        data-on-keys:q="el.click()"
-      >
-        Quests ${KeyboardShortcut("Q")}
-      </button>
-      <button
-        class="btn btn-primary btn-xs"
-        data-on:click="$_showInventory = !$_showInventory"
-        data-class:btn-primary="$_showInventory"
-        data-class:btn-outline="!$_showInventory"
-        data-on-keys:i="el.click()"
-      >
-        Inventory ${KeyboardShortcut("I")}
-      </button>
-      <button
-        class="btn btn-primary btn-xs"
-        data-on:click="$_showSocial = !$_showSocial"
-        data-class:btn-primary="$_showSocial"
-        data-class:btn-outline="!$_showSocial"
-        data-on-keys:s="el.click()"
-      >
-        Social ${KeyboardShortcut("S")}
-      </button>
+        <div class="flex items-center gap-4">
+          <div class="p-3 rounded-xl bg-white/10 ${theme.accent}">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-8"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-2xl md:text-3xl font-bold ${theme.text}">
+              ${worldTile.tile?.name}
+            </h1>
+            <p class="text-sm ${theme.accent} opacity-80">
+              ${worldTile.tile?.description ??
+              `Coordinates: ${worldTile.x}, ${worldTile.y}`}
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-200 text-sm font-medium"
+            data-on:click="@post('/game/move/exit')"
+            data-on-keys:escape="el.click()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-4"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+              />
+            </svg>
+            Exit Zone ${KeyboardShortcut("esc")}
+          </button>
+        </div>
+      </div>
     </div>
+
+    <!-- Navigation Tabs -->
+    <div
+      id="zone-nav"
+      class="flex flex-wrap justify-center gap-2 p-2 rounded-xl bg-black/20 border border-white/10"
+    >
+      ${ZoneNavButton(
+        "Actions",
+        "A",
+        "_showActions",
+        totalResources,
+        ActionsIcon,
+        contextFlashes.has("resource")
+      )}
+      ${ZoneNavButton(
+        "Quests",
+        "Q",
+        "_showQuests",
+        totalQuests,
+        QuestsIcon,
+        hasQuestNotification || contextFlashes.has("quest")
+      )}
+      ${ZoneNavButton(
+        "Inventory",
+        "I",
+        "_showInventory",
+        user.i.length,
+        InventoryIcon,
+        contextFlashes.has("inventory")
+      )}
+      ${ZoneNavButton(
+        "Social",
+        "S",
+        "_showSocial",
+        players.length,
+        SocialIcon,
+        false
+      )}
+    </div>
+
+    <!-- Actions Panel -->
     <div
       id="resources"
-      class="grid grid-cols-1 gap-2"
+      class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
       data-show="$_showActions"
     >
-      ${Object.entries(groupedResources).map(
-        ([type, resources]) => html`<h2 class="text-2xl font-bold capitalize">
-            ${type}
-          </h2>
-          ${resources.map((resource) =>
-            ResourceItem({
-              resource,
-              inventory: user.i,
-              inprogress:
-                inprogress?.resource_id === resource.id
-                  ? {
-                      total: resource.collectionTime,
-                      current: calculateProgress(inprogress),
-                    }
-                  : undefined,
-            })
-          )}`
+      ${ZoneSectionHeader(
+        "Actions",
+        totalResources > 0
+          ? `${totalResources} activities available`
+          : "Nothing to do here",
+        ActionsIcon
       )}
+      ${Object.entries(groupedResources).length === 0
+        ? html`<div class="text-center py-8 text-gray-400">
+            <p>No resources or activities available in this area.</p>
+            <p class="text-sm mt-2">Try exploring other zones!</p>
+          </div>`
+        : Object.entries(groupedResources).map(
+            ([type, resources]) => html`
+              <div class="flex flex-col gap-3">
+                <div class="flex items-center gap-2 ${theme.accent}">
+                  ${getResourceTypeIcon(type)}
+                  <h3 class="text-lg font-semibold capitalize">
+                    ${type === "workbench" ? "Crafting" : "Gathering"}
+                  </h3>
+                  <span class="text-xs opacity-60">(${resources.length})</span>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                  ${resources.map((resource) =>
+                    ResourceItem({
+                      resource,
+                      inventory: user.i,
+                      inprogress:
+                        inprogress?.resource_id === resource.id
+                          ? {
+                              total: resource.collectionTime,
+                              current: calculateProgress(inprogress),
+                            }
+                          : undefined,
+                      flashMessage: contextFlashes.get(
+                        `resource:${resource.id}`
+                      ),
+                      isObjective: resourceObjectives.has(resource.id),
+                    })
+                  )}
+                </div>
+              </div>
+            `
+          )}
     </div>
-    ${Quests({ zoneQuests, npcInteractions })}
+
+    <!-- Quests Panel -->
+    ${Quests({
+      zoneQuests,
+      npcInteractions,
+      flashMessage: contextFlashes.get("quest"),
+    })}
+
+    <!-- Inventory Panel -->
     <div
       id="inventory"
-      class="grid grid-cols-1 gap-2"
+      class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
       data-show="$_showInventory"
     >
-      <h2 class="text-2xl font-bold">
-        Inventory (${user.i.length}/${MAX_INVENTORY_SIZE}) - ${user.$} Gold
-      </h2>
-      ${user.i.map((item, index) =>
-        InventorySlot({
-          slot: item,
-          index,
-        })
+      ${ZoneSectionHeader(
+        "Inventory",
+        `${user.i.length}/${MAX_INVENTORY_SIZE} slots used`,
+        InventoryIcon
       )}
-    </div>
-    <div id="social" class="grid grid-cols-1 gap-2" data-show="$_showSocial">
-      <div id="players" class="grid grid-cols-1 gap-2">
-        <h2 class="text-2xl font-bold">Active Players</h2>
-        ${players.map((player) => OtherPlayerInfo(player))}
+      <div
+        class="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 w-fit"
+      >
+        ${GoldIcon}
+        <span class="font-bold text-yellow-400">${user.$}</span>
+        <span class="text-sm text-yellow-400/70">Gold</span>
       </div>
+      ${user.i.length === 0
+        ? html`<div class="text-center py-8 text-gray-400">
+            <p>Your inventory is empty.</p>
+            <p class="text-sm mt-2">Gather resources to fill it up!</p>
+          </div>`
+        : html`<div class="grid grid-cols-1 gap-2">
+            ${user.i.map((item, index) =>
+              InventorySlot({
+                slot: item,
+                index,
+              })
+            )}
+          </div>`}
+    </div>
+
+    <!-- Social Panel -->
+    <div
+      id="social"
+      class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
+      data-show="$_showSocial"
+    >
+      ${ZoneSectionHeader(
+        "Social",
+        players.length > 0
+          ? `${players.length} players nearby`
+          : "You're alone here",
+        SocialIcon
+      )}
+
+      <!-- Players Section -->
+      <div class="flex flex-col gap-3">
+        <h3 class="text-lg font-semibold flex items-center gap-2">
+          <span class="size-2 bg-green-500 rounded-full animate-pulse"></span>
+          Active Players
+        </h3>
+        ${players.length === 0
+          ? html`<p class="text-gray-400 text-sm">
+              No other players in this zone.
+            </p>`
+          : html`<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              ${players.map((player) => OtherPlayerInfo(player))}
+            </div>`}
+      </div>
+
+      <!-- Chat Section -->
       <div
         id="chat"
-        class="grid grid-cols-1 gap-2"
+        class="flex flex-col gap-3 pt-4 border-t border-white/10"
         data-signals__ifmissing="${JSON.stringify({ message: "" })}"
       >
-        <h2 class="text-2xl font-bold">Chat</h2>
+        <h3 class="text-lg font-semibold">Zone Chat</h3>
         <form
           class="flex flex-row gap-2"
           data-on:submit="@post('/game/chat'); $message = ''"
         >
           <input
             type="text"
-            class="p-2 border-gray-400 rounded flex-grow"
+            class="flex-grow px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-white/30 focus:outline-none transition-colors"
             autocomplete="off"
             data-bind="message"
             maxlength="100"
             data-on-keys__el__stop="1"
-            placeholder="Enter your message"
+            placeholder="Say something..."
           />
           <button class="btn btn-primary">Send</button>
         </form>
@@ -474,48 +835,280 @@ export const ChatMessages = (messages: ChatMessage[], user: GameUser) => {
   </div>`;
 };
 
-export const UserZoneInfo = (user: GameUser) => html`<div
-  id="user"
-  class="flex flex-row gap-2 text-sm"
->
-  <div class="p-2 rounded">
-    <span id="user-p">x: ${user.p.x}, y: ${user.p.y}</span>
-  </div>
-  <button
-    class="btn btn-neutral"
-    data-on:click="@post('/game/move/exit')"
-    data-on-keys:escape="el.click()"
-  >
-    Exit Zone ${KeyboardShortcut("esc")}
-  </button>
-</div>`;
+export const GameMenu = (user: GameUser, messages?: SystemMessage[]) => {
+  const hasMessages = messages && messages.length > 0;
+  const recentMessage = messages?.[0];
+  const hasRecentAlert =
+    recentMessage && recentMessage.sent_at > Date.now() - 10000;
+
+  let alertColor = "";
+  if (hasRecentAlert) {
+    switch (recentMessage.type) {
+      case "error":
+        alertColor = "text-red-400";
+        break;
+      case "warning":
+        alertColor = "text-yellow-400";
+        break;
+      case "success":
+        alertColor = "text-green-400";
+        break;
+    }
+  }
+
+  return html`
+    <div
+      id="game-menu"
+      class="relative"
+      data-signals__ifmissing="${JSON.stringify({ _menuOpen: false })}"
+    >
+      <!-- Menu Toggle Button -->
+      <button
+        class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-200"
+        data-on:click="$_menuOpen = !$_menuOpen"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+          />
+        </svg>
+        <span class="text-sm font-medium hidden sm:inline">Menu</span>
+        ${hasMessages
+          ? html`<span
+              class="flex items-center justify-center size-5 text-xs font-bold rounded-full ${hasRecentAlert
+                ? alertColor + " bg-white/20"
+                : "bg-white/10 text-gray-400"}"
+            >
+              ${messages.length}
+            </span>`
+          : null}
+      </button>
+
+      <!-- Dropdown Menu -->
+      <div
+        class="absolute right-0 top-full mt-2 w-72 rounded-xl bg-gray-900/95 backdrop-blur-sm border border-white/20 shadow-2xl z-50 overflow-hidden"
+        data-show="$_menuOpen"
+      >
+        <!-- Menu Header -->
+        <div class="px-4 py-3 border-b border-white/10 bg-white/5">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-semibold text-gray-300">Game Menu</span>
+            <span class="text-xs text-gray-500 font-mono"
+              >${user.p.x}, ${user.p.y}</span
+            >
+          </div>
+        </div>
+
+        <!-- Menu Items -->
+        <div class="p-2 flex flex-col gap-1">
+          <!-- Refresh -->
+          <button
+            class="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/10 transition-colors text-left"
+            data-on:click="@get('/game/refresh'); $_menuOpen = false"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-5 text-blue-400"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+              />
+            </svg>
+            <div class="flex-1">
+              <span class="text-sm font-medium">Refresh</span>
+              <p class="text-xs text-gray-500">Reload game state</p>
+            </div>
+          </button>
+
+          <!-- Messages -->
+          ${hasMessages
+            ? html`
+                <div class="border-t border-white/10 my-1"></div>
+                <div class="px-3 py-2">
+                  <div class="flex items-center justify-between mb-2">
+                    <span
+                      class="text-xs font-semibold text-gray-400 uppercase tracking-wide"
+                      >Notifications</span
+                    >
+                    <button
+                      class="text-xs text-red-400 hover:text-red-300 transition-colors"
+                      data-on:click="@delete('/game/system-messages')"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  <div class="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                    ${messages.slice(0, 5).map(
+                      (msg) => html`
+                        <div
+                          class="flex items-start gap-2 p-2 rounded-lg ${msg.type ===
+                          "error"
+                            ? "bg-red-500/10"
+                            : msg.type === "warning"
+                            ? "bg-yellow-500/10"
+                            : msg.type === "success"
+                            ? "bg-green-500/10"
+                            : "bg-blue-500/10"}"
+                        >
+                          <span
+                            class="size-2 rounded-full mt-1.5 flex-shrink-0 ${msg.type ===
+                            "error"
+                              ? "bg-red-400"
+                              : msg.type === "warning"
+                              ? "bg-yellow-400"
+                              : msg.type === "success"
+                              ? "bg-green-400"
+                              : "bg-blue-400"}"
+                          ></span>
+                          <p class="text-xs text-gray-300 flex-1">
+                            ${msg.message}
+                          </p>
+                          <button
+                            class="text-gray-500 hover:text-gray-300 transition-colors"
+                            data-on:click="@delete('/game/system-messages/${msg.id}')"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke-width="1.5"
+                              stroke="currentColor"
+                              class="size-3"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      `
+                    )}
+                    ${messages.length > 5
+                      ? html`<p class="text-xs text-gray-500 text-center py-1">
+                          +${messages.length - 5} more
+                        </p>`
+                      : null}
+                  </div>
+                </div>
+              `
+            : null}
+
+          <div class="border-t border-white/10 my-1"></div>
+
+          <!-- User ID -->
+          <div class="px-3 py-2">
+            <span
+              class="text-xs font-semibold text-gray-400 uppercase tracking-wide"
+              >Your ID</span
+            >
+            <div class="mt-1 flex items-center gap-2">
+              <input
+                type="text"
+                value="${user.id}"
+                readonly
+                class="flex-1 px-2 py-1 text-xs font-mono bg-white/5 border border-white/10 rounded text-gray-400"
+              />
+              <button
+                class="p-1 rounded hover:bg-white/10 transition-colors text-gray-400 hover:text-gray-200"
+                onclick="navigator.clipboard.writeText('${user.id}')"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-4"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="border-t border-white/10 my-1"></div>
+
+          <!-- Logout -->
+          <button
+            class="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-red-500/20 transition-colors text-left group"
+            data-on:click="@delete('/game/logout')"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-5 text-red-400"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
+              />
+            </svg>
+            <div class="flex-1">
+              <span
+                class="text-sm font-medium text-red-400 group-hover:text-red-300"
+                >Logout</span
+              >
+              <p class="text-xs text-gray-500">End your session</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Click outside to close -->
+      <div
+        class="fixed inset-0 z-40"
+        data-show="$_menuOpen"
+        data-on:click="$_menuOpen = false"
+      ></div>
+    </div>
+  `;
+};
 
 export const UserInfo = (
   user: GameUser,
   messages?: SystemMessage[]
-) => html` <div
+) => html`<div
   id="user-info"
-  class="w-full flex flex-row justify-end items-center"
+  class="w-full flex flex-row justify-between items-center px-2"
 >
-  <div class="flex flex-row gap-2">
-    ${messages ? Messages(messages) : null} ${user.z && UserZoneInfo(user)}
-    <button class="btn btn-square" data-on:click="@get('/game/refresh')">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class="size-6"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-        />
-      </svg>
-    </button>
+  <div class="flex items-center gap-2">
+    <span class="text-lg font-bold text-white/90">Aederyn</span>
+    ${user.z
+      ? html`<span
+          class="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30"
+          >In Zone</span
+        >`
+      : html`<span
+          class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30"
+          >World Map</span
+        >`}
   </div>
+  ${GameMenu(user, messages)}
 </div>`;
 export const OtherPlayerInfo = (otherUser: OtherUser) => html` <div
   id="other-user-${otherUser.id}"
@@ -525,6 +1118,47 @@ export const OtherPlayerInfo = (otherUser: OtherUser) => html` <div
   <p>${otherUser.p.x}, ${otherUser.p.y}</p>
 </div>`;
 
+export const ContextualFlash = (props: { message?: SystemMessage }) => {
+  if (!props.message) return null;
+
+  const latestMessage = props.message;
+  const bgColor =
+    latestMessage.type === "error"
+      ? "bg-red-500/20 border-red-500/40 text-red-300"
+      : latestMessage.type === "warning"
+      ? "bg-yellow-500/20 border-yellow-500/40 text-yellow-300"
+      : latestMessage.type === "success"
+      ? "bg-green-500/20 border-green-500/40 text-green-300"
+      : "bg-blue-500/20 border-blue-500/40 text-blue-300";
+
+  return html`
+    <div
+      class="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm animate-pulse ${bgColor}"
+    >
+      <span class="flex-1">${latestMessage.message}</span>
+      <button
+        class="opacity-60 hover:opacity-100 transition-opacity"
+        data-on:click="@delete('/game/system-messages/${latestMessage.id}')"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-4"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>
+  `;
+};
+
 export const ResourceItem = (props: {
   resource: Resource;
   inventory: InventoryItem[];
@@ -532,64 +1166,135 @@ export const ResourceItem = (props: {
     total: number;
     current: number;
   };
+  flashMessage?: SystemMessage;
+  isObjective?: boolean;
 }) => {
+  const hasRequirements = props.resource.required_items.length > 0;
+  const hasRewards = props.resource.reward_items.length > 0;
+  const progressPercent = props.inprogress
+    ? Math.round((props.inprogress.current / props.inprogress.total) * 100)
+    : 0;
+
+  const flashMessage = ContextualFlash({ message: props.flashMessage });
+
   return html`<div
     id="resources-${props.resource.id}"
-    class="rounded-lg flex flex-row gap-4 justify-between p-4 border border-gray-400"
+    class="rounded-xl flex flex-col gap-3 p-4 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 ${props.inprogress
+      ? "ring-2 ring-blue-500/50"
+      : props.isObjective
+      ? "ring-2 ring-orange-500/50 border-orange-500/30"
+      : ""}"
   >
-    <div class="flex flex-col gap-2 flex-1">
-      <div class="flex flex-row justify-between gap-2">
-        <span class="font-semibold text-lg"
-          >${props.resource.name}
-          ${props.resource.limitless ? "" : `(${props.resource.amount})`}</span
-        >
-        ${props.inprogress &&
-        html`
-          <div class="flex items-center flex-col gap-2">
-            <span>${props.inprogress.current}/${props.inprogress.total}</span>
-            <progress
-              class="progress progress-primary w-56"
-              value="${props.inprogress.current}"
-              max="${props.inprogress.total}"
-            ></progress>
-          </div>
-        `}
+    <!-- Header Row -->
+    <div class="flex flex-row items-start justify-between gap-4">
+      <div class="flex-1">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-lg text-white"
+            >${props.resource.name}</span
+          >
+          ${props.isObjective
+            ? html`<span
+                class="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                >Quest Objective</span
+              >`
+            : null}
+          ${!props.resource.limitless
+            ? html`<span
+                class="text-xs px-2 py-0.5 rounded-full ${props.resource
+                  .amount > 0
+                  ? "bg-green-500/20 text-green-400"
+                  : "bg-red-500/20 text-red-400"}"
+              >
+                ${props.resource.amount} left
+              </span>`
+            : html`<span
+                class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400"
+                >Unlimited</span
+              >`}
+        </div>
       </div>
-      <div class="flex flex-row gap-4">
-        ${props.resource.required_items.length
-          ? html`<div class="flex flex-col gap-4">
-              <span>Requires:</span>
-              <div class="flex flex-row gap-2">
-                ${props.resource.required_items.map((a) =>
-                  ResourceRequiredItem(a, props.inventory)
-                )}
-              </div>
-            </div>`
-          : ""}
-        ${props.resource.reward_items.length
-          ? html`<div class="flex flex-col gap-4">
-              <span>Rewards:</span>
-              <div class="flex flex-row gap-2">
-                ${props.resource.reward_items.map((i) => ResourceRewardItem(i))}
-              </div>
-            </div>`
-          : ""}
-      </div>
+
+      ${props.inprogress
+        ? html`<button
+            class="btn btn-sm btn-outline btn-warning"
+            data-on:click="@delete('/game/resources/${props.resource.id}')"
+          >
+            Cancel
+          </button>`
+        : html`<button
+            class="btn btn-sm btn-primary"
+            data-on:click="@get('/game/resources/${props.resource.id}')"
+          >
+            ${props.resource.verb}
+          </button>`}
     </div>
 
+    <!-- Contextual Flash Message -->
+    ${flashMessage}
+
+    <!-- Progress Bar (when active) -->
     ${props.inprogress
-      ? html`<button
-          class="btn btn-warning"
-          data-on:click="@delete('/game/resources/${props.resource.id}')"
-        >
-          Cancel
-        </button>`
-      : html`<button
-          class="btn btn-accent"
-          data-on:click="@get('/game/resources/${props.resource.id}')"
-        >
-          ${props.resource.verb}
-        </button>`}
+      ? html`<div class="flex flex-col gap-1">
+          <div class="flex items-center justify-between text-xs text-gray-400">
+            <span>In Progress...</span>
+            <span class="font-mono"
+              >${props.inprogress.current}/${props.inprogress.total}s</span
+            >
+          </div>
+          <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+            <div
+              class="h-full bg-blue-500 transition-all duration-300"
+              style="width: ${progressPercent}%"
+            ></div>
+          </div>
+        </div>`
+      : null}
+
+    <!-- Requirements & Rewards -->
+    ${hasRequirements || hasRewards
+      ? html`<div class="flex flex-wrap gap-4 pt-2 border-t border-white/10">
+          ${hasRequirements
+            ? (() => {
+                const hasItemCheck = (item: RequiredItem) =>
+                  props.inventory.find(
+                    (inv) => inv.item.id === item.item.id && inv.qty >= item.qty
+                  );
+                const available =
+                  props.resource.required_items.filter(hasItemCheck);
+                const missing = props.resource.required_items.filter(
+                  (i) => !hasItemCheck(i)
+                );
+                return html`<div class="flex flex-col gap-2">
+                  <span
+                    class="text-xs font-semibold text-gray-400 uppercase tracking-wide"
+                    >Requires</span
+                  >
+                  <div class="flex flex-wrap gap-2">
+                    ${available.map((a) =>
+                      ResourceRequiredItem(a, props.inventory)
+                    )}
+                    ${missing.map((a) =>
+                      ResourceRequiredItem(a, props.inventory)
+                    )}
+                  </div>
+                </div>`;
+              })()
+            : null}
+          ${hasRewards
+            ? html`<div class="flex flex-col gap-2">
+                <span
+                  class="text-xs font-semibold text-gray-400 uppercase tracking-wide"
+                  >Rewards</span
+                >
+                <div class="flex flex-wrap gap-2">
+                  ${props.resource.reward_items.map((i) =>
+                    ResourceRewardItem(i)
+                  )}
+                </div>
+              </div>`
+            : null}
+        </div>`
+      : null}
   </div>`;
 };
 
@@ -600,112 +1305,128 @@ export const ResourceRequiredItem = (
   const hasItem = inventory.find(
     (inv) => inv.item.id === item.item.id && inv.qty >= item.qty
   );
+  const hasDurabilityReduction =
+    item.qty === 1 && !item.consumed && item.itemDurabilityReduction;
 
-  if (hasItem) {
-    if (item.consumed) {
-      return html`<div class="indicator">
-        <span
-          class="tooltip indicator-item badge badge-error text-xs font-bold"
-          data-tip="This item is consumed"
-        >
-          -${item.qty}</span
-        >
-        <div class="inline badge badge-outline">${item.item.name}</div>
-      </div>`;
-    }
-
-    return html`<div class="indicator">
-      <span class="indicator-item badge badge-outline">
-        -${item.qty === 1 && !item.consumed && item.itemDurabilityReduction
-          ? html`${DurabilityIcon} ${item.itemDurabilityReduction}`
-          : item.qty}</span
-      >
-      <div class="tooltip inline badge badge-outline">${item.item.name}</div>
-    </div>`;
-  }
-
-  if (item.consumed) {
-    return html`<div class="indicator">
-      ${item.qty > 1
-        ? html`<span
-            class="tooltip indicator-item badge badge-error text-xs font-bold"
-            data-tip="You do not have the required qty of this item"
-          >
-            -${item.qty}</span
-          >`
-        : null}
-      <div
-        class="tooltip inline badge badge-outline badge-error opacity-50"
-        ${item.qty === 1
-          ? html`data-tip="You do not have the required qty of this item"`
-          : ""}
-      >
-        ${item.item.name}
-      </div>
-    </div>`;
-  }
-
-  return html`<div class="indicator ">
-    ${item.qty > 1
-      ? html`<span
-          class="tooltip indicator-item badge badge-error text-xs font-bold"
-          data-tip="This item is consumed"
-        >
-          -${item.qty}</span
-        >`
-      : null}
-    <div
-      class="tooltip inline badge badge-outline badge-error opacity-50"
-      data-tip="This item is required"
+  return html`<div
+    class="flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm ${hasItem
+      ? "bg-white/10 border border-white/20"
+      : "bg-red-500/10 border border-red-500/30 opacity-70"}"
+  >
+    <span
+      class="${hasItem ? "text-orange-400" : "text-red-400"} font-mono text-xs"
     >
-      ${item.item.name}
-    </div>
+      ${hasDurabilityReduction
+        ? html`${DurabilityIcon}-${item.itemDurabilityReduction}`
+        : `-${item.qty}`}
+    </span>
+    <span class="${hasItem ? "text-gray-200" : "text-red-300"}"
+      >${item.item.name}</span
+    >
+    ${!hasItem
+      ? html`<span class="text-red-400" title="Missing from inventory">✗</span>`
+      : item.consumed
+      ? html`<span class="text-orange-400/60" title="Will be consumed">↓</span>`
+      : html`<span class="text-green-400/60" title="Required (not consumed)"
+          >✓</span
+        >`}
   </div>`;
 };
+
 export const ResourceRewardItem = (item: RewardItem) => {
-  return html`<div class="indicator">
-    <span class="indicator-item badge badge-success text-xs font-bold">
-      +${item.qty}</span
-    >
-    <span class="badge badge-success badge-outline">${item.item.name} </span>
+  return html`<div
+    class="flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm bg-green-500/10 border border-green-500/30"
+  >
+    <span class="text-green-400 font-mono text-xs">+${item.qty}</span>
+    <span class="text-green-300">${item.item.name}</span>
   </div>`;
 };
 
 export const InventorySlot = (props: {
   slot: InventoryItem;
   index: number;
-}) => html`<div
-  id="inventory-${props.slot.id}"
-  class="flex flex-row gap-4 items-center justify-between p-4 border border-gray-400"
->
-  <p class="rounded text-primary-content font-bold bg-secondary p-4 h-18">
-    ${props.slot.qty}
-  </p>
-  <div class="flex flex-col gap-2 flex-1">
-    <span>${props.slot.item.name}</span>
-    <span>${props.slot.item.description}</span>
-  </div>
-  <div class="flex flex-col gap-2">
-    ${props.slot.item.durability
-      ? html`<div class="flex flex-row items-center gap-1 text-sm">
-          ${DurabilityIcon}
+}) => {
+  const durability = props.slot.item.durability;
+  const durabilityPercent = durability
+    ? Math.round((durability.current / durability.max) * 100)
+    : null;
+  const durabilityColor = durabilityPercent
+    ? durabilityPercent > 50
+      ? "text-green-400"
+      : durabilityPercent > 25
+      ? "text-yellow-400"
+      : "text-red-400"
+    : "";
 
-          <span
-            >${props.slot.item.durability.current}/${props.slot.item.durability
-              .max}</span
-          >
+  return html`<div
+    id="inventory-${props.slot.id}"
+    class="flex flex-row gap-4 items-center p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200"
+  >
+    <!-- Quantity Badge -->
+    <div
+      class="flex items-center justify-center min-w-[48px] h-12 rounded-lg bg-white/10 border border-white/20"
+    >
+      <span class="text-xl font-bold text-white">${props.slot.qty}</span>
+    </div>
+
+    <!-- Item Info -->
+    <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+      <span class="font-semibold text-white truncate"
+        >${props.slot.item.name}</span
+      >
+      <span class="text-xs text-gray-400 line-clamp-1"
+        >${props.slot.item.description}</span
+      >
+    </div>
+
+    <!-- Durability (if applicable) -->
+    ${durability
+      ? html`<div class="flex items-center gap-2">
+          <div class="flex flex-col items-end gap-0.5">
+            <div class="flex items-center gap-1 ${durabilityColor}">
+              ${DurabilityIcon}
+              <span class="text-sm font-mono"
+                >${durability.current}/${durability.max}</span
+              >
+            </div>
+            <div class="w-16 h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div
+                class="h-full transition-all duration-300 ${durabilityPercent &&
+                durabilityPercent > 50
+                  ? "bg-green-500"
+                  : durabilityPercent && durabilityPercent > 25
+                  ? "bg-yellow-500"
+                  : "bg-red-500"}"
+                style="width: ${durabilityPercent}%"
+              ></div>
+            </div>
+          </div>
         </div>`
       : null}
-  </div>
-  <div class="flex flex-col gap-2">
+
+    <!-- Delete Button -->
     <button
-      class="btn btn-error"
-      data-on:click="@delete('/game/inventory/${props.slot.id}') "
+      class="p-2 rounded-lg text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+      data-on:click="@delete('/game/inventory/${props.slot.id}')"
+      title="Delete item"
     >
-      Delete
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="size-5"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+        />
+      </svg>
     </button>
-  </div>
-</div>`;
+  </div>`;
+};
 
 export const DurabilityIcon = html`<svg
   xmlns="http://www.w3.org/2000/svg"

@@ -22,7 +22,8 @@ await client.migrate([
   "DROP TABLE IF EXISTS inprogress",
   "CREATE TABLE IF NOT EXISTS inprogress (user_id TEXT PRIMARY KEY,x INT, y INT, resource_id TEXT, inprogress_at INT, completed_at INT)",
   "CREATE TABLE IF NOT EXISTS zone_users (user_id T,x INT, y INT, entered_at INT, PRIMARY KEY (user_id, x, y), UNIQUE(user_id))",
-  "CREATE TABLE IF NOT EXISTS system_messages (id INTEGER PRIMARY KEY, user_id TEXT, message TEXT,type TEXT, sent_at INT)",
+  "DROP TABLE IF EXISTS system_messages",
+  "CREATE TABLE IF NOT EXISTS system_messages (id INTEGER PRIMARY KEY, user_id TEXT, message TEXT,type TEXT, action_type TEXT, action_id TEXT, location_x INT, location_y INT, sent_at INT)",
   ...QuestProgressManager.migrations(),
   ...QuestManager.migrations(),
 ]);
