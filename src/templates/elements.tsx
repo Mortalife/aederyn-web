@@ -28,60 +28,34 @@ export const KeyboardShortcut = (shortcut: string) => html`<span
 >`;
 
 export const MapIndicatorIcons = (indicator: MapIndicator) => html` <div
-  class="flex flex-row gap-1"
+  class="flex flex-row gap-1.5"
 >
   ${indicator.available
-    ? html`<svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="3"
-        stroke="currentColor"
-        class="size-6 text-yellow-300"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
-        />
-      </svg> `
+    ? html`<div class="tooltip tooltip-top" data-tip="Quest Available">
+        <span
+          class="flex items-center justify-center size-5 font-black text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.8)] animate-pulse select-none"
+          style="text-shadow: 0 0 8px rgba(250,204,21,0.6), 0 1px 2px rgba(0,0,0,0.8);"
+          >!</span
+        >
+      </div>`
     : null}
   ${indicator.objective
-    ? html`<svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class="size-6 text-orange-600"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-        />
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-        />
-      </svg> `
+    ? html`<div class="tooltip tooltip-top" data-tip="Quest Objective">
+        <span
+          class="flex items-center justify-center size-5 font-black text-orange-400 drop-shadow-[0_0_6px_rgba(251,146,60,0.8)] select-none"
+          style="text-shadow: 0 0 8px rgba(251,146,60,0.6), 0 1px 2px rgba(0,0,0,0.8);"
+          >◆</span
+        >
+      </div>`
     : null}
   ${indicator.completable
-    ? html`<svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class="size-6 text-green-600"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
-        />
-      </svg> `
+    ? html`<div class="tooltip tooltip-top" data-tip="Ready to Complete">
+        <span
+          class="flex items-center justify-center size-5 font-black text-green-500 drop-shadow-[0_0_6px_rgba(74,222,128,0.8)] animate-pulse select-none"
+          style="text-shadow: 0 0 8px rgba(74,222,128,0.6), 0 1px 2px rgba(0,0,0,0.8);"
+          >?</span
+        >
+      </div>`
     : null}
 </div>`;
 
