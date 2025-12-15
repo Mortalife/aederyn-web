@@ -127,6 +127,24 @@ export const sendGame = async (
     ) {
       resourceObjectives.add(quest.currentObjective.resource_id);
     }
+
+    if (
+      quest.currentObjective &&
+      quest.currentObjective.type === "collect" &&
+      quest.currentObjective.item_id
+    ) {
+      // Find resources that reward the item needed for this collect objective
+      const targetItemId = quest.currentObjective.item_id;
+      const currentZone = map.find((tile) => tile.here);
+
+      if (currentZone && currentZone?.tile?.resources) {
+        for (const resource of currentZone.tile.resources) {
+          if (resource.reward_items?.some((r) => r.item.id === targetItemId)) {
+            resourceObjectives.add(resource.id);
+          }
+        }
+      }
+    }
   }
 
   const game = Game({

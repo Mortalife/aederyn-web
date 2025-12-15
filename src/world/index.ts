@@ -156,7 +156,7 @@ export const getTile = async (x: number, y: number) => {
           }),
 
           // Set the amount to the real amount remaining
-          amount: activity
+          amount_remaining: activity
             ? resourceModel.amount - activity.qty
             : resourceModel.amount,
         };

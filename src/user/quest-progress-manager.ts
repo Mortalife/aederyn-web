@@ -207,6 +207,19 @@ export class QuestProgressManager {
                 continue;
               }
               break;
+            case "collect":
+              if (
+                currentObjective.item_id &&
+                tile.resources.some((r) =>
+                  r.reward_items.some(
+                    (i) => i.item.id === currentObjective.item_id
+                  )
+                )
+              ) {
+                result.inProgressQuests.push({ ...quest, currentObjective });
+                continue;
+              }
+              break;
             case "talk":
             case "explore":
               if (currentObjective.x === x && currentObjective.y === y) {
@@ -353,6 +366,27 @@ export class QuestProgressManager {
                   if (
                     tile.tile?.resources.some(
                       (r) => r.id === currentObjective.resource_id
+                    )
+                  ) {
+                    addToMap(tile.x, tile.y, {
+                      x: tile.x,
+                      y: tile.y,
+                      available: false,
+                      completable: false,
+                      objective: true,
+                    });
+                  }
+                }
+              }
+              break;
+            case "collect":
+              if (currentObjective.item_id) {
+                for (const tile of worldMap) {
+                  if (
+                    tile.tile?.resources.some((r) =>
+                      r.reward_items.some(
+                        (i) => i.item.id === currentObjective.item_id
+                      )
                     )
                   ) {
                     addToMap(tile.x, tile.y, {

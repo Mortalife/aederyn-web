@@ -119,6 +119,7 @@ export type Resource = Omit<
   ResourceModel,
   "reward_items" | "required_items"
 > & {
+  amount_remaining: number;
   reward_items: RewardItem[];
   required_items: RequiredItem[];
 };

@@ -1372,12 +1372,20 @@ export const ResourceItem = (props: {
             : null}
           ${!props.resource.limitless
             ? html`<span
-                class="text-xs px-2 py-0.5 rounded-full ${props.resource
-                  .amount > 0
+                class="text-xs px-2 py-0.5 rounded-full flex flex-row items-center justify-center gap-1 ${props.resource
+                  .amount_remaining > 0
                   ? "bg-green-500/20 text-green-400"
                   : "bg-red-500/20 text-red-400"}"
               >
-                ${props.resource.amount} left
+                ${props.resource.amount_remaining} left
+                ${props.resource.amount !== props.resource.amount_remaining
+                  ? html`<span
+                      class="tooltip tooltip-top"
+                      data-tip="Replenishing"
+                    >
+                      <span class="loading loading-dots loading-xs"></span>
+                    </span>`
+                  : ""}
               </span>`
             : html`<span
                 class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400"

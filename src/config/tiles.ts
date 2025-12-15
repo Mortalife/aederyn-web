@@ -49,7 +49,7 @@ export const tileTypes: TileType[] = [
   },
   {
     id: "tile_grass",
-    name: "Grass",
+    name: "Meadow",
     color: "#006400",
     backgroundColor: "#90EE90",
     theme: "lemonade",

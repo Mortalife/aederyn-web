@@ -7,7 +7,7 @@ import {
 import { itemsMap } from "../config/items.js";
 import { resourcesMap } from "../config/resources.js";
 import { client } from "../database.js";
-import { PubSub, USER_EVENT } from "../sse/pubsub.js";
+import { PubSub, USER_EVENT, ZONE_EVENT } from "../sse/pubsub.js";
 import { markResourceUsed } from "../world/resources.js";
 import { addToInventory, getInventory, updateInventory } from "./inventory.js";
 import { progressHooks } from "./quest-hooks.js";
@@ -263,17 +263,28 @@ export const processActions = async () => {
           .map((item) => `${item.qty} x ${itemsMap.get(item.item_id)?.name}`)
           .join(", ")}`,
         "success",
-        { action_type: "resource", action_id: resource.id, location_x: action.x, location_y: action.y }
+        {
+          action_type: "resource",
+          action_id: resource.id,
+          location_x: action.x,
+          location_y: action.y,
+        }
       );
     } else {
       await addSystemMessage(
         action.user_id,
         `This resource is depleted.`,
         "error",
-        { action_type: "resource", action_id: resource.id, location_x: action.x, location_y: action.y }
+        {
+          action_type: "resource",
+          action_id: resource.id,
+          location_x: action.x,
+          location_y: action.y,
+        }
       );
     }
 
     PubSub.publish(USER_EVENT, { user_id: action.user_id });
+    PubSub.publish(ZONE_EVENT, { x: action.x, y: action.y });
   }
 };
