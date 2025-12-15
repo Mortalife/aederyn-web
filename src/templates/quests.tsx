@@ -477,7 +477,10 @@ export const QuestObjectivesCompleted = (quest: TileQuest) => {
                   ? "text-green-400 line-through opacity-70"
                   : "text-gray-200"}"
               >
-                ${objective.description}
+                ${objective.description}${objective.progress?.completed &&
+                objective.type === "explore"
+                  ? ` (${objective.x}, ${objective.y})`
+                  : ""}
               </span>
               ${objective.id === quest.currentObjective?.id
                 ? QuestObjectiveProgress({ objective: quest.currentObjective })
