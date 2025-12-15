@@ -247,11 +247,33 @@ export const processActions = async () => {
     await markActionComplete(action.user_id, action.x, action.y);
 
     if (successfullyUsed) {
+      const discardedItems: { qty: number; item_id: string }[] = [];
       for (const reward of resource.reward_items) {
-        await addToInventory(action.user_id, {
+        const added = await addToInventory(action.user_id, {
           qty: reward.qty,
           item_id: reward.item_id,
         });
+        if (!added) {
+          discardedItems.push({ qty: reward.qty, item_id: reward.item_id });
+        }
+      }
+
+      if (discardedItems.length > 0) {
+        await addSystemMessage(
+          action.user_id,
+          `Your inventory is full. Discarded: ${discardedItems
+            .map(
+              (item) => `${item.qty} x ${itemsMap.get(item.item_id)?.name}`
+            )
+            .join(", ")}`,
+          "error",
+          {
+            action_type: "resource",
+            action_id: resource.id,
+            location_x: action.x,
+            location_y: action.y,
+          }
+        );
       }
 
       await progressHooks.onResourceCompleted(action.user_id, resource.id);
