@@ -1,6 +1,6 @@
-import { type QuestGroup } from "./types.js";
+import type { Quest } from "./types.js";
 
-export const quests: QuestGroup[] = [
+export const quests: Quest[] = [
   {
     id: "quest_tutorial_gathering",
     type: "collection",
@@ -72,8 +72,6 @@ export const quests: QuestGroup[] = [
         amount: 10,
       },
     ],
-    starts_at: 0,
-    ends_at: 0,
     is_tutorial: true,
   },
   {
@@ -95,7 +93,6 @@ export const quests: QuestGroup[] = [
         description: "Speak with Forge the Blacksmith",
         entity_id: "npc_blacksmith",
         zone_id: "tile_rocky_outcrop",
-
         dialog_steps: [
           {
             entity_id: "npc_blacksmith",
@@ -144,8 +141,6 @@ export const quests: QuestGroup[] = [
         amount: 3,
       },
     ],
-    starts_at: 0,
-    ends_at: 0,
     is_tutorial: true,
   },
   {
@@ -173,7 +168,10 @@ export const quests: QuestGroup[] = [
             dialog:
               "The forest holds many secrets. Let me show you how to find what you need in the wilderness.",
           },
-          { entity_id: null, dialog: "I'm ready to explore." },
+          {
+            entity_id: null,
+            dialog: "I'm ready to explore.",
+          },
         ],
         x: 9,
         y: 12,
@@ -216,12 +214,109 @@ export const quests: QuestGroup[] = [
         amount: 1,
       },
     ],
-    starts_at: 0,
-    ends_at: 0,
     is_tutorial: true,
+  },
+  {
+    id: "mysterious_fairy_friends",
+    name: "Mysterious Fairy Friends",
+    description:
+      "Elara the Elder Sage has noticed strange occurrences in the Enchanted Grove involving the fairies. She needs your help to gather evidence about the fairies' activities.",
+    type: "collection",
+    giver: {
+      entity_id: "npc_elder_sage",
+      zone_id: "tile_enchanted_grove",
+    },
+    objectives: [
+      {
+        id: "gather_fairy_petal",
+        description: "Gather Fairy Petals from the Enchanted Grove.",
+        progress: null,
+        type: "gather",
+        resource_id: "resource_fairy_flower",
+        amount: 5,
+      },
+      {
+        id: "collect_glow_fungus",
+        description: "Collect Glow Fungus to explore the area better.",
+        progress: null,
+        type: "collect",
+        item_id: "item_glow_fungus",
+        amount: 3,
+      },
+    ],
+    completion: {
+      entity_id: "npc_elder_sage",
+      zone_id: "tile_enchanted_grove",
+      message:
+        "Thank you for your help! These petals and fungi will help us understand the fairies' intentions.",
+      return_message: "You have helped before. The fairies thank you!",
+    },
+    rewards: [
+      {
+        type: "item",
+        item_id: "item_flower_petals",
+        amount: 1,
+      },
+    ],
+    is_tutorial: false,
+    prerequisites: [],
+  },
+  {
+    id: "whispers-in-the-marsh",
+    name: "Whispers in the Marsh",
+    description:
+      "Vex the Hermit Alchemist has been hearing unsettling whispers coming from the Mystic Marsh. He believes the source may be tied to the ancient magic of the area. He needs your help to gather rare materials and uncover the truth.",
+    type: "collection",
+    giver: {
+      entity_id: "npc_hermit_alchemist",
+      zone_id: "tile_mystic_marsh",
+    },
+    objectives: [
+      {
+        id: "gather_glow_fungus",
+        description: "Collect 5 Glow Fungus from the Mystic Marsh.",
+        progress: null,
+        type: "gather",
+        resource_id: "resource_cave_fungus",
+        amount: 5,
+      },
+      {
+        id: "gather_spring_water",
+        description: "Gather 3 Spring Water from the nearby water sources.",
+        progress: null,
+        type: "gather",
+        resource_id: "resource_spring_water",
+        amount: 3,
+      },
+      {
+        id: "talk_with_vex",
+        description:
+          "Return to Vex the Hermit Alchemist to discuss your findings.",
+        progress: null,
+        type: "talk",
+        entity_id: "npc_hermit_alchemist",
+        zone_id: "tile_mystic_marsh",
+        dialog_steps: [],
+      },
+    ],
+    completion: {
+      entity_id: "npc_hermit_alchemist",
+      zone_id: "tile_mystic_marsh",
+      message:
+        "You've brought back the materials! Now, let's see if we can unravel the mystery of the whispers.",
+      return_message:
+        "Thank you for your assistance! The whispers grow stronger.",
+    },
+    rewards: [
+      {
+        type: "item",
+        item_id: "item_ruby",
+        amount: 1,
+      },
+    ],
+    is_tutorial: false,
+    prerequisites: [],
   },
 ];
 
-export const questMap = new Map<string, QuestGroup>(
-  quests.map((q) => [q.id, q])
-);
+export const questsById = new Map<string, Quest>(quests.map((q) => [q.id, q]));

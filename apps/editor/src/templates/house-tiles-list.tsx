@@ -45,11 +45,9 @@ export const HouseTilesList: FC<HouseTilesListProps> = ({ houseTiles }) => {
                 <tr key={tile.id} data-testid="house-tile-row" class="hover:bg-gray-700/50 transition">
                   <td class="px-4 py-3">
                     <div
-                      class="w-10 h-10 rounded flex items-center justify-center text-xl"
+                      class="w-10 h-10 rounded"
                       style={`background-color: ${tile.bgColor || '#374151'};`}
-                    >
-                      {tile.sprite || "🏠"}
-                    </div>
+                    />
                   </td>
                   <td class="px-4 py-3 text-white font-medium">{tile.name}</td>
                   <td class="px-4 py-3 text-gray-400 font-mono text-sm">{tile.id}</td>

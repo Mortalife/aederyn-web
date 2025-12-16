@@ -1,4 +1,5 @@
 import type { FC } from "hono/jsx";
+import type { ValidationResult } from "../services/validation.js";
 
 interface DashboardProps {
   counts: {
@@ -9,9 +10,14 @@ interface DashboardProps {
     quests: number;
     houseTiles: number;
   };
+  validation: ValidationResult;
 }
 
-export const Dashboard: FC<DashboardProps> = ({ counts }) => {
+export const Dashboard: FC<DashboardProps> = ({ counts, validation }) => {
+  const { errors, warnings, summary } = validation;
+  const missingRefCount = errors.length;
+  const orphanedCount = warnings.filter(w => w.type === "orphaned").length;
+  const balanceCount = warnings.filter(w => w.type === "balance").length;
   return (
     <div id="main-content">
       <div class="text-center py-8">
@@ -86,17 +92,35 @@ export const Dashboard: FC<DashboardProps> = ({ counts }) => {
         <div class="bg-gray-800 rounded-lg p-6">
           <h2 class="text-xl font-semibold text-white mb-4">Health Check</h2>
           <div class="space-y-3">
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+            <a href="/validate" class="flex items-center justify-between p-3 bg-gray-700 rounded hover:bg-gray-600 transition">
               <span>Missing References</span>
-              <span class="text-green-400">✓ None</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+              {missingRefCount === 0 ? (
+                <span class="text-green-400">✓ None</span>
+              ) : (
+                <span class="text-red-400">❌ {missingRefCount} error{missingRefCount !== 1 ? 's' : ''}</span>
+              )}
+            </a>
+            <a href="/validate" class="flex items-center justify-between p-3 bg-gray-700 rounded hover:bg-gray-600 transition">
               <span>Orphaned Entities</span>
-              <span class="text-green-400">✓ None</span>
-            </div>
-            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+              {orphanedCount === 0 ? (
+                <span class="text-green-400">✓ None</span>
+              ) : (
+                <span class="text-yellow-400">⚠️ {orphanedCount} warning{orphanedCount !== 1 ? 's' : ''}</span>
+              )}
+            </a>
+            <a href="/validate" class="flex items-center justify-between p-3 bg-gray-700 rounded hover:bg-gray-600 transition">
               <span>Balance Warnings</span>
-              <span class="text-green-400">✓ None</span>
+              {balanceCount === 0 ? (
+                <span class="text-green-400">✓ None</span>
+              ) : (
+                <span class="text-yellow-400">⚠️ {balanceCount} warning{balanceCount !== 1 ? 's' : ''}</span>
+              )}
+            </a>
+            <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+              <span>Health Score</span>
+              <span class={summary.healthScore >= 80 ? "text-green-400" : summary.healthScore >= 50 ? "text-yellow-400" : "text-red-400"}>
+                {summary.healthScore}%
+              </span>
             </div>
           </div>
         </div>

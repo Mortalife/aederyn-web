@@ -67,8 +67,6 @@
         "amount": 10
       }
     ],
-    "starts_at": 0,
-    "ends_at": 0,
     "is_tutorial": true
   },
   {
@@ -135,8 +133,6 @@
         "amount": 3
       }
     ],
-    "starts_at": 0,
-    "ends_at": 0,
     "is_tutorial": true
   },
   {
@@ -206,8 +202,6 @@
         "amount": 1
       }
     ],
-    "starts_at": 0,
-    "ends_at": 0,
     "is_tutorial": true
   },
   {

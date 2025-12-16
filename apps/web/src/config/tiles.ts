@@ -115,7 +115,6 @@ export const tileTypes: Tile[] = [
     rarity: 0.2,
     accessible: true,
   },
-
   {
     id: "tile_abandoned_mine",
     name: "Abandoned Mine",
@@ -153,7 +152,6 @@ export const tileTypes: Tile[] = [
     rarity: 0.2,
     accessible: true,
   },
-
   {
     id: "tile_mountain_peak",
     name: "Mountain Peak",

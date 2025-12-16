@@ -90,12 +90,18 @@ app.get("/", async (c) => {
 // Dashboard SSE
 app.get("/sse/dashboard", async (c) => {
   return streamSSE(c, async (stream) => {
-    const counts = await repository.getCounts();
-    await stream.writeSSE(fragmentEvent(Dashboard({ counts })));
+    const [counts, validation] = await Promise.all([
+      repository.getCounts(),
+      runValidation(),
+    ]);
+    await stream.writeSSE(fragmentEvent(Dashboard({ counts, validation })));
 
     const handleUpdate = async () => {
-      const counts = await repository.getCounts();
-      await stream.writeSSE(fragmentEvent(Dashboard({ counts })));
+      const [counts, validation] = await Promise.all([
+        repository.getCounts(),
+        runValidation(),
+      ]);
+      await stream.writeSSE(fragmentEvent(Dashboard({ counts, validation })));
     };
 
     PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
@@ -2005,6 +2011,47 @@ app.post("/commands/ai/generate/npc", async (c) => {
     console.error("AI NPC generation error:", error);
     return c.redirect("/ai?error=generation_failed");
   }
+});
+
+// Export commands
+app.post("/commands/export/json", async (c) => {
+  const result = await exportToJson();
+  const zip = result.files
+    .map((f) => `// ${f.filename}\n${f.content}`)
+    .join("\n\n---\n\n");
+  return c.text(zip, 200, {
+    "Content-Type": "application/json",
+    "Content-Disposition": 'attachment; filename="export.json"',
+  });
+});
+
+app.post("/commands/export/typescript", async (c) => {
+  const result = await exportToTypeScript();
+  const zip = result.files
+    .map((f) => `// ${f.filename}\n${f.content}`)
+    .join("\n\n---\n\n");
+  return c.text(zip, 200, {
+    "Content-Type": "text/plain",
+    "Content-Disposition": 'attachment; filename="export.ts"',
+  });
+});
+
+app.post("/commands/export/deploy", async (c) => {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const result = await exportToTypeScript();
+
+  const configDir = path.resolve(
+    import.meta.dirname,
+    "../../web/src/config"
+  );
+
+  for (const file of result.files) {
+    const filePath = path.join(configDir, file.filename);
+    await fs.writeFile(filePath, file.content, "utf-8");
+  }
+
+  return c.redirect("/export?deployed=true");
 });
 
 // Naming commands
