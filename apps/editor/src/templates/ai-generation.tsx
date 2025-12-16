@@ -260,8 +260,15 @@ export const AIGenerationView: FC<AIGenerationViewProps> = ({ worldBible }) => {
           <div class="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4 mt-4">
             <h3 class="text-sm font-semibold text-yellow-400 mb-2">⚠️ API Key Required</h3>
             <p class="text-xs text-yellow-200/70">
-              AI generation requires an OpenAI API key. Set the <code class="bg-gray-800 px-1 rounded">OPENAI_API_KEY</code> environment variable to enable this feature.
+              AI generation requires an OpenRouter API key. Set the <code class="bg-gray-800 px-1 rounded">OPENROUTER_API_KEY</code> environment variable to enable this feature.
             </p>
+            <a
+              href="https://openrouter.ai/keys"
+              target="_blank"
+              class="text-xs text-blue-400 hover:underline mt-2 inline-block"
+            >
+              Get an API key →
+            </a>
           </div>
         </div>
       </div>

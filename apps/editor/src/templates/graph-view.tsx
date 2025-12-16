@@ -221,6 +221,9 @@ const FilterCheckbox: FC<FilterCheckboxProps> = ({ id, label, count, color, chec
     cyan: "text-cyan-400",
   };
 
+  const filterKey = id.replace("filter-", "").replace("-", "T");
+  const paramName = filterKey === "houseTiles" ? "houseTiles" : filterKey;
+
   return (
     <label class="flex items-center justify-between cursor-pointer">
       <div class="flex items-center gap-2">
@@ -229,6 +232,7 @@ const FilterCheckbox: FC<FilterCheckboxProps> = ({ id, label, count, color, chec
           data-testid={id}
           checked={checked}
           class="w-4 h-4 rounded bg-gray-700 border-gray-600"
+          onchange={`window.location.href = window.location.pathname + '?' + new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), '${paramName}': this.checked}).toString()`}
         />
         <span class={`text-sm ${colorClasses[color]}`}>{label}</span>
       </div>

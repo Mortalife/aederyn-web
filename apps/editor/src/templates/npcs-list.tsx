@@ -19,51 +19,66 @@ export const NPCsList: FC<NPCsListProps> = ({ npcs }) => {
         </a>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="npcs-list">
-        {npcs.length === 0 ? (
-          <div class="col-span-full text-center py-8 text-gray-400">
-            No NPCs found. Create your first NPC!
-          </div>
-        ) : (
-          npcs.map((npc) => (
-            <div key={npc.entity_id} class="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-purple-500/50 transition">
-              <div class="flex items-start justify-between mb-3">
-                <div>
-                  <h3 class="text-lg font-semibold text-white">{npc.name}</h3>
-                  <p class="text-sm text-gray-400 font-mono">{npc.entity_id}</p>
-                </div>
-                <span class="text-2xl">👤</span>
-              </div>
-              <p class="text-sm text-gray-300 line-clamp-2 mb-3">{npc.backstory}</p>
-              <div class="flex justify-between items-center">
-                <span class="text-xs text-gray-500">
-                  {Object.keys(npc.relationships).length} relationships
-                </span>
-                <div class="space-x-2">
-                  <a
-                    href={`/npcs/${npc.entity_id}`}
-                    class="text-sm text-blue-400 hover:text-blue-300"
-                  >
-                    Edit
-                  </a>
-                  <form
-                    method="post"
-                    action={`/commands/npcs/${npc.entity_id}/delete`}
-                    class="inline"
-                  >
-                    <button
-                      type="submit"
-                      data-testid="delete-btn"
-                      class="text-sm text-red-400 hover:text-red-300"
+      <div class="bg-gray-800 rounded-lg overflow-hidden">
+        <table data-testid="npcs-list" class="w-full">
+          <thead class="bg-gray-700">
+            <tr>
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Name</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">ID</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Backstory</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Relationships</th>
+              <th class="px-4 py-3 text-right text-sm font-medium text-gray-300">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-700">
+            {npcs.length === 0 ? (
+              <tr>
+                <td colspan={5} class="px-4 py-8 text-center text-gray-400">
+                  No NPCs found. Create your first NPC!
+                </td>
+              </tr>
+            ) : (
+              npcs.map((npc) => (
+                <tr key={npc.entity_id} data-testid="npc-row" class="hover:bg-gray-700/50 transition">
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xl">👤</span>
+                      <span class="text-white font-medium">{npc.name}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-gray-400 font-mono text-sm">{npc.entity_id}</td>
+                  <td class="px-4 py-3 text-gray-300 text-sm max-w-xs truncate">{npc.backstory}</td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-1 rounded text-xs font-medium bg-purple-500/20 text-purple-400">
+                      {Object.values(npc.relationships || {}).flat().length} relationships
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <a
+                      href={`/npcs/${npc.entity_id}`}
+                      class="text-blue-400 hover:text-blue-300 mr-3"
                     >
-                      Delete
-                    </button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
+                      Edit
+                    </a>
+                    <form
+                      method="post"
+                      action={`/commands/npcs/${npc.entity_id}/delete`}
+                      class="inline"
+                    >
+                      <button
+                        type="submit"
+                        data-testid="delete-btn"
+                        class="text-red-400 hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

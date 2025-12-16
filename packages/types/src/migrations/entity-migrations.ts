@@ -1,10 +1,10 @@
 import type { Migration } from "./index.js";
-import type { Item } from "../entities/item.js";
-import type { ResourceModel } from "../entities/resource.js";
-import type { Tile } from "../entities/tile.js";
-import type { NPC } from "../entities/npc.js";
-import type { TileQuest } from "../entities/quest.js";
-import type { HouseTile } from "../entities/house-tile.js";
+import type { Item } from "../entities/item.schema.js";
+import type { ResourceModel } from "../entities/resource.schema.js";
+import type { Tile } from "../entities/tile.schema.js";
+import type { NPC } from "../entities/npc.schema.js";
+import type { TileQuest } from "../entities/quest.schema.js";
+import type { HouseTile } from "../entities/house-tile.schema.js";
 
 // Example migration: Item v1 -> v2 (adding iconUrl field)
 export const itemV1ToV2: Migration<Omit<Item, 'iconUrl'>, Item> = {

@@ -14,7 +14,9 @@
     "@hono/node-server": "^1.19.7",
     "cytoscape": "^3.30.4",
     "hono": "^4.10.8",
-    "zod": "^3.24.1"
+    "openai": "^4.77.0",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.25.0"
   },
   "devDependencies": {
     "@hono/vite-build": "^1.2.1",

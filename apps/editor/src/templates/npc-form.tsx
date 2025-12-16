@@ -197,7 +197,7 @@ export const NPCForm: FC<NPCFormProps> = ({ npc, isNew = true, allNpcs = [] }) =
                           class="px-2 py-1 text-red-400 hover:text-red-300"
                           onclick="this.parentElement.remove()"
                         >
-                          \u2715
+                          ✕
                         </button>
                       </div>
                     ))}

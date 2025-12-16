@@ -1,5 +1,6 @@
 import type { WorldBible } from "@aederyn/types";
 import { repository } from "../repository/index.js";
+import { getSchemaPrompt } from "./ai-schema.js";
 
 export interface AIContext {
   worldSummary: string;
@@ -8,6 +9,13 @@ export interface AIContext {
     items: string[];
     npcs: string[];
     quests: string[];
+  };
+  // Full entity lists with IDs for AI to reference
+  availableEntities: {
+    items: Array<{ id: string; name: string; type: string }>;
+    npcs: Array<{ entity_id: string; name: string }>;
+    resources: Array<{ id: string; name: string }>;
+    zones: Array<{ id: string; name: string }>;
   };
   constraints: {
     balanceGuidelines: string;
@@ -63,10 +71,12 @@ ${worldBible.factions.map((f) => `- ${f.name} (${f.alignment}): ${f.description}
     }
   }
 
-  const [items, npcs, quests] = await Promise.all([
+  const [items, npcs, quests, resources, tiles] = await Promise.all([
     repository.items.getAll(),
     repository.npcs.getAll(),
     repository.quests.getAll(),
+    repository.resources.getAll(),
+    repository.tiles.getAll(),
   ]);
 
   const namingPatterns = [
@@ -82,6 +92,15 @@ ${worldBible.factions.map((f) => `- ${f.name} (${f.alignment}): ${f.description}
       items: items.slice(0, 20).map((i) => `${i.name}: ${i.description}`),
       npcs: npcs.slice(0, 20).map((n) => `${n.name}: ${n.backstory?.substring(0, 100) || ""}`),
       quests: quests.slice(0, 10).map((q) => `${q.name}: ${q.description}`),
+    },
+    availableEntities: {
+      items: items.map((i) => ({ id: i.id, name: i.name, type: i.type })),
+      npcs: npcs.map((n) => ({ entity_id: n.entity_id, name: n.name })),
+      resources: resources.map((r) => ({ id: r.id, name: r.name })),
+      zones: [
+        ...worldBible.regions.map((r) => ({ id: r.id, name: r.name })),
+        ...tiles.map((t) => ({ id: t.id, name: t.name })),
+      ],
     },
     constraints: {
       balanceGuidelines: buildBalanceGuidelines(),
@@ -126,18 +145,7 @@ ${request.theme ? `Theme/style: ${request.theme}` : ""}
 ${request.relatedTo ? `Should relate to: ${request.relatedTo}` : ""}
 
 Respond with JSON in this exact format:
-{
-  "name": "Item Name",
-  "description": "2-3 sentence description",
-  "type": "${request.type}",
-  "rarity": "${request.rarity}",
-  "value": <number based on rarity>,
-  "weight": <number>,
-  "stackable": <boolean>,
-  "maxStackSize": <number if stackable>,
-  "equippable": <boolean>,
-  "equipSlot": "<slot if equippable>"
-}
+${getSchemaPrompt("item")}
   `.trim();
 }
 
@@ -159,35 +167,38 @@ ${context.existingEntities.quests.slice(0, 5).join("\n")}
 Relevant lore:
 ${context.relevantLore.join("\n")}
 
+=== AVAILABLE ENTITIES (use these exact IDs) ===
+
+NPCs (use entity_id for giver and completion):
+${context.availableEntities.npcs.map((n) => `- ${n.entity_id}: ${n.name}`).join("\n") || "No NPCs available"}
+
+Items (use id for collect objectives and item rewards):
+${context.availableEntities.items.map((i) => `- ${i.id}: ${i.name} (${i.type})`).join("\n") || "No items available"}
+
+Resources (use id for gather/craft objectives):
+${context.availableEntities.resources.map((r) => `- ${r.id}: ${r.name}`).join("\n") || "No resources available"}
+
+Zones (use id for zone_id fields):
+${context.availableEntities.zones.map((z) => `- ${z.id}: ${z.name}`).join("\n") || "No zones available"}
+
+=== QUEST REQUIREMENTS ===
+
 Generate a quest.
 ${request.type ? `Quest type: ${request.type}` : ""}
 ${request.giver ? `Quest giver: ${request.giver}` : ""}
 ${request.region ? `Takes place in: ${request.region}` : ""}
 ${request.difficulty ? `Difficulty: ${request.difficulty}` : ""}
 
-The quest should:
-- Fit the world's tone and themes
-- Have clear objectives
-- Offer appropriate rewards
-- Connect to existing lore when possible
+IMPORTANT:
+- You MUST use entity IDs from the lists above. Do not invent new IDs.
+- The giver must reference an existing NPC entity_id and zone_id
+- The completion must reference an existing NPC entity_id and zone_id
+- Objectives must use valid item_id, resource_id, entity_id, or zone_id from above
+- Rewards must use valid item_id from the items list
+- If no suitable entity exists, pick the closest match from available options
 
 Respond with JSON in this exact format:
-{
-  "name": "Quest Name",
-  "description": "Quest description for player",
-  "type": "main|side|daily|tutorial",
-  "objectives": [
-    { "type": "collect|talk|explore|craft", "description": "...", "target": "item/npc id", "amount": 1 }
-  ],
-  "rewards": [
-    { "type": "item|currency", "id": "item-id", "amount": 1 }
-  ],
-  "dialogue": {
-    "intro": "Quest giver's introduction",
-    "progress": "What they say mid-quest",
-    "completion": "What they say on completion"
-  }
-}
+${getSchemaPrompt("quest")}
   `.trim();
 }
 
@@ -219,18 +230,6 @@ The NPC should have:
 - Potential relationships with existing NPCs
 
 Respond with JSON in this exact format:
-{
-  "name": "NPC Name",
-  "entity_id": "npc-id-slug",
-  "backstory": "2-3 paragraph backstory",
-  "personalMission": "What drives them",
-  "hopes": "What they hope for",
-  "fears": "What they fear",
-  "relationships": {
-    "friends": ["Existing NPC - relationship description"],
-    "rivals": [],
-    "family": []
-  }
-}
+${getSchemaPrompt("npc")}
   `.trim();
 }

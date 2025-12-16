@@ -1,4 +1,4 @@
-import type { Item } from "../entities/item.js";
+import type { Item } from "../entities/item.schema.js";
 
 export interface UserInventoryItem {
   id: string;

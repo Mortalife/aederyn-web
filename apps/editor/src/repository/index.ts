@@ -5,15 +5,16 @@ import type {
   ResourceModel,
   Tile,
   NPC,
+  Quest,
   TileQuest,
+  QuestGroup,
   HouseTile,
   WorldBible,
 } from "@aederyn/types";
 import { createDefaultWorldBible } from "@aederyn/types";
 
-export type { Item, Tile, NPC, HouseTile };
+export type { Item, Tile, NPC, HouseTile, Quest, TileQuest, QuestGroup };
 export type Resource = ResourceModel;
-export type Quest = TileQuest;
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -168,20 +169,20 @@ export const repository = {
   },
 
   quests: {
-    async getAll(): Promise<Quest[]> {
-      return readJsonFile<Quest>("quests.json");
+    async getAll(): Promise<QuestGroup[]> {
+      return readJsonFile<QuestGroup>("quests.json");
     },
-    async getById(id: string): Promise<Quest | undefined> {
+    async getById(id: string): Promise<QuestGroup | undefined> {
       const quests = await this.getAll();
       return quests.find((q) => q.id === id);
     },
-    async create(quest: Quest): Promise<Quest> {
+    async create(quest: QuestGroup): Promise<QuestGroup> {
       const quests = await this.getAll();
       quests.push(quest);
       await writeJsonFile("quests.json", quests);
       return quest;
     },
-    async update(id: string, updates: Partial<Quest>): Promise<Quest | undefined> {
+    async update(id: string, updates: Partial<QuestGroup>): Promise<QuestGroup | undefined> {
       const quests = await this.getAll();
       const index = quests.findIndex((q) => q.id === id);
       if (index === -1) return undefined;

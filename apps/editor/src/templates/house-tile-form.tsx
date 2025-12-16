@@ -142,10 +142,9 @@ export const HouseTileForm: FC<HouseTileFormProps> = ({ houseTile, isNew = true 
                   class="w-16 h-16 rounded flex items-center justify-center text-3xl border border-gray-600"
                   style={`background-color: ${ht.bgColor || '#374151'};`}
                 >
-                  {ht.sprite || "🏠"}
                 </div>
                 <div class="text-gray-400 text-sm">
-                  This is how the tile will appear in the game
+                  This is how the tile background will appear in the game
                 </div>
               </div>
             </div>
@@ -158,81 +157,196 @@ export const HouseTileForm: FC<HouseTileFormProps> = ({ houseTile, isNew = true 
             Available Actions
           </h2>
           <div data-testid="action-builder" class="space-y-4">
-            {/* Visual Action Cards */}
-            {(ht.availableActions || []).length > 0 && (
-              <div class="space-y-3">
-                {(ht.availableActions || []).map((action, index) => (
-                  <div key={action.id || index} class="bg-gray-700 rounded-lg p-4 border border-gray-600">
-                    <div class="flex items-start justify-between mb-3">
-                      <div class="flex items-center gap-2">
-                        <span class="text-cyan-400 font-mono text-sm">#{index + 1}</span>
-                        <span class="font-semibold text-white">{action.name}</span>
-                      </div>
-                      <span class="text-xs px-2 py-1 bg-gray-600 rounded text-gray-300 font-mono">
-                        {action.id}
-                      </span>
-                    </div>
-                    <p class="text-sm text-gray-400 mb-3">{action.description}</p>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                      <div data-testid="requirements-section">
-                        <span class="text-gray-500">Requirements:</span>
-                        <pre class="mt-1 text-xs bg-gray-800 p-2 rounded overflow-x-auto text-gray-300">
-                          {JSON.stringify(action.requirements || {}, null, 2)}
-                        </pre>
-                      </div>
-                      <div>
-                        <span class="text-gray-500">Result:</span>
-                        <pre class="mt-1 text-xs bg-gray-800 p-2 rounded overflow-x-auto text-gray-300">
-                          {JSON.stringify(action.result || {}, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                    <div class="mt-2 flex items-center gap-4 text-xs text-gray-400">
-                      <span>Can Undo: {action.canUndo ? "Yes" : "No"}</span>
-                    </div>
+            {/* Existing Actions */}
+            {(ht.availableActions || []).map((action, index) => (
+              <div key={action.id || index} class="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                <div class="flex items-start justify-between mb-4">
+                  <span class="text-cyan-400 font-mono text-sm">Action #{index + 1}</span>
+                  <button
+                    type="button"
+                    class="text-red-400 hover:text-red-300 text-sm"
+                    onclick={`this.closest('.bg-gray-700').remove()`}
+                  >
+                    ✕ Remove
+                  </button>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Action ID</label>
+                    <input
+                      type="text"
+                      name={`action_${index}_id`}
+                      value={action.id}
+                      placeholder="plant_seeds"
+                      class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                    />
                   </div>
-                ))}
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Action Name</label>
+                    <input
+                      type="text"
+                      name={`action_${index}_name`}
+                      value={action.name}
+                      placeholder="Plant Seeds"
+                      class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                    />
+                  </div>
+                </div>
+                <div class="mb-4">
+                  <label class="block text-xs text-gray-400 mb-1">Description</label>
+                  <input
+                    type="text"
+                    name={`action_${index}_description`}
+                    value={action.description}
+                    placeholder="What this action does..."
+                    class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Transform To (Tile ID)</label>
+                    <input
+                      type="text"
+                      name={`action_${index}_transformTo`}
+                      value={(action.result as any)?.transform_to || ""}
+                      placeholder="garden_planted"
+                      class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Required Item ID</label>
+                    <input
+                      type="text"
+                      name={`action_${index}_requiredItem`}
+                      value={(action.requirements as any)?.items?.[0]?.item_id || ""}
+                      placeholder="item_seeds"
+                      class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                    />
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Required Quantity</label>
+                    <input
+                      type="number"
+                      name={`action_${index}_requiredQty`}
+                      value={(action.requirements as any)?.items?.[0]?.qty || 1}
+                      min="1"
+                      class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                    />
+                  </div>
+                  <div class="flex items-end">
+                    <label class="flex items-center gap-2 cursor-pointer pb-2">
+                      <input
+                        type="checkbox"
+                        name={`action_${index}_canUndo`}
+                        checked={action.canUndo === true}
+                        class="w-4 h-4 rounded bg-gray-600 border-gray-500"
+                      />
+                      <span class="text-sm text-white">Can Undo</span>
+                    </label>
+                  </div>
+                </div>
               </div>
-            )}
+            ))}
+
+            {/* Add New Action Template (hidden, cloned via JS) */}
+            <template id="action-template">
+              <div class="bg-gray-700 rounded-lg p-4 border border-gray-600 new-action">
+                <div class="flex items-start justify-between mb-4">
+                  <span class="text-cyan-400 font-mono text-sm">New Action</span>
+                  <button
+                    type="button"
+                    class="text-red-400 hover:text-red-300 text-sm"
+                    onclick="this.closest('.new-action').remove()"
+                  >
+                    ✕ Remove
+                  </button>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Action ID</label>
+                    <input
+                      type="text"
+                      name="new_action_id"
+                      placeholder="plant_seeds"
+                      class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Action Name</label>
+                    <input
+                      type="text"
+                      name="new_action_name"
+                      placeholder="Plant Seeds"
+                      class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                    />
+                  </div>
+                </div>
+                <div class="mb-4">
+                  <label class="block text-xs text-gray-400 mb-1">Description</label>
+                  <input
+                    type="text"
+                    name="new_action_description"
+                    placeholder="What this action does..."
+                    class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Transform To (Tile ID)</label>
+                    <input
+                      type="text"
+                      name="new_action_transformTo"
+                      placeholder="garden_planted"
+                      class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Required Item ID</label>
+                    <input
+                      type="text"
+                      name="new_action_requiredItem"
+                      placeholder="item_seeds"
+                      class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                    />
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-1">Required Quantity</label>
+                    <input
+                      type="number"
+                      name="new_action_requiredQty"
+                      value="1"
+                      min="1"
+                      class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                    />
+                  </div>
+                  <div class="flex items-end">
+                    <label class="flex items-center gap-2 cursor-pointer pb-2">
+                      <input
+                        type="checkbox"
+                        name="new_action_canUndo"
+                        class="w-4 h-4 rounded bg-gray-600 border-gray-500"
+                      />
+                      <span class="text-sm text-white">Can Undo</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </template>
 
             {/* Add Action Button */}
             <button
               type="button"
               data-testid="add-action"
               class="w-full py-3 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:border-cyan-500 hover:text-cyan-400 transition flex items-center justify-center gap-2"
-              onclick="document.getElementById('action-json-editor').classList.toggle('hidden')"
+              onclick="const t = document.getElementById('action-template'); const clone = t.content.cloneNode(true); this.parentNode.insertBefore(clone, this);"
             >
               <span>+</span>
-              <span>Add/Edit Actions (JSON)</span>
+              <span>Add Action</span>
             </button>
-
-            {/* JSON Editor (collapsible) */}
-            <div id="action-json-editor" class={`bg-gray-700 rounded p-4 ${(ht.availableActions || []).length > 0 ? 'hidden' : ''}`}>
-              <div class="flex items-center justify-between mb-2">
-                <label class="text-sm font-medium text-gray-300">Actions JSON</label>
-                <span class="text-xs text-gray-500">Edit the raw JSON to add or modify actions</span>
-              </div>
-              <textarea
-                name="availableActions"
-                rows={10}
-                placeholder={`[
-  {
-    "id": "plant_seeds",
-    "name": "Plant Seeds",
-    "description": "Plant seeds in the soil",
-    "requirements": { "items": [{ "item_id": "item_seeds", "qty": 1 }] },
-    "result": { "transform_to": "garden_planted" },
-    "canUndo": false
-  }
-]`}
-                class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 font-mono text-sm"
-              >
-                {JSON.stringify(ht.availableActions || [], null, 2)}
-              </textarea>
-              <p class="text-xs text-gray-400 mt-2">
-                Each action should have: id, name, description, requirements (optional), result (optional), canUndo (boolean)
-              </p>
-            </div>
           </div>
         </div>
 
@@ -241,18 +355,55 @@ export const HouseTileForm: FC<HouseTileFormProps> = ({ houseTile, isNew = true 
           <h2 class="text-lg font-semibold text-cyan-400 mb-4 border-b border-gray-700 pb-2">
             Flags
           </h2>
-          <div class="bg-gray-700 rounded p-4">
-            <textarea
-              name="flags"
-              rows={4}
-              placeholder='{"walkable": true, "buildable": true}'
-              class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 font-mono text-sm"
-            >
-              {JSON.stringify(ht.flags || {}, null, 2)}
-            </textarea>
-            <p class="text-xs text-gray-400 mt-2">
-              JSON object for tile flags and properties.
-            </p>
+          <div class="bg-gray-700 rounded p-4 space-y-3">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="flags_isWalkable"
+                checked={(ht.flags as any)?.isWalkable !== false}
+                class="w-4 h-4 rounded bg-gray-600 border-gray-500"
+              />
+              <div>
+                <span class="text-white">Walkable</span>
+                <p class="text-xs text-gray-400">Player can walk on this tile</p>
+              </div>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="flags_isBuildable"
+                checked={(ht.flags as any)?.isBuildable === true}
+                class="w-4 h-4 rounded bg-gray-600 border-gray-500"
+              />
+              <div>
+                <span class="text-white">Buildable</span>
+                <p class="text-xs text-gray-400">Can place structures on this tile</p>
+              </div>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="flags_isInteractable"
+                checked={(ht.flags as any)?.isInteractable === true}
+                class="w-4 h-4 rounded bg-gray-600 border-gray-500"
+              />
+              <div>
+                <span class="text-white">Interactable</span>
+                <p class="text-xs text-gray-400">Player can interact with this tile</p>
+              </div>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="flags_isDestructible"
+                checked={(ht.flags as any)?.isDestructible === true}
+                class="w-4 h-4 rounded bg-gray-600 border-gray-500"
+              />
+              <div>
+                <span class="text-white">Destructible</span>
+                <p class="text-xs text-gray-400">This tile can be destroyed or removed</p>
+              </div>
+            </label>
           </div>
         </div>
 

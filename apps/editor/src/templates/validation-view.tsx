@@ -169,6 +169,22 @@ const ErrorCard: FC<{ error: ValidationError }> = ({ error }) => {
 };
 
 const WarningCard: FC<{ warning: ValidationWarning }> = ({ warning }) => {
+  const getWarningLabel = () => {
+    if (warning.type === "orphaned") {
+      const typeLabels: Record<string, string> = {
+        item: "Orphaned Item",
+        resource: "Orphaned Resource",
+        tile: "Orphaned Tile",
+        npc: "Orphaned NPC",
+        quest: "Orphaned Quest",
+        "house-tile": "Orphaned House Tile",
+      };
+      return typeLabels[warning.entityType] || `Orphaned ${warning.entityType}`;
+    }
+    if (warning.type === "duplicate_id") return "Duplicate ID";
+    return "Balance Issue";
+  };
+
   return (
     <a
       href={getEntityEditUrl(warning.entityType, warning.entity)}
@@ -178,7 +194,7 @@ const WarningCard: FC<{ warning: ValidationWarning }> = ({ warning }) => {
       <div class="flex items-start justify-between">
         <div>
           <span class="text-sm font-medium text-yellow-400">
-            {warning.type === "orphaned" ? "Orphaned Entity" : warning.type === "duplicate_id" ? "Duplicate ID" : "Balance Issue"}
+            {getWarningLabel()}
           </span>
           <p class="text-xs text-gray-400 mt-1">
             <span class="text-gray-300">{warning.entityName}</span>

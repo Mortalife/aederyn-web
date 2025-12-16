@@ -1,4 +1,4 @@
-import type { ItemDurability, ItemAttributes, ItemRequirements, ItemEffect, TileObjective, RequirementReward, TileCompletion, DialogStep } from "@aederyn/types";
+import type { ItemDurability, ItemAttributes, ItemRequirements, ItemEffect, TileObjective, Objective, RequirementReward, TileCompletion, Completion, DialogStep } from "@aederyn/types";
 
 type FormBody = Record<string, string | File | (string | File)[]>;
 
@@ -177,8 +177,8 @@ export function parseRelationships(body: FormBody): Record<string, string[]> {
   return relationships;
 }
 
-export function parseObjectives(body: FormBody): TileObjective[] {
-  const objectives: TileObjective[] = [];
+export function parseObjectives(body: FormBody, isTileQuest = true): (Objective | TileObjective)[] {
+  const objectives: (Objective | TileObjective)[] = [];
   let index = 0;
   
   while (true) {
@@ -206,7 +206,7 @@ export function parseObjectives(body: FormBody): TileObjective[] {
           amount: parseInt(body[`objectives[${index}].amount`] as string) || 1,
         });
         break;
-      case 'talk':
+      case 'talk': {
         const dialogSteps: DialogStep[] = [];
         let stepIndex = 0;
         while (true) {
@@ -218,26 +218,47 @@ export function parseObjectives(body: FormBody): TileObjective[] {
           });
           stepIndex++;
         }
-        objectives.push({
-          ...baseObj,
-          type: 'talk',
-          entity_id: body[`objectives[${index}].entity_id`] as string || '',
-          zone_id: body[`objectives[${index}].zone_id`] as string || '',
-          dialog_steps: dialogSteps,
-          x: 0,
-          y: 0,
-        });
+        if (isTileQuest) {
+          objectives.push({
+            ...baseObj,
+            type: 'talk',
+            entity_id: body[`objectives[${index}].entity_id`] as string || '',
+            zone_id: body[`objectives[${index}].zone_id`] as string || '',
+            dialog_steps: dialogSteps,
+            x: 0,
+            y: 0,
+          });
+        } else {
+          objectives.push({
+            ...baseObj,
+            type: 'talk',
+            entity_id: body[`objectives[${index}].entity_id`] as string || '',
+            zone_id: body[`objectives[${index}].zone_id`] as string || '',
+            dialog_steps: dialogSteps,
+          });
+        }
         break;
+      }
       case 'explore':
-        objectives.push({
-          ...baseObj,
-          type: 'explore',
-          zone_id: body[`objectives[${index}].zone_id`] as string || '',
-          chance: parseInt(body[`objectives[${index}].chance`] as string) || 100,
-          found_message: (body[`objectives[${index}].found_message`] as string) || null,
-          x: 0,
-          y: 0,
-        });
+        if (isTileQuest) {
+          objectives.push({
+            ...baseObj,
+            type: 'explore',
+            zone_id: body[`objectives[${index}].zone_id`] as string || '',
+            chance: parseInt(body[`objectives[${index}].chance`] as string) || 100,
+            found_message: (body[`objectives[${index}].found_message`] as string) || null,
+            x: 0,
+            y: 0,
+          });
+        } else {
+          objectives.push({
+            ...baseObj,
+            type: 'explore',
+            zone_id: body[`objectives[${index}].zone_id`] as string || '',
+            chance: parseInt(body[`objectives[${index}].chance`] as string) || 100,
+            found_message: (body[`objectives[${index}].found_message`] as string) || null,
+          });
+        }
         break;
       case 'craft':
         objectives.push({
@@ -292,13 +313,21 @@ export function parseRewards(body: FormBody): RequirementReward[] {
   return rewards;
 }
 
-export function parseCompletion(body: FormBody): TileCompletion {
-  return {
+export function parseCompletion(body: FormBody, isTileQuest = true): Completion | TileCompletion {
+  const base = {
     entity_id: body.completion_entity_id as string || '',
     zone_id: body.completion_zone_id as string || '',
     message: body.completion_message as string || '',
     return_message: body.completion_return_message as string || '',
-    x: parseInt(body.completion_x as string) || 0,
-    y: parseInt(body.completion_y as string) || 0,
   };
+  
+  if (isTileQuest) {
+    return {
+      ...base,
+      x: parseInt(body.completion_x as string) || 0,
+      y: parseInt(body.completion_y as string) || 0,
+    };
+  }
+  
+  return base;
 }

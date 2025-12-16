@@ -1,16 +1,16 @@
 import type { FC } from "hono/jsx";
-import type { Quest, NPC } from "../repository/index.js";
+import type { QuestGroup, NPC } from "../repository/index.js";
 import type { Objective, RequirementReward } from "@aederyn/types";
 
 interface QuestFormProps {
-  quest?: Quest;
+  quest?: QuestGroup;
   isNew?: boolean;
   npcs?: NPC[];
-  allQuests?: Quest[];
+  allQuests?: QuestGroup[];
 }
 
 export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], allQuests = [] }) => {
-  const defaultQuest: Partial<Quest> = {
+  const defaultQuest: Partial<QuestGroup> = {
     id: "",
     name: "",
     description: "",
@@ -18,8 +18,6 @@ export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], 
     giver: {
       entity_id: "",
       zone_id: "",
-      x: 0,
-      y: 0,
     },
     objectives: [],
     completion: {
@@ -27,17 +25,14 @@ export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], 
       zone_id: "",
       message: "",
       return_message: "",
-      x: 0,
-      y: 0,
     },
     rewards: [],
-    starts_at: 0,
-    ends_at: 0,
     is_tutorial: false,
     prerequisites: [],
   };
 
   const q = quest || defaultQuest;
+  const isTile = quest && "starts_at" in quest;
 
   return (
     <div id="main-content">
@@ -129,6 +124,22 @@ export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], 
               </select>
             </div>
 
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">
+                Quest Mode
+              </label>
+              <select
+                name="quest_mode"
+                id="quest-mode-select"
+                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
+                onchange="document.querySelectorAll('.tile-quest-fields').forEach(el => el.style.display = this.value === 'tile' ? 'block' : 'none')"
+              >
+                <option value="base" selected={!isTile}>Quest (Randomized at runtime)</option>
+                <option value="tile" selected={isTile}>TileQuest (Fixed map positions)</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Base quests have positions assigned at runtime. TileQuests have fixed x,y coordinates.</p>
+            </div>
+
             <div class="flex items-center gap-4">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input
@@ -185,26 +196,52 @@ export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], 
               />
             </div>
 
-            <div>
+            <div class="tile-quest-fields" style={{ display: isTile ? "block" : "none" }}>
               <label class="block text-sm font-medium text-gray-300 mb-2">
                 X Position
               </label>
               <input
                 type="number"
                 name="giver_x"
-                value={q.giver?.x || 0}
+                value={(q.giver as any)?.x || 0}
                 class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
               />
             </div>
 
-            <div>
+            <div class="tile-quest-fields" style={{ display: isTile ? "block" : "none" }}>
               <label class="block text-sm font-medium text-gray-300 mb-2">
                 Y Position
               </label>
               <input
                 type="number"
                 name="giver_y"
-                value={q.giver?.y || 0}
+                value={(q.giver as any)?.y || 0}
+                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
+              />
+            </div>
+          </div>
+
+          {/* TileQuest timing fields */}
+          <div class="tile-quest-fields grid grid-cols-2 gap-6 mt-4" style={{ display: isTile ? "block" : "none" }}>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">
+                Starts At (timestamp)
+              </label>
+              <input
+                type="number"
+                name="starts_at"
+                value={(q as any).starts_at || 0}
+                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">
+                Ends At (timestamp)
+              </label>
+              <input
+                type="number"
+                name="ends_at"
+                value={(q as any).ends_at || 0}
                 class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
               />
             </div>
@@ -404,14 +441,14 @@ export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], 
                 <input type="text" name="completion_zone_id" value={q.completion?.zone_id || ""} placeholder="zone_village" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="tile-quest-fields grid grid-cols-2 gap-4" style={{ display: isTile ? "grid" : "none" }}>
               <div>
                 <label class="text-xs text-gray-400">X Position</label>
-                <input type="number" name="completion_x" value={q.completion?.x || 0} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
+                <input type="number" name="completion_x" value={(q.completion as any)?.x || 0} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
               </div>
               <div>
                 <label class="text-xs text-gray-400">Y Position</label>
-                <input type="number" name="completion_y" value={q.completion?.y || 0} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
+                <input type="number" name="completion_y" value={(q.completion as any)?.y || 0} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
               </div>
             </div>
             <div>

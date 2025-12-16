@@ -34,7 +34,19 @@ import { runValidation } from "./services/validation.js";
 import { ValidationView } from "./templates/validation-view.js";
 import { ExportView } from "./templates/export-view.js";
 import { exportToJson, exportToTypeScript } from "./services/export.js";
-import { parseItemQuantityList, parseRequiredItemList, parseStringArray, parseItemDurability, parseItemAttributes, parseItemRequirements, parseItemEffects, parseRelationships, parseObjectives, parseRewards, parseCompletion } from "./utils/form-parser.js";
+import {
+  parseItemQuantityList,
+  parseRequiredItemList,
+  parseStringArray,
+  parseItemDurability,
+  parseItemAttributes,
+  parseItemRequirements,
+  parseItemEffects,
+  parseRelationships,
+  parseObjectives,
+  parseRewards,
+  parseCompletion,
+} from "./utils/form-parser.js";
 import { analyzeImpact, type EntityType } from "./services/impact-analysis.js";
 import { ImpactView } from "./templates/impact-view.js";
 import { WorldOverview } from "./templates/world-overview.js";
@@ -51,8 +63,19 @@ import { WorldSystemsList } from "./templates/world-systems-list.js";
 import { WorldSystemForm } from "./templates/world-system-form.js";
 import { WorldNamingForm } from "./templates/world-naming-form.js";
 import { AIGenerationView } from "./templates/ai-generation.js";
-import { buildAIContext, buildItemGenerationPrompt, buildQuestGenerationPrompt, buildNPCGenerationPrompt } from "./services/ai-context.js";
-import type { WorldRegion, WorldFaction, WorldHistoryEvent, WorldTheme, WorldSystem } from "@aederyn/types";
+import {
+  isAIConfigured,
+  generateItem,
+  generateQuest,
+  generateNPC,
+} from "./services/ai-service.js";
+import type {
+  WorldRegion,
+  WorldFaction,
+  WorldHistoryEvent,
+  WorldTheme,
+  WorldSystem,
+} from "@aederyn/types";
 
 const app = new Hono();
 
@@ -134,7 +157,11 @@ app.get("/items/:id", async (c) => {
   const counts = await repository.getCounts();
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Edit Item" sseEndpoint={`/sse/items/${id}`} counts={counts} />
+    <Layout
+      title="Edit Item"
+      sseEndpoint={`/sse/items/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -144,16 +171,23 @@ app.get("/sse/items/:id", async (c) => {
     const item = await repository.items.getById(id);
     const usedBy = await findUsedBy(id);
     if (item) {
-      await stream.writeSSE(fragmentEvent(ItemForm({ item, isNew: false, usedBy })));
+      await stream.writeSSE(
+        fragmentEvent(ItemForm({ item, isNew: false, usedBy }))
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">Item not found</h1>
-          <a href="/items" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to Items
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">Item not found</h1>
+            <a
+              href="/items"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to Items
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -185,7 +219,11 @@ app.get("/sse/resources", async (c) => {
 app.get("/resources/new", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="New Resource" sseEndpoint="/sse/resources/new" counts={counts} />
+    <Layout
+      title="New Resource"
+      sseEndpoint="/sse/resources/new"
+      counts={counts}
+    />
   );
 });
 
@@ -200,7 +238,11 @@ app.get("/resources/:id", async (c) => {
   const counts = await repository.getCounts();
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Edit Resource" sseEndpoint={`/sse/resources/${id}`} counts={counts} />
+    <Layout
+      title="Edit Resource"
+      sseEndpoint={`/sse/resources/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -212,16 +254,23 @@ app.get("/sse/resources/:id", async (c) => {
       repository.items.getAll(),
     ]);
     if (resource) {
-      await stream.writeSSE(fragmentEvent(ResourceForm({ resource, isNew: false, items })));
+      await stream.writeSSE(
+        fragmentEvent(ResourceForm({ resource, isNew: false, items }))
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">Resource not found</h1>
-          <a href="/resources" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to Resources
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">Resource not found</h1>
+            <a
+              href="/resources"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to Resources
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -268,7 +317,11 @@ app.get("/tiles/:id", async (c) => {
   const counts = await repository.getCounts();
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Edit Tile" sseEndpoint={`/sse/tiles/${id}`} counts={counts} />
+    <Layout
+      title="Edit Tile"
+      sseEndpoint={`/sse/tiles/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -280,16 +333,23 @@ app.get("/sse/tiles/:id", async (c) => {
       repository.resources.getAll(),
     ]);
     if (tile) {
-      await stream.writeSSE(fragmentEvent(TileForm({ tile, isNew: false, resources })));
+      await stream.writeSSE(
+        fragmentEvent(TileForm({ tile, isNew: false, resources }))
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">Tile not found</h1>
-          <a href="/tiles" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to Tiles
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">Tile not found</h1>
+            <a
+              href="/tiles"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to Tiles
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -298,7 +358,11 @@ app.get("/sse/tiles/:id", async (c) => {
 app.get("/house-tiles", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="House Tiles" sseEndpoint="/sse/house-tiles" counts={counts} />
+    <Layout
+      title="House Tiles"
+      sseEndpoint="/sse/house-tiles"
+      counts={counts}
+    />
   );
 });
 
@@ -321,7 +385,11 @@ app.get("/sse/house-tiles", async (c) => {
 app.get("/house-tiles/new", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="New House Tile" sseEndpoint="/sse/house-tiles/new" counts={counts} />
+    <Layout
+      title="New House Tile"
+      sseEndpoint="/sse/house-tiles/new"
+      counts={counts}
+    />
   );
 });
 
@@ -335,7 +403,11 @@ app.get("/house-tiles/:id", async (c) => {
   const counts = await repository.getCounts();
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Edit House Tile" sseEndpoint={`/sse/house-tiles/${id}`} counts={counts} />
+    <Layout
+      title="Edit House Tile"
+      sseEndpoint={`/sse/house-tiles/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -344,16 +416,25 @@ app.get("/sse/house-tiles/:id", async (c) => {
   return streamSSE(c, async (stream) => {
     const houseTile = await repository.houseTiles.getById(id);
     if (houseTile) {
-      await stream.writeSSE(fragmentEvent(HouseTileForm({ houseTile, isNew: false })));
+      await stream.writeSSE(
+        fragmentEvent(HouseTileForm({ houseTile, isNew: false }))
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">House Tile not found</h1>
-          <a href="/house-tiles" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to House Tiles
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">
+              House Tile not found
+            </h1>
+            <a
+              href="/house-tiles"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to House Tiles
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -410,16 +491,23 @@ app.get("/sse/npcs/:id", async (c) => {
     const npc = await repository.npcs.getById(id);
     const allNpcs = await repository.npcs.getAll();
     if (npc) {
-      await stream.writeSSE(fragmentEvent(NPCForm({ npc, isNew: false, allNpcs })));
+      await stream.writeSSE(
+        fragmentEvent(NPCForm({ npc, isNew: false, allNpcs }))
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">NPC not found</h1>
-          <a href="/npcs" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to NPCs
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">NPC not found</h1>
+            <a
+              href="/npcs"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to NPCs
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -459,7 +547,9 @@ app.get("/sse/quests/new", async (c) => {
   return streamSSE(c, async (stream) => {
     const npcs = await repository.npcs.getAll();
     const allQuests = await repository.quests.getAll();
-    await stream.writeSSE(fragmentEvent(QuestForm({ isNew: true, npcs, allQuests })));
+    await stream.writeSSE(
+      fragmentEvent(QuestForm({ isNew: true, npcs, allQuests }))
+    );
   });
 });
 
@@ -467,7 +557,11 @@ app.get("/quests/:id", async (c) => {
   const counts = await repository.getCounts();
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Edit Quest" sseEndpoint={`/sse/quests/${id}`} counts={counts} />
+    <Layout
+      title="Edit Quest"
+      sseEndpoint={`/sse/quests/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -478,16 +572,23 @@ app.get("/sse/quests/:id", async (c) => {
     const npcs = await repository.npcs.getAll();
     const allQuests = await repository.quests.getAll();
     if (quest) {
-      await stream.writeSSE(fragmentEvent(QuestForm({ quest, isNew: false, npcs, allQuests })));
+      await stream.writeSSE(
+        fragmentEvent(QuestForm({ quest, isNew: false, npcs, allQuests }))
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">Quest not found</h1>
-          <a href="/quests" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to Quests
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">Quest not found</h1>
+            <a
+              href="/quests"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to Quests
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -495,19 +596,42 @@ app.get("/sse/quests/:id", async (c) => {
 // Graph routes
 app.get("/graph", async (c) => {
   const counts = await repository.getCounts();
+  const query = c.req.query();
+  const filterParams = new URLSearchParams();
+  if (query.items !== undefined) filterParams.set("items", query.items);
+  if (query.resources !== undefined)
+    filterParams.set("resources", query.resources);
+  if (query.tiles !== undefined) filterParams.set("tiles", query.tiles);
+  if (query.npcs !== undefined) filterParams.set("npcs", query.npcs);
+  if (query.quests !== undefined) filterParams.set("quests", query.quests);
+  if (query.houseTiles !== undefined)
+    filterParams.set("houseTiles", query.houseTiles);
+  const sseEndpoint = `/sse/graph${
+    filterParams.toString() ? `?${filterParams.toString()}` : ""
+  }`;
   return c.html(
-    <Layout title="Graph" sseEndpoint="/sse/graph" counts={counts} />
+    <Layout title="Graph" sseEndpoint={sseEndpoint} counts={counts} />
   );
 });
 
 app.get("/sse/graph", async (c) => {
+  const query = c.req.query();
+  const filters = {
+    items: query.items !== "false",
+    resources: query.resources !== "false",
+    tiles: query.tiles !== "false",
+    npcs: query.npcs !== "false",
+    quests: query.quests !== "false",
+    houseTiles: query.houseTiles !== "false",
+  };
+
   return streamSSE(c, async (stream) => {
     const graphData = await buildGraphData();
-    await stream.writeSSE(fragmentEvent(GraphView({ graphData })));
+    await stream.writeSSE(fragmentEvent(GraphView({ graphData, filters })));
 
     const handleUpdate = async () => {
       const graphData = await buildGraphData();
-      await stream.writeSSE(fragmentEvent(GraphView({ graphData })));
+      await stream.writeSSE(fragmentEvent(GraphView({ graphData, filters })));
     };
 
     PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
@@ -581,14 +705,25 @@ app.get("/sse/world", async (c) => {
 app.get("/world/setting", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="World Setting" sseEndpoint="/sse/world/setting" counts={counts} />
+    <Layout
+      title="World Setting"
+      sseEndpoint="/sse/world/setting"
+      counts={counts}
+    />
   );
 });
 
 app.get("/sse/world/setting", async (c) => {
   return streamSSE(c, async (stream) => {
     const worldBible = await repository.worldBible.get();
-    await stream.writeSSE(fragmentEvent(WorldSettingForm({ setting: worldBible.setting, worldName: worldBible.name })));
+    await stream.writeSSE(
+      fragmentEvent(
+        WorldSettingForm({
+          setting: worldBible.setting,
+          worldName: worldBible.name,
+        })
+      )
+    );
   });
 });
 
@@ -602,14 +737,20 @@ app.get("/world/regions", async (c) => {
 app.get("/sse/world/regions", async (c) => {
   return streamSSE(c, async (stream) => {
     const worldBible = await repository.worldBible.get();
-    await stream.writeSSE(fragmentEvent(WorldRegionsList({ regions: worldBible.regions })));
+    await stream.writeSSE(
+      fragmentEvent(WorldRegionsList({ regions: worldBible.regions }))
+    );
   });
 });
 
 app.get("/world/regions/new", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="New Region" sseEndpoint="/sse/world/regions/new" counts={counts} />
+    <Layout
+      title="New Region"
+      sseEndpoint="/sse/world/regions/new"
+      counts={counts}
+    />
   );
 });
 
@@ -623,7 +764,11 @@ app.get("/world/regions/:id", async (c) => {
   const counts = await repository.getCounts();
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Edit Region" sseEndpoint={`/sse/world/regions/${id}`} counts={counts} />
+    <Layout
+      title="Edit Region"
+      sseEndpoint={`/sse/world/regions/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -633,16 +778,23 @@ app.get("/sse/world/regions/:id", async (c) => {
     const worldBible = await repository.worldBible.get();
     const region = worldBible.regions.find((r: WorldRegion) => r.id === id);
     if (region) {
-      await stream.writeSSE(fragmentEvent(WorldRegionForm({ region, isNew: false })));
+      await stream.writeSSE(
+        fragmentEvent(WorldRegionForm({ region, isNew: false }))
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">Region not found</h1>
-          <a href="/world/regions" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to Regions
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">Region not found</h1>
+            <a
+              href="/world/regions"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to Regions
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -650,28 +802,42 @@ app.get("/sse/world/regions/:id", async (c) => {
 app.get("/world/factions", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="Factions" sseEndpoint="/sse/world/factions" counts={counts} />
+    <Layout
+      title="Factions"
+      sseEndpoint="/sse/world/factions"
+      counts={counts}
+    />
   );
 });
 
 app.get("/sse/world/factions", async (c) => {
   return streamSSE(c, async (stream) => {
     const worldBible = await repository.worldBible.get();
-    await stream.writeSSE(fragmentEvent(WorldFactionsList({ factions: worldBible.factions })));
+    await stream.writeSSE(
+      fragmentEvent(WorldFactionsList({ factions: worldBible.factions }))
+    );
   });
 });
 
 app.get("/world/factions/new", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="New Faction" sseEndpoint="/sse/world/factions/new" counts={counts} />
+    <Layout
+      title="New Faction"
+      sseEndpoint="/sse/world/factions/new"
+      counts={counts}
+    />
   );
 });
 
 app.get("/sse/world/factions/new", async (c) => {
   return streamSSE(c, async (stream) => {
     const worldBible = await repository.worldBible.get();
-    await stream.writeSSE(fragmentEvent(WorldFactionForm({ isNew: true, allFactions: worldBible.factions })));
+    await stream.writeSSE(
+      fragmentEvent(
+        WorldFactionForm({ isNew: true, allFactions: worldBible.factions })
+      )
+    );
   });
 });
 
@@ -679,7 +845,11 @@ app.get("/world/factions/:id", async (c) => {
   const counts = await repository.getCounts();
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Edit Faction" sseEndpoint={`/sse/world/factions/${id}`} counts={counts} />
+    <Layout
+      title="Edit Faction"
+      sseEndpoint={`/sse/world/factions/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -689,16 +859,29 @@ app.get("/sse/world/factions/:id", async (c) => {
     const worldBible = await repository.worldBible.get();
     const faction = worldBible.factions.find((f: WorldFaction) => f.id === id);
     if (faction) {
-      await stream.writeSSE(fragmentEvent(WorldFactionForm({ faction, isNew: false, allFactions: worldBible.factions })));
+      await stream.writeSSE(
+        fragmentEvent(
+          WorldFactionForm({
+            faction,
+            isNew: false,
+            allFactions: worldBible.factions,
+          })
+        )
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">Faction not found</h1>
-          <a href="/world/factions" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to Factions
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">Faction not found</h1>
+            <a
+              href="/world/factions"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to Factions
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -714,14 +897,20 @@ app.get("/world/history", async (c) => {
 app.get("/sse/world/history", async (c) => {
   return streamSSE(c, async (stream) => {
     const worldBible = await repository.worldBible.get();
-    await stream.writeSSE(fragmentEvent(WorldHistoryList({ history: worldBible.history })));
+    await stream.writeSSE(
+      fragmentEvent(WorldHistoryList({ history: worldBible.history }))
+    );
   });
 });
 
 app.get("/world/history/new", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="New Event" sseEndpoint="/sse/world/history/new" counts={counts} />
+    <Layout
+      title="New Event"
+      sseEndpoint="/sse/world/history/new"
+      counts={counts}
+    />
   );
 });
 
@@ -735,7 +924,11 @@ app.get("/world/history/:id", async (c) => {
   const counts = await repository.getCounts();
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Edit Event" sseEndpoint={`/sse/world/history/${id}`} counts={counts} />
+    <Layout
+      title="Edit Event"
+      sseEndpoint={`/sse/world/history/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -743,18 +936,27 @@ app.get("/sse/world/history/:id", async (c) => {
   const id = c.req.param("id");
   return streamSSE(c, async (stream) => {
     const worldBible = await repository.worldBible.get();
-    const event = worldBible.history.find((h: WorldHistoryEvent) => h.id === id);
+    const event = worldBible.history.find(
+      (h: WorldHistoryEvent) => h.id === id
+    );
     if (event) {
-      await stream.writeSSE(fragmentEvent(WorldHistoryForm({ event, isNew: false })));
+      await stream.writeSSE(
+        fragmentEvent(WorldHistoryForm({ event, isNew: false }))
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">Event not found</h1>
-          <a href="/world/history" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to History
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">Event not found</h1>
+            <a
+              href="/world/history"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to History
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -770,14 +972,20 @@ app.get("/world/themes", async (c) => {
 app.get("/sse/world/themes", async (c) => {
   return streamSSE(c, async (stream) => {
     const worldBible = await repository.worldBible.get();
-    await stream.writeSSE(fragmentEvent(WorldThemesList({ themes: worldBible.themes })));
+    await stream.writeSSE(
+      fragmentEvent(WorldThemesList({ themes: worldBible.themes }))
+    );
   });
 });
 
 app.get("/world/themes/new", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="New Theme" sseEndpoint="/sse/world/themes/new" counts={counts} />
+    <Layout
+      title="New Theme"
+      sseEndpoint="/sse/world/themes/new"
+      counts={counts}
+    />
   );
 });
 
@@ -791,7 +999,11 @@ app.get("/world/themes/:id", async (c) => {
   const counts = await repository.getCounts();
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Edit Theme" sseEndpoint={`/sse/world/themes/${id}`} counts={counts} />
+    <Layout
+      title="Edit Theme"
+      sseEndpoint={`/sse/world/themes/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -801,16 +1013,23 @@ app.get("/sse/world/themes/:id", async (c) => {
     const worldBible = await repository.worldBible.get();
     const theme = worldBible.themes.find((t: WorldTheme) => t.id === id);
     if (theme) {
-      await stream.writeSSE(fragmentEvent(WorldThemeForm({ theme, isNew: false })));
+      await stream.writeSSE(
+        fragmentEvent(WorldThemeForm({ theme, isNew: false }))
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">Theme not found</h1>
-          <a href="/world/themes" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to Themes
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">Theme not found</h1>
+            <a
+              href="/world/themes"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to Themes
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -826,14 +1045,20 @@ app.get("/world/systems", async (c) => {
 app.get("/sse/world/systems", async (c) => {
   return streamSSE(c, async (stream) => {
     const worldBible = await repository.worldBible.get();
-    await stream.writeSSE(fragmentEvent(WorldSystemsList({ systems: worldBible.systems })));
+    await stream.writeSSE(
+      fragmentEvent(WorldSystemsList({ systems: worldBible.systems }))
+    );
   });
 });
 
 app.get("/world/systems/new", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="New System" sseEndpoint="/sse/world/systems/new" counts={counts} />
+    <Layout
+      title="New System"
+      sseEndpoint="/sse/world/systems/new"
+      counts={counts}
+    />
   );
 });
 
@@ -847,7 +1072,11 @@ app.get("/world/systems/:id", async (c) => {
   const counts = await repository.getCounts();
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Edit System" sseEndpoint={`/sse/world/systems/${id}`} counts={counts} />
+    <Layout
+      title="Edit System"
+      sseEndpoint={`/sse/world/systems/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -857,16 +1086,23 @@ app.get("/sse/world/systems/:id", async (c) => {
     const worldBible = await repository.worldBible.get();
     const system = worldBible.systems.find((s: WorldSystem) => s.id === id);
     if (system) {
-      await stream.writeSSE(fragmentEvent(WorldSystemForm({ system, isNew: false })));
+      await stream.writeSSE(
+        fragmentEvent(WorldSystemForm({ system, isNew: false }))
+      );
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">System not found</h1>
-          <a href="/world/systems" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to Systems
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">System not found</h1>
+            <a
+              href="/world/systems"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to Systems
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -875,14 +1111,20 @@ app.get("/sse/world/systems/:id", async (c) => {
 app.get("/world/naming", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
-    <Layout title="Naming Conventions" sseEndpoint="/sse/world/naming" counts={counts} />
+    <Layout
+      title="Naming Conventions"
+      sseEndpoint="/sse/world/naming"
+      counts={counts}
+    />
   );
 });
 
 app.get("/sse/world/naming", async (c) => {
   return streamSSE(c, async (stream) => {
     const worldBible = await repository.worldBible.get();
-    await stream.writeSSE(fragmentEvent(WorldNamingForm({ naming: worldBible.naming })));
+    await stream.writeSSE(
+      fragmentEvent(WorldNamingForm({ naming: worldBible.naming }))
+    );
   });
 });
 
@@ -914,7 +1156,11 @@ app.get("/impact/:type/:id", async (c) => {
   const type = c.req.param("type") as EntityType;
   const id = c.req.param("id");
   return c.html(
-    <Layout title="Impact Analysis" sseEndpoint={`/sse/impact/${type}/${id}`} counts={counts} />
+    <Layout
+      title="Impact Analysis"
+      sseEndpoint={`/sse/impact/${type}/${id}`}
+      counts={counts}
+    />
   );
 });
 
@@ -926,14 +1172,16 @@ app.get("/sse/impact/:type/:id", async (c) => {
     if (analysis) {
       await stream.writeSSE(fragmentEvent(ImpactView({ analysis })));
     } else {
-      await stream.writeSSE(fragmentEvent(
-        <div id="main-content" class="text-center py-12">
-          <h1 class="text-2xl font-bold text-red-400">Entity not found</h1>
-          <a href="/" class="text-blue-400 hover:underline mt-4 inline-block">
-            ← Back to Dashboard
-          </a>
-        </div>
-      ));
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">Entity not found</h1>
+            <a href="/" class="text-blue-400 hover:underline mt-4 inline-block">
+              ← Back to Dashboard
+            </a>
+          </div>
+        )
+      );
     }
   });
 });
@@ -957,8 +1205,20 @@ app.post("/commands/items", async (c) => {
     id: body.id as string,
     name: body.name as string,
     description: body.description as string,
-    type: body.type as "resource" | "tool" | "weapon" | "armor" | "consumable" | "quest" | "item",
-    rarity: body.rarity as "common" | "uncommon" | "rare" | "epic" | "legendary",
+    type: body.type as
+      | "resource"
+      | "tool"
+      | "weapon"
+      | "armor"
+      | "consumable"
+      | "quest"
+      | "item",
+    rarity: body.rarity as
+      | "common"
+      | "uncommon"
+      | "rare"
+      | "epic"
+      | "legendary",
     stackable: body.stackable === "on",
     maxStackSize: parseInt(body.maxStackSize as string) || 1,
     equippable: body.equippable === "on",
@@ -966,7 +1226,8 @@ app.post("/commands/items", async (c) => {
     durability: parseItemDurability(body),
     attributes: parseItemAttributes(body),
     requirements: parseItemRequirements(body),
-    effects: parseItemEffects(body).length > 0 ? parseItemEffects(body) : undefined,
+    effects:
+      parseItemEffects(body).length > 0 ? parseItemEffects(body) : undefined,
     value: parseInt(body.value as string) || 0,
     weight: parseFloat(body.weight as string) || 0,
   };
@@ -982,8 +1243,20 @@ app.post("/commands/items/:id", async (c) => {
   const updates = {
     name: body.name as string,
     description: body.description as string,
-    type: body.type as "resource" | "tool" | "weapon" | "armor" | "consumable" | "quest" | "item",
-    rarity: body.rarity as "common" | "uncommon" | "rare" | "epic" | "legendary",
+    type: body.type as
+      | "resource"
+      | "tool"
+      | "weapon"
+      | "armor"
+      | "consumable"
+      | "quest"
+      | "item",
+    rarity: body.rarity as
+      | "common"
+      | "uncommon"
+      | "rare"
+      | "epic"
+      | "legendary",
     stackable: body.stackable === "on",
     maxStackSize: parseInt(body.maxStackSize as string) || 1,
     equippable: body.equippable === "on",
@@ -991,7 +1264,8 @@ app.post("/commands/items/:id", async (c) => {
     durability: parseItemDurability(body),
     attributes: parseItemAttributes(body),
     requirements: parseItemRequirements(body),
-    effects: parseItemEffects(body).length > 0 ? parseItemEffects(body) : undefined,
+    effects:
+      parseItemEffects(body).length > 0 ? parseItemEffects(body) : undefined,
     value: parseInt(body.value as string) || 0,
     weight: parseFloat(body.weight as string) || 0,
   };
@@ -1019,7 +1293,7 @@ app.post("/commands/resources", async (c) => {
     required_items: parseRequiredItemList(body, "required_items"),
     collectionTime: parseInt(body.collectionTime as string) || 5,
     type: body.type as "resource" | "workbench" | "furnace" | "magic",
-    verb: body.verb as string || "Collect",
+    verb: (body.verb as string) || "Collect",
   };
   await repository.resources.create(resource);
   PubSub.publish(RESOURCES_UPDATED, { id: resource.id });
@@ -1038,7 +1312,7 @@ app.post("/commands/resources/:id", async (c) => {
     required_items: parseRequiredItemList(body, "required_items"),
     collectionTime: parseInt(body.collectionTime as string) || 5,
     type: body.type as "resource" | "workbench" | "furnace" | "magic",
-    verb: body.verb as string || "Collect",
+    verb: (body.verb as string) || "Collect",
   };
   await repository.resources.update(id, updates);
   PubSub.publish(RESOURCES_UPDATED, { id });
@@ -1141,25 +1415,35 @@ app.post("/commands/npcs/:id/delete", async (c) => {
 // Create new quest
 app.post("/commands/quests", async (c) => {
   const body = await c.req.parseBody();
-  const quest = {
+  const isTileQuest = body.quest_mode === "tile";
+  
+  const baseQuest = {
     id: body.id as string,
     name: body.name as string,
     description: body.description as string,
     type: body.type as QuestType,
-    giver: {
+    giver: isTileQuest ? {
       entity_id: body.giver_entity_id as string,
       zone_id: (body.giver_zone_id as string) || "",
       x: parseInt(body.giver_x as string) || 0,
       y: parseInt(body.giver_y as string) || 0,
+    } : {
+      entity_id: body.giver_entity_id as string,
+      zone_id: (body.giver_zone_id as string) || "",
     },
-    objectives: parseObjectives(body),
-    completion: parseCompletion(body),
+    objectives: parseObjectives(body, isTileQuest),
+    completion: parseCompletion(body, isTileQuest),
     rewards: parseRewards(body),
     is_tutorial: body.is_tutorial === "on",
     prerequisites: parseStringArray(body, "prerequisites"),
-    starts_at: 0,
-    ends_at: 0,
   };
+  
+  const quest = isTileQuest ? {
+    ...baseQuest,
+    starts_at: parseInt(body.starts_at as string) || 0,
+    ends_at: parseInt(body.ends_at as string) || 0,
+  } : baseQuest;
+  
   await repository.quests.create(quest);
   PubSub.publish(QUESTS_UPDATED, { id: quest.id });
   return c.redirect("/quests");
@@ -1169,22 +1453,34 @@ app.post("/commands/quests", async (c) => {
 app.post("/commands/quests/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.parseBody();
-  const updates = {
+  const isTileQuest = body.quest_mode === "tile";
+  
+  const baseUpdates = {
     name: body.name as string,
     description: body.description as string,
     type: body.type as QuestType,
-    giver: {
+    giver: isTileQuest ? {
       entity_id: body.giver_entity_id as string,
       zone_id: (body.giver_zone_id as string) || "",
       x: parseInt(body.giver_x as string) || 0,
       y: parseInt(body.giver_y as string) || 0,
+    } : {
+      entity_id: body.giver_entity_id as string,
+      zone_id: (body.giver_zone_id as string) || "",
     },
-    objectives: parseObjectives(body),
-    completion: parseCompletion(body),
+    objectives: parseObjectives(body, isTileQuest),
+    completion: parseCompletion(body, isTileQuest),
     rewards: parseRewards(body),
     is_tutorial: body.is_tutorial === "on",
     prerequisites: parseStringArray(body, "prerequisites"),
   };
+  
+  const updates = isTileQuest ? {
+    ...baseUpdates,
+    starts_at: parseInt(body.starts_at as string) || 0,
+    ends_at: parseInt(body.ends_at as string) || 0,
+  } : baseUpdates;
+  
   await repository.quests.update(id, updates);
   PubSub.publish(QUESTS_UPDATED, { id });
   return c.redirect("/quests");
@@ -1197,17 +1493,103 @@ app.post("/commands/quests/:id/delete", async (c) => {
   return c.redirect("/quests");
 });
 
+// Helper to parse house tile form data
+function parseHouseTileForm(body: Record<string, string | File>) {
+  // Parse flags from checkboxes
+  const flags = {
+    isWalkable: body.flags_isWalkable === "on",
+    isBuildable: body.flags_isBuildable === "on",
+    isInteractable: body.flags_isInteractable === "on",
+    isDestructible: body.flags_isDestructible === "on",
+  };
+
+  // Parse actions from form fields
+  const actions: any[] = [];
+  const actionIndices = new Set<number>();
+
+  // Find all existing action indices
+  for (const key of Object.keys(body)) {
+    const match = key.match(/^action_(\d+)_/);
+    if (match) {
+      actionIndices.add(parseInt(match[1], 10));
+    }
+  }
+
+  // Parse each action
+  for (const index of Array.from(actionIndices).sort((a, b) => a - b)) {
+    const actionId = body[`action_${index}_id`] as string;
+    const actionName = body[`action_${index}_name`] as string;
+    if (!actionId || !actionName) continue;
+
+    const action: any = {
+      id: actionId,
+      name: actionName,
+      description: (body[`action_${index}_description`] as string) || "",
+      canUndo: body[`action_${index}_canUndo`] === "on",
+    };
+
+    const transformTo = body[`action_${index}_transformTo`] as string;
+    if (transformTo) {
+      action.result = { transform_to: transformTo };
+    }
+
+    const requiredItem = body[`action_${index}_requiredItem`] as string;
+    const requiredQty =
+      parseInt(body[`action_${index}_requiredQty`] as string, 10) || 1;
+    if (requiredItem) {
+      action.requirements = {
+        items: [{ item_id: requiredItem, qty: requiredQty }],
+      };
+    }
+
+    actions.push(action);
+  }
+
+  // Parse new action if provided
+  const newActionId = body.new_action_id as string;
+  const newActionName = body.new_action_name as string;
+  if (newActionId && newActionName) {
+    const newAction: any = {
+      id: newActionId,
+      name: newActionName,
+      description: (body.new_action_description as string) || "",
+      canUndo: body.new_action_canUndo === "on",
+    };
+
+    const transformTo = body.new_action_transformTo as string;
+    if (transformTo) {
+      newAction.result = { transform_to: transformTo };
+    }
+
+    const requiredItem = body.new_action_requiredItem as string;
+    const requiredQty =
+      parseInt(body.new_action_requiredQty as string, 10) || 1;
+    if (requiredItem) {
+      newAction.requirements = {
+        items: [{ item_id: requiredItem, qty: requiredQty }],
+      };
+    }
+
+    actions.push(newAction);
+  }
+
+  return { flags, availableActions: actions };
+}
+
 // Create new house tile
 app.post("/commands/house-tiles", async (c) => {
   const body = await c.req.parseBody();
+  const { flags, availableActions } = parseHouseTileForm(
+    body as Record<string, string | File>
+  );
   const houseTile = {
     id: body.id as string,
     name: body.name as string,
     description: body.description as string,
-    sprite: body.sprite as string || "🏠",
-    bgColor: body.bgColor as string || "#374151",
-    availableActions: JSON.parse((body.availableActions as string) || "[]"),
-    flags: JSON.parse((body.flags as string) || "{}"),
+    sprite: (body.sprite as string) || "🏠",
+    bgColor: (body.bgColor as string) || "#374151",
+    availableActions,
+    flags,
   };
   await repository.houseTiles.create(houseTile);
   PubSub.publish(HOUSE_TILES_UPDATED, { id: houseTile.id });
@@ -1218,13 +1600,16 @@ app.post("/commands/house-tiles", async (c) => {
 app.post("/commands/house-tiles/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.parseBody();
+  const { flags, availableActions } = parseHouseTileForm(
+    body as Record<string, string | File>
+  );
   const updates = {
     name: body.name as string,
     description: body.description as string,
-    sprite: body.sprite as string || "🏠",
-    bgColor: body.bgColor as string || "#374151",
-    availableActions: JSON.parse((body.availableActions as string) || "[]"),
-    flags: JSON.parse((body.flags as string) || "{}"),
+    sprite: (body.sprite as string) || "🏠",
+    bgColor: (body.bgColor as string) || "#374151",
+    availableActions,
+    flags,
   };
   await repository.houseTiles.update(id, updates);
   PubSub.publish(HOUSE_TILES_UPDATED, { id });
@@ -1261,9 +1646,18 @@ app.post("/commands/world/regions", async (c) => {
     name: body.name as string,
     description: body.description as string,
     climate: body.climate as string,
-    themes: (body.themes as string).split(",").map((s) => s.trim()).filter(Boolean),
-    inhabitants: (body.inhabitants as string).split(",").map((s) => s.trim()).filter(Boolean),
-    resources: (body.resources as string).split(",").map((s) => s.trim()).filter(Boolean),
+    themes: (body.themes as string)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    inhabitants: (body.inhabitants as string)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    resources: (body.resources as string)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
   };
   worldBible.regions.push(region);
   await repository.worldBible.save(worldBible);
@@ -1281,9 +1675,18 @@ app.post("/commands/world/regions/:id", async (c) => {
       name: body.name as string,
       description: body.description as string,
       climate: body.climate as string,
-      themes: (body.themes as string).split(",").map((s) => s.trim()).filter(Boolean),
-      inhabitants: (body.inhabitants as string).split(",").map((s) => s.trim()).filter(Boolean),
-      resources: (body.resources as string).split(",").map((s) => s.trim()).filter(Boolean),
+      themes: (body.themes as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      inhabitants: (body.inhabitants as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      resources: (body.resources as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
     };
     await repository.worldBible.save(worldBible);
   }
@@ -1293,7 +1696,9 @@ app.post("/commands/world/regions/:id", async (c) => {
 app.post("/commands/world/regions/:id/delete", async (c) => {
   const id = c.req.param("id");
   const worldBible = await repository.worldBible.get();
-  worldBible.regions = worldBible.regions.filter((r: WorldRegion) => r.id !== id);
+  worldBible.regions = worldBible.regions.filter(
+    (r: WorldRegion) => r.id !== id
+  );
   await repository.worldBible.save(worldBible);
   return c.redirect("/world/regions");
 });
@@ -1306,10 +1711,22 @@ app.post("/commands/world/factions", async (c) => {
     name: body.name as string,
     description: body.description as string,
     alignment: body.alignment as "friendly" | "neutral" | "hostile",
-    goals: (body.goals as string).split("\n").map((s) => s.trim()).filter(Boolean),
-    allies: (body.allies as string).split(",").map((s) => s.trim()).filter(Boolean),
-    rivals: (body.rivals as string).split(",").map((s) => s.trim()).filter(Boolean),
-    members: (body.members as string).split(",").map((s) => s.trim()).filter(Boolean),
+    goals: (body.goals as string)
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    allies: (body.allies as string)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    rivals: (body.rivals as string)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    members: (body.members as string)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
   };
   worldBible.factions.push(faction);
   await repository.worldBible.save(worldBible);
@@ -1327,10 +1744,22 @@ app.post("/commands/world/factions/:id", async (c) => {
       name: body.name as string,
       description: body.description as string,
       alignment: body.alignment as "friendly" | "neutral" | "hostile",
-      goals: (body.goals as string).split("\n").map((s) => s.trim()).filter(Boolean),
-      allies: (body.allies as string).split(",").map((s) => s.trim()).filter(Boolean),
-      rivals: (body.rivals as string).split(",").map((s) => s.trim()).filter(Boolean),
-      members: (body.members as string).split(",").map((s) => s.trim()).filter(Boolean),
+      goals: (body.goals as string)
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      allies: (body.allies as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      rivals: (body.rivals as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      members: (body.members as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
     };
     await repository.worldBible.save(worldBible);
   }
@@ -1340,7 +1769,9 @@ app.post("/commands/world/factions/:id", async (c) => {
 app.post("/commands/world/factions/:id/delete", async (c) => {
   const id = c.req.param("id");
   const worldBible = await repository.worldBible.get();
-  worldBible.factions = worldBible.factions.filter((f: WorldFaction) => f.id !== id);
+  worldBible.factions = worldBible.factions.filter(
+    (f: WorldFaction) => f.id !== id
+  );
   await repository.worldBible.save(worldBible);
   return c.redirect("/world/factions");
 });
@@ -1355,7 +1786,10 @@ app.post("/commands/world/history", async (c) => {
     description: body.description as string,
     era: body.era as string,
     significance: body.significance as string,
-    relatedEntities: (body.relatedEntities as string).split(",").map((s) => s.trim()).filter(Boolean),
+    relatedEntities: (body.relatedEntities as string)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
   };
   worldBible.history.push(event);
   await repository.worldBible.save(worldBible);
@@ -1366,7 +1800,9 @@ app.post("/commands/world/history/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.parseBody();
   const worldBible = await repository.worldBible.get();
-  const index = worldBible.history.findIndex((h: WorldHistoryEvent) => h.id === id);
+  const index = worldBible.history.findIndex(
+    (h: WorldHistoryEvent) => h.id === id
+  );
   if (index !== -1) {
     worldBible.history[index] = {
       id,
@@ -1374,7 +1810,10 @@ app.post("/commands/world/history/:id", async (c) => {
       description: body.description as string,
       era: body.era as string,
       significance: body.significance as string,
-      relatedEntities: (body.relatedEntities as string).split(",").map((s) => s.trim()).filter(Boolean),
+      relatedEntities: (body.relatedEntities as string)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
     };
     await repository.worldBible.save(worldBible);
   }
@@ -1384,7 +1823,9 @@ app.post("/commands/world/history/:id", async (c) => {
 app.post("/commands/world/history/:id/delete", async (c) => {
   const id = c.req.param("id");
   const worldBible = await repository.worldBible.get();
-  worldBible.history = worldBible.history.filter((h: WorldHistoryEvent) => h.id !== id);
+  worldBible.history = worldBible.history.filter(
+    (h: WorldHistoryEvent) => h.id !== id
+  );
   await repository.worldBible.save(worldBible);
   return c.redirect("/world/history");
 });
@@ -1397,7 +1838,10 @@ app.post("/commands/world/themes", async (c) => {
     id: body.id as string,
     name: body.name as string,
     description: body.description as string,
-    examples: (body.examples as string).split("\n").map((s) => s.trim()).filter(Boolean),
+    examples: (body.examples as string)
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean),
   };
   worldBible.themes.push(theme);
   await repository.worldBible.save(worldBible);
@@ -1414,7 +1858,10 @@ app.post("/commands/world/themes/:id", async (c) => {
       id,
       name: body.name as string,
       description: body.description as string,
-      examples: (body.examples as string).split("\n").map((s) => s.trim()).filter(Boolean),
+      examples: (body.examples as string)
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
     };
     await repository.worldBible.save(worldBible);
   }
@@ -1438,8 +1885,14 @@ app.post("/commands/world/systems", async (c) => {
     name: body.name as string,
     type: body.type as "magic" | "technology" | "hybrid",
     description: body.description as string,
-    rules: (body.rules as string).split("\n").map((s) => s.trim()).filter(Boolean),
-    limitations: (body.limitations as string).split("\n").map((s) => s.trim()).filter(Boolean),
+    rules: (body.rules as string)
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    limitations: (body.limitations as string)
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean),
   };
   worldBible.systems.push(system);
   await repository.worldBible.save(worldBible);
@@ -1457,8 +1910,14 @@ app.post("/commands/world/systems/:id", async (c) => {
       name: body.name as string,
       type: body.type as "magic" | "technology" | "hybrid",
       description: body.description as string,
-      rules: (body.rules as string).split("\n").map((s) => s.trim()).filter(Boolean),
-      limitations: (body.limitations as string).split("\n").map((s) => s.trim()).filter(Boolean),
+      rules: (body.rules as string)
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      limitations: (body.limitations as string)
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
     };
     await repository.worldBible.save(worldBible);
   }
@@ -1468,9 +1927,84 @@ app.post("/commands/world/systems/:id", async (c) => {
 app.post("/commands/world/systems/:id/delete", async (c) => {
   const id = c.req.param("id");
   const worldBible = await repository.worldBible.get();
-  worldBible.systems = worldBible.systems.filter((s: WorldSystem) => s.id !== id);
+  worldBible.systems = worldBible.systems.filter(
+    (s: WorldSystem) => s.id !== id
+  );
   await repository.worldBible.save(worldBible);
   return c.redirect("/world/systems");
+});
+
+// AI Generation commands
+app.post("/commands/ai/generate/item", async (c) => {
+  if (!isAIConfigured()) {
+    return c.redirect("/ai?error=api_key_missing");
+  }
+
+  const body = await c.req.parseBody();
+  const worldBible = await repository.worldBible.get();
+
+  try {
+    const item = await generateItem(worldBible, {
+      type: body.type as string,
+      rarity: body.rarity as string,
+      theme: (body.theme as string) || undefined,
+    });
+
+    await repository.items.create(item);
+    PubSub.publish(ITEMS_UPDATED, { id: item.id });
+    return c.redirect(`/items/${item.id}`);
+  } catch (error) {
+    console.error("AI Item generation error:", error);
+    return c.redirect("/ai?error=generation_failed");
+  }
+});
+
+app.post("/commands/ai/generate/quest", async (c) => {
+  if (!isAIConfigured()) {
+    return c.redirect("/ai?error=api_key_missing");
+  }
+
+  const body = await c.req.parseBody();
+  const worldBible = await repository.worldBible.get();
+
+  try {
+    const quest = await generateQuest(worldBible, {
+      type: (body.type as string) || undefined,
+      difficulty: (body.difficulty as string) || undefined,
+      region: (body.region as string) || undefined,
+    });
+
+    await repository.quests.create(quest);
+    PubSub.publish(QUESTS_UPDATED, { id: quest.id });
+    return c.redirect(`/quests/${quest.id}`);
+  } catch (error) {
+    console.error("AI Quest generation error:", error);
+    return c.redirect("/ai?error=generation_failed");
+  }
+});
+
+app.post("/commands/ai/generate/npc", async (c) => {
+  if (!isAIConfigured()) {
+    return c.redirect("/ai?error=api_key_missing");
+  }
+
+  const body = await c.req.parseBody();
+  const worldBible = await repository.worldBible.get();
+
+  try {
+    const npc = await generateNPC(worldBible, {
+      role: (body.role as string) || undefined,
+      faction: (body.faction as string) || undefined,
+      region: (body.region as string) || undefined,
+    });
+
+    await repository.npcs.create(npc);
+    PubSub.publish(NPCS_UPDATED, { id: npc.entity_id });
+    return c.redirect(`/npcs/${npc.entity_id}`);
+  } catch (error) {
+    console.error("AI NPC generation error:", error);
+    return c.redirect("/ai?error=generation_failed");
+  }
 });
 
 // Naming commands
@@ -1478,13 +2012,31 @@ app.post("/commands/world/naming", async (c) => {
   const body = await c.req.parseBody();
   const worldBible = await repository.worldBible.get();
   worldBible.naming = {
-    characterPatterns: (body.characterPatterns as string).split("\n").map((s) => s.trim()).filter(Boolean),
-    placePatterns: (body.placePatterns as string).split("\n").map((s) => s.trim()).filter(Boolean),
-    itemPatterns: (body.itemPatterns as string).split("\n").map((s) => s.trim()).filter(Boolean),
+    characterPatterns: (body.characterPatterns as string)
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    placePatterns: (body.placePatterns as string)
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    itemPatterns: (body.itemPatterns as string)
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean),
     examples: {
-      characters: (body.examples_characters as string || "").split(",").map((s) => s.trim()).filter(Boolean),
-      places: (body.examples_places as string || "").split(",").map((s) => s.trim()).filter(Boolean),
-      items: (body.examples_items as string || "").split(",").map((s) => s.trim()).filter(Boolean),
+      characters: ((body.examples_characters as string) || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      places: ((body.examples_places as string) || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      items: ((body.examples_items as string) || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
     },
   };
   await repository.worldBible.save(worldBible);

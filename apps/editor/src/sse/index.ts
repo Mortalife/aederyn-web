@@ -3,9 +3,17 @@ import { type HtmlEscapedString } from "hono/utils/html";
 export const fragmentEvent = (
   html: HtmlEscapedString | Promise<HtmlEscapedString> | null
 ) => {
-  const htmlStr = html?.toString() ?? "";
+  if (html === null) {
+    return {
+      data: "",
+      event: "datastar-patch-elements",
+    };
+  }
+
   return {
-    data: `elements ${htmlStr.replaceAll("\n", "")}\n\n`,
+    data: [`elements ${html.toString().replaceAll("\n", "\nelements ")}`].join(
+      "\n"
+    ),
     event: "datastar-patch-elements",
   };
 };
