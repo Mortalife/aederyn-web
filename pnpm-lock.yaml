@@ -9,14 +9,16 @@ overrides:
 
 importers:
 
-  .:
+  .: {}
+
+  apps/web:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.71.2
         version: 0.71.2(zod@3.25.76)
       '@hono/node-server':
         specifier: ^1.19.7
-        version: 1.19.7(hono@4.10.8)
+        version: 1.19.7(hono@4.11.0)
       '@libsql/client':
         specifier: ^0.14.0
         version: 0.14.0
@@ -28,7 +30,7 @@ importers:
         version: 7.1.5
       hono:
         specifier: ^4.10.8
-        version: 4.10.8
+        version: 4.11.0
       hono-sessions:
         specifier: ^0.8.0
         version: 0.8.0
@@ -40,7 +42,7 @@ importers:
         version: 4.21.0
       vitest:
         specifier: ^4.0.15
-        version: 4.0.15(@types/node@24.10.2)(jiti@1.21.7)(tsx@4.21.0)
+        version: 4.0.15(@types/node@24.10.3)(jiti@1.21.7)(tsx@4.21.0)
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -50,13 +52,13 @@ importers:
     devDependencies:
       '@hono/vite-build':
         specifier: ^1.2.1
-        version: 1.8.0(hono@4.10.8)
+        version: 1.8.0(hono@4.11.0)
       '@hono/vite-dev-server':
         specifier: ^0.23.0
-        version: 0.23.0(hono@4.10.8)
+        version: 0.23.0(hono@4.11.0)
       '@types/node':
         specifier: '24'
-        version: 24.10.2
+        version: 24.10.3
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.22(postcss@8.5.6)
@@ -71,7 +73,7 @@ importers:
         version: 0.33.5
       tailwindcss:
         specifier: ^3.4.17
-        version: 3.4.18(tsx@4.21.0)
+        version: 3.4.19(tsx@4.21.0)
       tsup:
         specifier: ^8.3.5
         version: 8.5.1(jiti@1.21.7)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
@@ -80,7 +82,7 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^6.4.1
-        version: 6.4.1(@types/node@24.10.2)(jiti@1.21.7)(tsx@4.21.0)
+        version: 6.4.1(@types/node@24.10.3)(jiti@1.21.7)(tsx@4.21.0)
 
 packages:
 
@@ -770,11 +772,8 @@ packages:
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
-  '@types/node@22.19.2':
-    resolution: {integrity: sha512-LPM2G3Syo1GLzXLGJAKdqoU35XvrWzGJ21/7sgZTUpbkBaOasTj8tjwn6w+hCkqaa1TfJ/w67rJSwYItlJ2mYw==}
-
-  '@types/node@24.10.2':
-    resolution: {integrity: sha512-WOhQTZ4G8xZ1tjJTvKOpyEVSGgOTvJAfDK3FNFgELyaTpzhdgHVHeqW8V+UJvzF5BT+/B54T/1S2K6gd9c7bbA==}
+  '@types/node@24.10.3':
+    resolution: {integrity: sha512-gqkrWUsS8hcm0r44yn7/xZeV1ERva/nLgrLxFRUGb7aoNMIJfZJ3AC261zDQuOAKC7MiXai1WCpYc48jAHoShQ==}
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
@@ -837,8 +836,8 @@ packages:
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
 
-  baseline-browser-mapping@2.9.5:
-    resolution: {integrity: sha512-D5vIoztZOq1XM54LUdttJVc96ggEsIfju2JBvht06pSzpckp3C7HReun67Bghzrtdsq9XdMGbSSB3v3GhMNmAA==}
+  baseline-browser-mapping@2.9.7:
+    resolution: {integrity: sha512-k9xFKplee6KIio3IDbwj+uaCLpqzOwakOgmqzPezM0sFJlFKcg30vk2wOiAJtkTSfx0SSQDSe8q+mWA/fSH5Zg==}
     hasBin: true
 
   binary-extensions@2.3.0:
@@ -1051,8 +1050,8 @@ packages:
   hono-sessions@0.8.0:
     resolution: {integrity: sha512-44nDuxcGTlk1hKE+7vH8KnNleKYnr8p3i/vkT8640jU8V0F1Tm873F5NdfXpctZax3CtnQ4cUKyEF1axXdkZrw==}
 
-  hono@4.10.8:
-    resolution: {integrity: sha512-DDT0A0r6wzhe8zCGoYOmMeuGu3dyTAE40HHjwUsWFTEy5WxK1x2WDSsBPlEXgPbRIFY6miDualuUDbasPogIww==}
+  hono@4.11.0:
+    resolution: {integrity: sha512-Jg8uZzN2ul8/qlyid5FO8O624F3AK0wKtkgoeEON1qBum1rM1itYBxoMKu/1SPJC7F1+xlIZsJMmc4HHhJ1AWg==}
     engines: {node: '>=16.9.0'}
 
   iron-webcrypto@1.2.1:
@@ -1333,8 +1332,8 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  tailwindcss@3.4.18:
-    resolution: {integrity: sha512-6A2rnmW5xZMdw11LYjhcI5846rt9pbLSabY5XPxo+XWdxwZaFEn47Go4NzFiHu9sNNmr/kXivP1vStfvMaK1GQ==}
+  tailwindcss@3.4.19:
+    resolution: {integrity: sha512-3ofp+LL8E+pK/JuPLPggVAIaEuhvIz4qNcf3nA1Xn2o/7fb7s/TYpHhwGDv1ZU3PkBluUVaF8PyCHcm48cKLWQ==}
     engines: {node: '>=14.0.0'}
     hasBin: true
 
@@ -1411,9 +1410,6 @@ packages:
 
   ufo@1.6.1:
     resolution: {integrity: sha512-9a4/uxlTWJ4+a5i0ooc1rU7C7YOw3wT+UGqdeNNHWnOF9qcMBgLRS+4IYUqbczewFx4mLEig6gawh7X6mFlEkA==}
-
-  undici-types@6.21.0:
-    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
@@ -1703,18 +1699,18 @@ snapshots:
   '@esbuild/win32-x64@0.27.1':
     optional: true
 
-  '@hono/node-server@1.19.7(hono@4.10.8)':
+  '@hono/node-server@1.19.7(hono@4.11.0)':
     dependencies:
-      hono: 4.10.8
+      hono: 4.11.0
 
-  '@hono/vite-build@1.8.0(hono@4.10.8)':
+  '@hono/vite-build@1.8.0(hono@4.11.0)':
     dependencies:
-      hono: 4.10.8
+      hono: 4.11.0
 
-  '@hono/vite-dev-server@0.23.0(hono@4.10.8)':
+  '@hono/vite-dev-server@0.23.0(hono@4.11.0)':
     dependencies:
-      '@hono/node-server': 1.19.7(hono@4.10.8)
-      hono: 4.10.8
+      '@hono/node-server': 1.19.7(hono@4.11.0)
+      hono: 4.11.0
       minimatch: 9.0.5
 
   '@img/sharp-darwin-arm64@0.33.5':
@@ -1953,17 +1949,13 @@ snapshots:
 
   '@types/estree@1.0.8': {}
 
-  '@types/node@22.19.2':
-    dependencies:
-      undici-types: 6.21.0
-
-  '@types/node@24.10.2':
+  '@types/node@24.10.3':
     dependencies:
       undici-types: 7.16.0
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 22.19.2
+      '@types/node': 24.10.3
 
   '@vitest/expect@4.0.15':
     dependencies:
@@ -1974,13 +1966,13 @@ snapshots:
       chai: 6.2.1
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.15(vite@6.4.1(@types/node@24.10.2)(jiti@1.21.7)(tsx@4.21.0))':
+  '@vitest/mocker@4.0.15(vite@6.4.1(@types/node@24.10.3)(jiti@1.21.7)(tsx@4.21.0))':
     dependencies:
       '@vitest/spy': 4.0.15
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 6.4.1(@types/node@24.10.2)(jiti@1.21.7)(tsx@4.21.0)
+      vite: 6.4.1(@types/node@24.10.3)(jiti@1.21.7)(tsx@4.21.0)
 
   '@vitest/pretty-format@4.0.15':
     dependencies:
@@ -2029,7 +2021,7 @@ snapshots:
 
   balanced-match@1.0.2: {}
 
-  baseline-browser-mapping@2.9.5: {}
+  baseline-browser-mapping@2.9.7: {}
 
   binary-extensions@2.3.0: {}
 
@@ -2043,7 +2035,7 @@ snapshots:
 
   browserslist@4.28.1:
     dependencies:
-      baseline-browser-mapping: 2.9.5
+      baseline-browser-mapping: 2.9.7
       caniuse-lite: 1.0.30001760
       electron-to-chromium: 1.5.267
       node-releases: 2.0.27
@@ -2268,11 +2260,11 @@ snapshots:
 
   hono-sessions@0.8.0:
     dependencies:
-      hono: 4.10.8
+      hono: 4.11.0
       iron-webcrypto: 1.2.1
       ohash: 2.0.11
 
-  hono@4.10.8: {}
+  hono@4.11.0: {}
 
   iron-webcrypto@1.2.1: {}
 
@@ -2550,7 +2542,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  tailwindcss@3.4.18(tsx@4.21.0):
+  tailwindcss@3.4.19(tsx@4.21.0):
     dependencies:
       '@alloc/quick-lru': 5.2.0
       arg: 5.0.2
@@ -2651,8 +2643,6 @@ snapshots:
 
   ufo@1.6.1: {}
 
-  undici-types@6.21.0: {}
-
   undici-types@7.16.0: {}
 
   update-browserslist-db@1.2.2(browserslist@4.28.1):
@@ -2663,7 +2653,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  vite@6.4.1(@types/node@24.10.2)(jiti@1.21.7)(tsx@4.21.0):
+  vite@6.4.1(@types/node@24.10.3)(jiti@1.21.7)(tsx@4.21.0):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.3)
@@ -2672,15 +2662,15 @@ snapshots:
       rollup: 4.53.3
       tinyglobby: 0.2.15
     optionalDependencies:
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
       fsevents: 2.3.3
       jiti: 1.21.7
       tsx: 4.21.0
 
-  vitest@4.0.15(@types/node@24.10.2)(jiti@1.21.7)(tsx@4.21.0):
+  vitest@4.0.15(@types/node@24.10.3)(jiti@1.21.7)(tsx@4.21.0):
     dependencies:
       '@vitest/expect': 4.0.15
-      '@vitest/mocker': 4.0.15(vite@6.4.1(@types/node@24.10.2)(jiti@1.21.7)(tsx@4.21.0))
+      '@vitest/mocker': 4.0.15(vite@6.4.1(@types/node@24.10.3)(jiti@1.21.7)(tsx@4.21.0))
       '@vitest/pretty-format': 4.0.15
       '@vitest/runner': 4.0.15
       '@vitest/snapshot': 4.0.15
@@ -2697,10 +2687,10 @@ snapshots:
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 6.4.1(@types/node@24.10.2)(jiti@1.21.7)(tsx@4.21.0)
+      vite: 6.4.1(@types/node@24.10.3)(jiti@1.21.7)(tsx@4.21.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 24.10.2
+      '@types/node': 24.10.3
     transitivePeerDependencies:
       - jiti
       - less

@@ -6,5 +6,5 @@ node_modules/
 dist
 
 # Generated textures (source PNGs are in /textures)
-public/textures/*.webp
+**/public/textures/*.webp
 

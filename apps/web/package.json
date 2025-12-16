@@ -1,0 +1,42 @@
+{
+  "name": "web",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "vitest",
+    "cron": "tsx watch --env-file=.env --trace-deprecation src/cron.ts",
+    "resource-circular-deps": "tsx  src/config/index.ts",
+    "check": "tsc --noEmit && pnpm run resource-circular-deps",
+    "build": "pnpm run textures && vite build --mode client && tsup",
+    "textures": "tsx scripts/optimize-textures.ts",
+    "start": "NODE_ENV=production node --env-file=.env dist/code/index.js",
+    "db": "pnpx @outerbase/studio local.db --port=3333"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@hono/node-server": "^1.19.7",
+    "@libsql/client": "^0.14.0",
+    "date-fns": "^4.1.0",
+    "deepmerge-ts": "^7.1.3",
+    "hono": "^4.10.8",
+    "hono-sessions": "^0.8.0",
+    "p-debounce": "^5.1.0",
+    "tsx": "^4.19.2",
+    "vitest": "^4.0.15",
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "^3.25.0"
+  },
+  "devDependencies": {
+    "@hono/vite-build": "^1.2.1",
+    "@hono/vite-dev-server": "^0.23.0",
+    "@types/node": "24",
+    "autoprefixer": "^10.4.20",
+    "daisyui": "^4.12.23",
+    "postcss": "^8.4.49",
+    "sharp": "^0.33.5",
+    "tailwindcss": "^3.4.17",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "vite": "^6.4.1"
+  }
+}
