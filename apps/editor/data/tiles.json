@@ -1,0 +1,274 @@
+[
+  {
+    "id": "tile_castle_wall",
+    "name": "Castle Wall",
+    "color": "#a6adbb",
+    "backgroundColor": "#2f1e1e",
+    "theme": "storm",
+    "texture": "cliff",
+    "resources": [],
+    "rarity": 0,
+    "accessible": false
+  },
+  {
+    "id": "tile_basic_workshop",
+    "name": "Workshop",
+    "color": "#1d201d",
+    "backgroundColor": "#7f54cd",
+    "theme": "storm",
+    "texture": "settlement",
+    "resources": [
+      "resource_crafting_item_stone_axe_01",
+      "resource_crafting_bucket",
+      "resource_crafting_spade",
+      "resource_crafting_pickaxe",
+      "resource_crafting_gloves",
+      "resource_crafting_pruning_shears",
+      "resource_crafting_gem_extractor",
+      "resource_crafting_water_bottle",
+      "resource_crafting_fishing_net"
+    ],
+    "rarity": 0,
+    "accessible": true
+  },
+  {
+    "id": "tile_grass",
+    "name": "Meadow",
+    "color": "#006400",
+    "backgroundColor": "#90EE90",
+    "theme": "lemonade",
+    "texture": "grass",
+    "resources": [
+      "resource_grass_01"
+    ],
+    "rarity": 0.3,
+    "accessible": true
+  },
+  {
+    "id": "tile_trees",
+    "name": "Forest",
+    "color": "#ffdfcb",
+    "backgroundColor": "#1f691f",
+    "theme": "forest",
+    "texture": "tree",
+    "resources": [
+      "item_stick_01",
+      "resource_trees_01",
+      "resource_trees_oak_02"
+    ],
+    "rarity": 0.3,
+    "accessible": true
+  },
+  {
+    "id": "tile_rocky_outcrop",
+    "name": "Rocky Outcrop",
+    "color": "#F0F0F0",
+    "backgroundColor": "#696969",
+    "theme": "coffee",
+    "texture": "cliff",
+    "resources": [
+      "resource_stones_01",
+      "resource_quartz_deposit"
+    ],
+    "rarity": 0.3,
+    "accessible": true
+  },
+  {
+    "id": "tile_sunny_meadow",
+    "name": "Sunny Meadow",
+    "color": "#8B4513",
+    "backgroundColor": "#FFFF00",
+    "theme": "meadow",
+    "texture": "grass",
+    "resources": [
+      "resource_blooming_flower",
+      "resource_fresh_grass"
+    ],
+    "rarity": 0.3,
+    "accessible": true
+  },
+  {
+    "id": "tile_dense_thicket",
+    "name": "Dense Thicket",
+    "color": "#ADFF2F",
+    "backgroundColor": "#006400",
+    "theme": "forest",
+    "texture": "tree",
+    "resources": [
+      "resource_thicket_branches",
+      "resource_vine_growth",
+      "resource_nature_moss",
+      "resource_dead_animal"
+    ],
+    "rarity": 0.25,
+    "accessible": true
+  },
+  {
+    "id": "tile_mystic_marsh",
+    "name": "Mystic Marsh",
+    "color": "#ADFF2F",
+    "backgroundColor": "#2F4F4F",
+    "theme": "swamp",
+    "texture": "water",
+    "resources": [
+      "resource_mud",
+      "resource_cattails"
+    ],
+    "rarity": 0.25,
+    "accessible": true
+  },
+  {
+    "id": "tile_enchanted_grove",
+    "name": "Enchanted Grove",
+    "color": "#FFD700",
+    "backgroundColor": "#228B22",
+    "theme": "forest",
+    "texture": "tree",
+    "resources": [
+      "resource_enchanted_trees",
+      "resource_fairy_flower"
+    ],
+    "rarity": 0.2,
+    "accessible": true
+  },
+  {
+    "id": "tile_abandoned_mine",
+    "name": "Abandoned Mine",
+    "color": "#FFD700",
+    "backgroundColor": "#8B4513",
+    "theme": "mine",
+    "texture": "cliff",
+    "resources": [
+      "resource_mine_ore",
+      "resource_dust",
+      "resource_copper_deposit"
+    ],
+    "rarity": 0.2,
+    "accessible": true
+  },
+  {
+    "id": "tile_wonderous_waterfall",
+    "name": "Wonderous Waterfall",
+    "color": "#FFFFFF",
+    "backgroundColor": "#4169E1",
+    "theme": "waterfall",
+    "texture": "water",
+    "resources": [
+      "resource_spring_water",
+      "resource_water_plants"
+    ],
+    "rarity": 0.2,
+    "accessible": true
+  },
+  {
+    "id": "tile_marketplace",
+    "name": "Marketplace",
+    "color": "#FFD700",
+    "backgroundColor": "#800080",
+    "theme": "city",
+    "texture": "settlement",
+    "resources": [],
+    "rarity": 0.2,
+    "accessible": true
+  },
+  {
+    "id": "tile_mountain_peak",
+    "name": "Mountain Peak",
+    "color": "#FFFFFF",
+    "backgroundColor": "#A9A9A9",
+    "theme": "mountain",
+    "texture": "cliff",
+    "resources": [
+      "resource_mountain_rock",
+      "resource_rare_mineral"
+    ],
+    "rarity": 0.15,
+    "accessible": true
+  },
+  {
+    "id": "tile_mountain_peak",
+    "name": "Mountain Peak",
+    "color": "#FFFFFF",
+    "backgroundColor": "#A9A9A9",
+    "theme": "mountain",
+    "texture": "cliff",
+    "resources": [
+      "resource_mountain_rock",
+      "resource_rare_mineral"
+    ],
+    "rarity": 0.15,
+    "accessible": true
+  },
+  {
+    "id": "tile_frozen_wastes",
+    "name": "Frozen Wastes",
+    "color": "#191970",
+    "backgroundColor": "#E0FFFF",
+    "theme": "frozen",
+    "texture": "water",
+    "resources": [
+      "resource_ice_crystal",
+      "resource_frozen_rock"
+    ],
+    "rarity": 0.1,
+    "accessible": true
+  },
+  {
+    "id": "tile_cavern_of_echoes",
+    "name": "Cavern of Echoes",
+    "color": "#DDA0DD",
+    "backgroundColor": "#2F4F4F",
+    "theme": "cave",
+    "texture": "cliff",
+    "resources": [
+      "resource_ruby",
+      "resource_cave_fungus"
+    ],
+    "rarity": 0.1,
+    "accessible": true
+  },
+  {
+    "id": "tile_crystal_cavern",
+    "name": "Crystal Cavern",
+    "color": "#FF69B4",
+    "backgroundColor": "#4B0082",
+    "theme": "cave",
+    "texture": "cliff",
+    "resources": [
+      "resource_amethyst",
+      "resource_crystal_gems",
+      "resource_surface_gems"
+    ],
+    "rarity": 0.1,
+    "accessible": true
+  },
+  {
+    "id": "tile_campsite",
+    "name": "Campsite",
+    "color": "#FFD700",
+    "backgroundColor": "#8B4513",
+    "theme": "retro",
+    "texture": "camp",
+    "resources": [
+      "resource_campfire_01"
+    ],
+    "rarity": 0.02,
+    "accessible": true
+  },
+  {
+    "id": "tile_derelict_workshop",
+    "name": "Derelict Masters Workshop",
+    "color": "#F0E68C",
+    "backgroundColor": "#708090",
+    "theme": "nord",
+    "texture": "settlement",
+    "resources": [
+      "resource_crafting_item_broom_01",
+      "resource_crafting_advanced_pickaxe",
+      "resource_crafting_ice_pick",
+      "resource_crafting_gem_pickaxe"
+    ],
+    "rarity": 0.02,
+    "accessible": true
+  }
+]

@@ -1,6 +1,6 @@
 import type { TileQuest } from "../user/quest.js";
 
-export const tutorialQuests: TileQuest[] = [
+export const quests: TileQuest[] = [
   {
     id: "quest_tutorial_gathering",
     type: "collection",

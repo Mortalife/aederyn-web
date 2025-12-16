@@ -5,7 +5,7 @@ import { generateQuestTemplates } from "../ai/quests.js";
 import { MAP_HEIGHT, MAP_WIDTH, type Tile } from "../config.js";
 import { getTileSelection } from "../world/index.js";
 import { randomIndex } from "../lib/random.js";
-import { tutorialQuests } from "../config/quests.js";
+import { quests } from "../config/quests.js";
 
 export class QuestManager {
   static VERSION = 2;
@@ -312,7 +312,7 @@ export class QuestManager {
     }
 
     console.log("Adding tutorial quests");
-    for (const tileQuest of tutorialQuests) {
+    for (const tileQuest of quests) {
       const clone = structuredClone(tileQuest);
       clone.starts_at = starts_at.getTime();
       clone.ends_at = ends_at.getTime();

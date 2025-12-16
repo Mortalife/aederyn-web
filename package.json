@@ -5,7 +5,10 @@
     "dev": "pnpm --filter web dev",
     "build": "pnpm --filter web build",
     "test": "pnpm --filter web test",
-    "check": "pnpm --filter web check"
+    "check": "pnpm --filter web check",
+    "editor": "pnpm --filter editor dev",
+    "editor:build": "pnpm --filter editor build",
+    "editor:test": "pnpm --filter editor test"
   },
   "pnpm": {
     "overrides": {

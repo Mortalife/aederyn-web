@@ -1,0 +1,1033 @@
+[
+  {
+    "id": "resource_grass_01",
+    "name": "Grass",
+    "amount": 1,
+    "limitless": false,
+    "reward_items": [
+      {
+        "item_id": "item_grass_01",
+        "qty": 1
+      }
+    ],
+    "required_items": [],
+    "collectionTime": 3,
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "item_stick_01",
+    "name": "Branch",
+    "amount": 1,
+    "limitless": false,
+    "reward_items": [
+      {
+        "item_id": "item_stick_01",
+        "qty": 1
+      }
+    ],
+    "required_items": [],
+    "collectionTime": 5,
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_trees_01",
+    "name": "Tree",
+    "limitless": false,
+    "amount": 5,
+    "reward_items": [
+      {
+        "item_id": "item_log_01",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_stone_axe_01",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "collectionTime": 10,
+    "type": "resource",
+    "verb": "Chop"
+  },
+  {
+    "id": "resource_trees_oak_02",
+    "name": "Oak Tree",
+    "amount": 5,
+    "limitless": false,
+    "reward_items": [
+      {
+        "item_id": "item_log_01",
+        "qty": 2
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_stone_axe_01",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 2
+      }
+    ],
+    "collectionTime": 15,
+    "type": "resource",
+    "verb": "Chop"
+  },
+  {
+    "id": "resource_stones_01",
+    "name": "Stones",
+    "limitless": false,
+    "amount": 10,
+    "reward_items": [
+      {
+        "item_id": "item_stone_01",
+        "qty": 1
+      }
+    ],
+    "required_items": [],
+    "collectionTime": 5,
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_campfire_01",
+    "name": "Campfire",
+    "limitless": false,
+    "amount": 10,
+    "reward_items": [
+      {
+        "item_id": "item_ash_01",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_log_01",
+        "qty": 1,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 10,
+    "type": "resource",
+    "verb": "Light"
+  },
+  {
+    "id": "resource_crafting_item_stone_axe_01",
+    "name": "Stone Axe",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_stone_axe_01",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_stick_01",
+        "qty": 1,
+        "consumed": true
+      },
+      {
+        "item_id": "item_stone_01",
+        "qty": 1,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 10,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_item_broom_01",
+    "name": "Broom",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_broom",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_stick_01",
+        "qty": 2,
+        "consumed": true
+      },
+      {
+        "item_id": "item_grass_01",
+        "qty": 3,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 10,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_enchanted_trees",
+    "name": "Enchanted Oak",
+    "amount": 3,
+    "limitless": false,
+    "collectionTime": 10,
+    "reward_items": [
+      {
+        "item_id": "item_enchanted_log",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_stone_axe_01",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 2
+      }
+    ],
+    "type": "resource",
+    "verb": "Chop"
+  },
+  {
+    "id": "resource_fairy_flower",
+    "name": "Glowing Fairy Flower",
+    "amount": 5,
+    "limitless": true,
+    "collectionTime": 5,
+    "reward_items": [
+      {
+        "item_id": "item_fairy_petal",
+        "qty": 2
+      }
+    ],
+    "required_items": [],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_mud",
+    "name": "Mud",
+    "amount": 10,
+    "limitless": false,
+    "collectionTime": 8,
+    "reward_items": [
+      {
+        "item_id": "item_clay",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_spade",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_cattails",
+    "name": "Cattail",
+    "amount": 5,
+    "limitless": true,
+    "collectionTime": 5,
+    "reward_items": [
+      {
+        "item_id": "item_cattail_fiber",
+        "qty": 1
+      }
+    ],
+    "required_items": [],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_mountain_rock",
+    "name": "Mountain Stone",
+    "amount": 10,
+    "limitless": false,
+    "collectionTime": 12,
+    "reward_items": [
+      {
+        "item_id": "item_mountain_rock",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_pickaxe",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "type": "resource",
+    "verb": "Mine"
+  },
+  {
+    "id": "resource_rare_mineral",
+    "name": "Rare Mineral",
+    "amount": 3,
+    "limitless": false,
+    "collectionTime": 15,
+    "reward_items": [
+      {
+        "item_id": "item_rare_mineral",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_advanced_pickaxe",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 2
+      }
+    ],
+    "type": "resource",
+    "verb": "Mine"
+  },
+  {
+    "id": "resource_ice_crystal",
+    "name": "Ice Crystal",
+    "amount": 5,
+    "limitless": false,
+    "collectionTime": 10,
+    "reward_items": [
+      {
+        "item_id": "item_ice_shard",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_ice_pick",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "type": "resource",
+    "verb": "Mine"
+  },
+  {
+    "id": "resource_frozen_rock",
+    "name": "Frozen Stone",
+    "amount": 5,
+    "limitless": false,
+    "collectionTime": 8,
+    "reward_items": [
+      {
+        "item_id": "item_frozen_stone",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_pickaxe",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 2
+      }
+    ],
+    "type": "resource",
+    "verb": "Mine"
+  },
+  {
+    "id": "resource_ruby",
+    "name": "Ruby Ore",
+    "amount": 3,
+    "limitless": false,
+    "collectionTime": 15,
+    "reward_items": [
+      {
+        "item_id": "item_ruby",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_gem_pickaxe",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 2
+      }
+    ],
+    "type": "resource",
+    "verb": "Mine"
+  },
+  {
+    "id": "resource_cave_fungus",
+    "name": "Glow Fungus",
+    "amount": 5,
+    "limitless": false,
+    "collectionTime": 8,
+    "reward_items": [
+      {
+        "item_id": "item_glow_fungus",
+        "qty": 2
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_gloves",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_blooming_flower",
+    "name": "Blooming Flower",
+    "amount": 10,
+    "limitless": true,
+    "collectionTime": 5,
+    "reward_items": [
+      {
+        "item_id": "item_flower_petals",
+        "qty": 3
+      }
+    ],
+    "required_items": [],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_fresh_grass",
+    "name": "Fresh Grass",
+    "amount": 15,
+    "limitless": false,
+    "collectionTime": 3,
+    "reward_items": [
+      {
+        "item_id": "item_wild_grass",
+        "qty": 1
+      }
+    ],
+    "required_items": [],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_thicket_branches",
+    "name": "Thicket Branches",
+    "amount": 8,
+    "limitless": false,
+    "collectionTime": 7,
+    "reward_items": [
+      {
+        "item_id": "item_stick_01",
+        "qty": 2
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_pruning_shears",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_nature_moss",
+    "name": "Moss",
+    "amount": 6,
+    "limitless": true,
+    "collectionTime": 4,
+    "reward_items": [
+      {
+        "item_id": "item_moss_clump",
+        "qty": 1
+      }
+    ],
+    "required_items": [],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_amethyst",
+    "name": "Amethyst Ore",
+    "amount": 2,
+    "limitless": false,
+    "collectionTime": 15,
+    "reward_items": [
+      {
+        "item_id": "item_amethyst",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_gem_pickaxe",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 2
+      }
+    ],
+    "type": "resource",
+    "verb": "Mine"
+  },
+  {
+    "id": "resource_crystal_gems",
+    "name": "Shimmering Gem",
+    "amount": 5,
+    "limitless": false,
+    "collectionTime": 10,
+    "reward_items": [
+      {
+        "item_id": "item_crystal_shard",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_gem_extractor",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_mine_ore",
+    "name": "Iron Ore",
+    "amount": 5,
+    "limitless": false,
+    "collectionTime": 15,
+    "reward_items": [
+      {
+        "item_id": "item_iron_ore",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_pickaxe",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 2
+      }
+    ],
+    "type": "resource",
+    "verb": "Mine"
+  },
+  {
+    "id": "resource_dust",
+    "name": "Dust",
+    "amount": 10,
+    "limitless": false,
+    "collectionTime": 4,
+    "reward_items": [
+      {
+        "item_id": "item_dust",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_broom",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_spring_water",
+    "name": "Spring Water",
+    "amount": 5,
+    "limitless": true,
+    "collectionTime": 3,
+    "reward_items": [
+      {
+        "item_id": "item_spring_water",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_water_bottle",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_water_plants",
+    "name": "Water Plants",
+    "amount": 8,
+    "limitless": false,
+    "collectionTime": 5,
+    "reward_items": [
+      {
+        "item_id": "item_water_plant",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_fishing_net",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_copper_deposit",
+    "name": "Copper Deposit",
+    "amount": 8,
+    "limitless": false,
+    "reward_items": [
+      {
+        "item_id": "item_copper_ore",
+        "qty": 1
+      }
+    ],
+    "required_items": [],
+    "collectionTime": 8,
+    "type": "resource",
+    "verb": "Mine"
+  },
+  {
+    "id": "resource_dead_animal",
+    "name": "Dead Animal",
+    "amount": 1,
+    "limitless": false,
+    "reward_items": [
+      {
+        "item_id": "item_leather",
+        "qty": 2
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_stone_axe_01",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "collectionTime": 10,
+    "type": "resource",
+    "verb": "Skin"
+  },
+  {
+    "id": "resource_quartz_deposit",
+    "name": "Quartz Deposit",
+    "amount": 5,
+    "limitless": false,
+    "reward_items": [
+      {
+        "item_id": "item_quartz",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_stone_axe_01",
+        "qty": 1,
+        "consumed": false,
+        "itemDurabilityReduction": 1
+      }
+    ],
+    "collectionTime": 6,
+    "type": "resource",
+    "verb": "Mine"
+  },
+  {
+    "id": "resource_vine_growth",
+    "name": "Vine Growth",
+    "amount": 4,
+    "limitless": true,
+    "reward_items": [
+      {
+        "item_id": "item_vine",
+        "qty": 1
+      }
+    ],
+    "required_items": [],
+    "collectionTime": 5,
+    "type": "resource",
+    "verb": "Collect"
+  },
+  {
+    "id": "resource_surface_gems",
+    "name": "Surface Gems",
+    "amount": 3,
+    "limitless": false,
+    "reward_items": [
+      {
+        "item_id": "item_rough_gem",
+        "qty": 1
+      }
+    ],
+    "required_items": [],
+    "collectionTime": 12,
+    "type": "resource",
+    "verb": "Search"
+  },
+  {
+    "id": "resource_crafting_bucket",
+    "name": "Bucket",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_bucket",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_copper_ore",
+        "qty": 2,
+        "consumed": true
+      },
+      {
+        "item_id": "item_clay",
+        "qty": 1,
+        "consumed": true
+      },
+      {
+        "item_id": "item_vine",
+        "qty": 1,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 15,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_spade",
+    "name": "Spade",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_spade",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_stone_01",
+        "qty": 1,
+        "consumed": true
+      },
+      {
+        "item_id": "item_stick_01",
+        "qty": 1,
+        "consumed": true
+      },
+      {
+        "item_id": "item_vine",
+        "qty": 1,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 10,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_pickaxe",
+    "name": "Basic Pickaxe",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_pickaxe",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_copper_ore",
+        "qty": 3,
+        "consumed": true
+      },
+      {
+        "item_id": "item_stick_01",
+        "qty": 2,
+        "consumed": true
+      },
+      {
+        "item_id": "item_vine",
+        "qty": 2,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 20,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_advanced_pickaxe",
+    "name": "Advanced Pickaxe",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_advanced_pickaxe",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_pickaxe",
+        "qty": 1,
+        "consumed": true
+      },
+      {
+        "item_id": "item_iron_ore",
+        "qty": 3,
+        "consumed": true
+      },
+      {
+        "item_id": "item_leather",
+        "qty": 2,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 30,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_ice_pick",
+    "name": "Ice Pick",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_ice_pick",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_copper_ore",
+        "qty": 2,
+        "consumed": true
+      },
+      {
+        "item_id": "item_rough_gem",
+        "qty": 1,
+        "consumed": true
+      },
+      {
+        "item_id": "item_leather",
+        "qty": 1,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 25,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_gem_pickaxe",
+    "name": "Gem Pickaxe",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_gem_pickaxe",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_advanced_pickaxe",
+        "qty": 1,
+        "consumed": true
+      },
+      {
+        "item_id": "item_rough_gem",
+        "qty": 3,
+        "consumed": true
+      },
+      {
+        "item_id": "item_quartz",
+        "qty": 2,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 40,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_gloves",
+    "name": "Protective Gloves",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_gloves",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_leather",
+        "qty": 2,
+        "consumed": true
+      },
+      {
+        "item_id": "item_cattail_fiber",
+        "qty": 3,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 15,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_pruning_shears",
+    "name": "Pruning Shears",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_pruning_shears",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_copper_ore",
+        "qty": 2,
+        "consumed": true
+      },
+      {
+        "item_id": "item_stick_01",
+        "qty": 1,
+        "consumed": true
+      },
+      {
+        "item_id": "item_vine",
+        "qty": 2,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 20,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_gem_extractor",
+    "name": "Gem Extractor",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_gem_extractor",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_copper_ore",
+        "qty": 1,
+        "consumed": true
+      },
+      {
+        "item_id": "item_quartz",
+        "qty": 3,
+        "consumed": true
+      },
+      {
+        "item_id": "item_leather",
+        "qty": 1,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 30,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_water_bottle",
+    "name": "Water Bottle",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_water_bottle",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_clay",
+        "qty": 2,
+        "consumed": true
+      },
+      {
+        "item_id": "item_vine",
+        "qty": 1,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 10,
+    "type": "workbench",
+    "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_fishing_net",
+    "name": "Fishing Net",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_fishing_net",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_vine",
+        "qty": 3,
+        "consumed": true
+      },
+      {
+        "item_id": "item_cattail_fiber",
+        "qty": 4,
+        "consumed": true
+      },
+      {
+        "item_id": "item_stick_01",
+        "qty": 2,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 25,
+    "type": "workbench",
+    "verb": "Craft"
+  }
+]

@@ -1,4 +1,4 @@
-import { tutorialQuests } from "../config/quests.js";
+import { quests } from "../config/quests.js";
 import { client } from "../database.js";
 import { getTile, type WorldTile } from "../world/index.js";
 import { addGold, addToInventory } from "./inventory.js";
@@ -629,7 +629,7 @@ export class QuestProgressManager {
 
     if (!quest) {
       // Is it a tutorial?
-      quest = tutorialQuests.find((q) => q.id === questId);
+      quest = quests.find((q) => q.id === questId);
 
       if (!quest) {
         await addSystemMessage(userId, "Quest not found", "error", {
@@ -761,7 +761,7 @@ export class QuestProgressManager {
       const quests = await questManager.getActiveQuests();
       const quest =
         quests.find((q) => q.id === questId) ??
-        tutorialQuests.find((q) => q.id === questId);
+        quests.find((q) => q.id === questId);
       const objective = quest?.objectives.find((o) => o.id === objectiveId);
 
       if (quest && objective) {
