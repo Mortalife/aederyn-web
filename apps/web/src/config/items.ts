@@ -75,15 +75,10 @@ export const items: Item[] = [
     maxStackSize: 1,
     equippable: true,
     equipSlot: "mainHand",
-    durability: {
-      current: 10,
-      max: 10,
-    },
+    durability: { current: 10, max: 10 },
     value: 10,
     weight: 2.5,
-    attributes: {
-      damage: 2,
-    },
+    attributes: { damage: 2 },
   },
   {
     id: "item_enchanted_log",
@@ -324,10 +319,7 @@ export const items: Item[] = [
     equippable: true,
     value: 15,
     weight: 1,
-    durability: {
-      current: 100,
-      max: 100,
-    },
+    durability: { current: 100, max: 100 },
   },
   {
     id: "item_spade",
@@ -340,10 +332,7 @@ export const items: Item[] = [
     equippable: true,
     value: 20,
     weight: 2,
-    durability: {
-      current: 100,
-      max: 100,
-    },
+    durability: { current: 100, max: 100 },
   },
   {
     id: "item_pickaxe",
@@ -356,10 +345,7 @@ export const items: Item[] = [
     equippable: true,
     value: 30,
     weight: 4,
-    durability: {
-      current: 75,
-      max: 75,
-    },
+    durability: { current: 75, max: 75 },
   },
   {
     id: "item_advanced_pickaxe",
@@ -372,10 +358,7 @@ export const items: Item[] = [
     equippable: true,
     value: 100,
     weight: 5,
-    durability: {
-      current: 150,
-      max: 150,
-    },
+    durability: { current: 150, max: 150 },
   },
   {
     id: "item_ice_pick",
@@ -388,10 +371,7 @@ export const items: Item[] = [
     equippable: true,
     value: 50,
     weight: 2,
-    durability: {
-      current: 100,
-      max: 100,
-    },
+    durability: { current: 100, max: 100 },
   },
   {
     id: "item_gem_pickaxe",
@@ -404,10 +384,7 @@ export const items: Item[] = [
     equippable: true,
     value: 200,
     weight: 3,
-    durability: {
-      current: 100,
-      max: 100,
-    },
+    durability: { current: 100, max: 100 },
   },
   {
     id: "item_gloves",
@@ -420,10 +397,7 @@ export const items: Item[] = [
     equippable: true,
     value: 25,
     weight: 0.5,
-    durability: {
-      current: 50,
-      max: 50,
-    },
+    durability: { current: 50, max: 50 },
   },
   {
     id: "item_pruning_shears",
@@ -437,10 +411,7 @@ export const items: Item[] = [
     equippable: true,
     value: 35,
     weight: 1,
-    durability: {
-      current: 75,
-      max: 75,
-    },
+    durability: { current: 75, max: 75 },
   },
   {
     id: "item_gem_extractor",
@@ -453,10 +424,7 @@ export const items: Item[] = [
     equippable: true,
     value: 150,
     weight: 2,
-    durability: {
-      current: 50,
-      max: 50,
-    },
+    durability: { current: 50, max: 50 },
   },
   {
     id: "item_broom",
@@ -469,10 +437,7 @@ export const items: Item[] = [
     equippable: true,
     value: 10,
     weight: 1,
-    durability: {
-      current: 100,
-      max: 100,
-    },
+    durability: { current: 100, max: 100 },
   },
   {
     id: "item_water_bottle",
@@ -485,10 +450,7 @@ export const items: Item[] = [
     equippable: true,
     value: 5,
     weight: 0.5,
-    durability: {
-      current: 50,
-      max: 50,
-    },
+    durability: { current: 50, max: 50 },
   },
   {
     id: "item_fishing_net",
@@ -501,10 +463,7 @@ export const items: Item[] = [
     equippable: true,
     value: 40,
     weight: 2,
-    durability: {
-      current: 75,
-      max: 75,
-    },
+    durability: { current: 75, max: 75 },
   },
   {
     id: "item_copper_ore",
@@ -581,5 +540,5 @@ export const items: Item[] = [
 ];
 
 export const itemsById = new Map<string, Item>(
-  items.map((item) => [item.id, item])
+  items.map((item) => [item.id, item]),
 );

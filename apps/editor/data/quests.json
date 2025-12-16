@@ -248,7 +248,7 @@
     "prerequisites": []
   },
   {
-    "id": "whispers-in-the-marsh",
+    "id": "whispers_in_the_marsh",
     "name": "Whispers in the Marsh",
     "description": "Vex the Hermit Alchemist has been hearing unsettling whispers coming from the Mystic Marsh. He believes the source may be tied to the ancient magic of the area. He needs your help to gather rare materials and uncover the truth.",
     "type": "collection",

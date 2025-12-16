@@ -6,12 +6,7 @@ export const resources: ResourceModel[] = [
     name: "Grass",
     amount: 1,
     limitless: false,
-    reward_items: [
-      {
-        item_id: "item_grass_01",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_grass_01", qty: 1 }],
     required_items: [],
     collectionTime: 3,
     type: "resource",
@@ -22,12 +17,7 @@ export const resources: ResourceModel[] = [
     name: "Branch",
     amount: 1,
     limitless: false,
-    reward_items: [
-      {
-        item_id: "item_stick_01",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_stick_01", qty: 1 }],
     required_items: [],
     collectionTime: 5,
     type: "resource",
@@ -38,12 +28,7 @@ export const resources: ResourceModel[] = [
     name: "Tree",
     limitless: false,
     amount: 5,
-    reward_items: [
-      {
-        item_id: "item_log_01",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_log_01", qty: 1 }],
     required_items: [
       {
         item_id: "item_stone_axe_01",
@@ -61,12 +46,7 @@ export const resources: ResourceModel[] = [
     name: "Oak Tree",
     amount: 5,
     limitless: false,
-    reward_items: [
-      {
-        item_id: "item_log_01",
-        qty: 2,
-      },
-    ],
+    reward_items: [{ item_id: "item_log_01", qty: 2 }],
     required_items: [
       {
         item_id: "item_stone_axe_01",
@@ -84,12 +64,7 @@ export const resources: ResourceModel[] = [
     name: "Stones",
     limitless: false,
     amount: 10,
-    reward_items: [
-      {
-        item_id: "item_stone_01",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_stone_01", qty: 1 }],
     required_items: [],
     collectionTime: 5,
     type: "resource",
@@ -100,19 +75,8 @@ export const resources: ResourceModel[] = [
     name: "Campfire",
     limitless: false,
     amount: 10,
-    reward_items: [
-      {
-        item_id: "item_ash_01",
-        qty: 1,
-      },
-    ],
-    required_items: [
-      {
-        item_id: "item_log_01",
-        qty: 1,
-        consumed: true,
-      },
-    ],
+    reward_items: [{ item_id: "item_ash_01", qty: 1 }],
+    required_items: [{ item_id: "item_log_01", qty: 1, consumed: true }],
     collectionTime: 10,
     type: "resource",
     verb: "Light",
@@ -122,23 +86,10 @@ export const resources: ResourceModel[] = [
     name: "Stone Axe",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_stone_axe_01",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_stone_axe_01", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_stick_01",
-        qty: 1,
-        consumed: true,
-      },
-      {
-        item_id: "item_stone_01",
-        qty: 1,
-        consumed: true,
-      },
+      { item_id: "item_stick_01", qty: 1, consumed: true },
+      { item_id: "item_stone_01", qty: 1, consumed: true },
     ],
     collectionTime: 10,
     type: "workbench",
@@ -149,23 +100,10 @@ export const resources: ResourceModel[] = [
     name: "Broom",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_broom",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_broom", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_stick_01",
-        qty: 2,
-        consumed: true,
-      },
-      {
-        item_id: "item_grass_01",
-        qty: 3,
-        consumed: true,
-      },
+      { item_id: "item_stick_01", qty: 2, consumed: true },
+      { item_id: "item_grass_01", qty: 3, consumed: true },
     ],
     collectionTime: 10,
     type: "workbench",
@@ -177,12 +115,7 @@ export const resources: ResourceModel[] = [
     amount: 3,
     limitless: false,
     collectionTime: 10,
-    reward_items: [
-      {
-        item_id: "item_enchanted_log",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_enchanted_log", qty: 1 }],
     required_items: [
       {
         item_id: "item_stone_axe_01",
@@ -200,12 +133,7 @@ export const resources: ResourceModel[] = [
     amount: 5,
     limitless: true,
     collectionTime: 5,
-    reward_items: [
-      {
-        item_id: "item_fairy_petal",
-        qty: 2,
-      },
-    ],
+    reward_items: [{ item_id: "item_fairy_petal", qty: 2 }],
     required_items: [],
     type: "resource",
     verb: "Collect",
@@ -216,12 +144,7 @@ export const resources: ResourceModel[] = [
     amount: 10,
     limitless: false,
     collectionTime: 8,
-    reward_items: [
-      {
-        item_id: "item_clay",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_clay", qty: 1 }],
     required_items: [
       {
         item_id: "item_spade",
@@ -239,12 +162,7 @@ export const resources: ResourceModel[] = [
     amount: 5,
     limitless: true,
     collectionTime: 5,
-    reward_items: [
-      {
-        item_id: "item_cattail_fiber",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_cattail_fiber", qty: 1 }],
     required_items: [],
     type: "resource",
     verb: "Collect",
@@ -255,12 +173,7 @@ export const resources: ResourceModel[] = [
     amount: 10,
     limitless: false,
     collectionTime: 12,
-    reward_items: [
-      {
-        item_id: "item_mountain_rock",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_mountain_rock", qty: 1 }],
     required_items: [
       {
         item_id: "item_pickaxe",
@@ -278,12 +191,7 @@ export const resources: ResourceModel[] = [
     amount: 3,
     limitless: false,
     collectionTime: 15,
-    reward_items: [
-      {
-        item_id: "item_rare_mineral",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_rare_mineral", qty: 1 }],
     required_items: [
       {
         item_id: "item_advanced_pickaxe",
@@ -301,12 +209,7 @@ export const resources: ResourceModel[] = [
     amount: 5,
     limitless: false,
     collectionTime: 10,
-    reward_items: [
-      {
-        item_id: "item_ice_shard",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_ice_shard", qty: 1 }],
     required_items: [
       {
         item_id: "item_ice_pick",
@@ -324,12 +227,7 @@ export const resources: ResourceModel[] = [
     amount: 5,
     limitless: false,
     collectionTime: 8,
-    reward_items: [
-      {
-        item_id: "item_frozen_stone",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_frozen_stone", qty: 1 }],
     required_items: [
       {
         item_id: "item_pickaxe",
@@ -347,12 +245,7 @@ export const resources: ResourceModel[] = [
     amount: 3,
     limitless: false,
     collectionTime: 15,
-    reward_items: [
-      {
-        item_id: "item_ruby",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_ruby", qty: 1 }],
     required_items: [
       {
         item_id: "item_gem_pickaxe",
@@ -370,12 +263,7 @@ export const resources: ResourceModel[] = [
     amount: 5,
     limitless: false,
     collectionTime: 8,
-    reward_items: [
-      {
-        item_id: "item_glow_fungus",
-        qty: 2,
-      },
-    ],
+    reward_items: [{ item_id: "item_glow_fungus", qty: 2 }],
     required_items: [
       {
         item_id: "item_gloves",
@@ -393,12 +281,7 @@ export const resources: ResourceModel[] = [
     amount: 10,
     limitless: true,
     collectionTime: 5,
-    reward_items: [
-      {
-        item_id: "item_flower_petals",
-        qty: 3,
-      },
-    ],
+    reward_items: [{ item_id: "item_flower_petals", qty: 3 }],
     required_items: [],
     type: "resource",
     verb: "Collect",
@@ -409,12 +292,7 @@ export const resources: ResourceModel[] = [
     amount: 15,
     limitless: false,
     collectionTime: 3,
-    reward_items: [
-      {
-        item_id: "item_wild_grass",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_wild_grass", qty: 1 }],
     required_items: [],
     type: "resource",
     verb: "Collect",
@@ -425,12 +303,7 @@ export const resources: ResourceModel[] = [
     amount: 8,
     limitless: false,
     collectionTime: 7,
-    reward_items: [
-      {
-        item_id: "item_stick_01",
-        qty: 2,
-      },
-    ],
+    reward_items: [{ item_id: "item_stick_01", qty: 2 }],
     required_items: [
       {
         item_id: "item_pruning_shears",
@@ -448,12 +321,7 @@ export const resources: ResourceModel[] = [
     amount: 6,
     limitless: true,
     collectionTime: 4,
-    reward_items: [
-      {
-        item_id: "item_moss_clump",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_moss_clump", qty: 1 }],
     required_items: [],
     type: "resource",
     verb: "Collect",
@@ -464,12 +332,7 @@ export const resources: ResourceModel[] = [
     amount: 2,
     limitless: false,
     collectionTime: 15,
-    reward_items: [
-      {
-        item_id: "item_amethyst",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_amethyst", qty: 1 }],
     required_items: [
       {
         item_id: "item_gem_pickaxe",
@@ -487,12 +350,7 @@ export const resources: ResourceModel[] = [
     amount: 5,
     limitless: false,
     collectionTime: 10,
-    reward_items: [
-      {
-        item_id: "item_crystal_shard",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_crystal_shard", qty: 1 }],
     required_items: [
       {
         item_id: "item_gem_extractor",
@@ -510,12 +368,7 @@ export const resources: ResourceModel[] = [
     amount: 5,
     limitless: false,
     collectionTime: 15,
-    reward_items: [
-      {
-        item_id: "item_iron_ore",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_iron_ore", qty: 1 }],
     required_items: [
       {
         item_id: "item_pickaxe",
@@ -533,12 +386,7 @@ export const resources: ResourceModel[] = [
     amount: 10,
     limitless: false,
     collectionTime: 4,
-    reward_items: [
-      {
-        item_id: "item_dust",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_dust", qty: 1 }],
     required_items: [
       {
         item_id: "item_broom",
@@ -556,12 +404,7 @@ export const resources: ResourceModel[] = [
     amount: 5,
     limitless: true,
     collectionTime: 3,
-    reward_items: [
-      {
-        item_id: "item_spring_water",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_spring_water", qty: 1 }],
     required_items: [
       {
         item_id: "item_water_bottle",
@@ -579,12 +422,7 @@ export const resources: ResourceModel[] = [
     amount: 8,
     limitless: false,
     collectionTime: 5,
-    reward_items: [
-      {
-        item_id: "item_water_plant",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_water_plant", qty: 1 }],
     required_items: [
       {
         item_id: "item_fishing_net",
@@ -601,12 +439,7 @@ export const resources: ResourceModel[] = [
     name: "Copper Deposit",
     amount: 8,
     limitless: false,
-    reward_items: [
-      {
-        item_id: "item_copper_ore",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_copper_ore", qty: 1 }],
     required_items: [],
     collectionTime: 8,
     type: "resource",
@@ -617,12 +450,7 @@ export const resources: ResourceModel[] = [
     name: "Dead Animal",
     amount: 1,
     limitless: false,
-    reward_items: [
-      {
-        item_id: "item_leather",
-        qty: 2,
-      },
-    ],
+    reward_items: [{ item_id: "item_leather", qty: 2 }],
     required_items: [
       {
         item_id: "item_stone_axe_01",
@@ -640,12 +468,7 @@ export const resources: ResourceModel[] = [
     name: "Quartz Deposit",
     amount: 5,
     limitless: false,
-    reward_items: [
-      {
-        item_id: "item_quartz",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_quartz", qty: 1 }],
     required_items: [
       {
         item_id: "item_stone_axe_01",
@@ -663,12 +486,7 @@ export const resources: ResourceModel[] = [
     name: "Vine Growth",
     amount: 4,
     limitless: true,
-    reward_items: [
-      {
-        item_id: "item_vine",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_vine", qty: 1 }],
     required_items: [],
     collectionTime: 5,
     type: "resource",
@@ -679,12 +497,7 @@ export const resources: ResourceModel[] = [
     name: "Surface Gems",
     amount: 3,
     limitless: false,
-    reward_items: [
-      {
-        item_id: "item_rough_gem",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_rough_gem", qty: 1 }],
     required_items: [],
     collectionTime: 12,
     type: "resource",
@@ -695,28 +508,11 @@ export const resources: ResourceModel[] = [
     name: "Bucket",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_bucket",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_bucket", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_copper_ore",
-        qty: 2,
-        consumed: true,
-      },
-      {
-        item_id: "item_clay",
-        qty: 1,
-        consumed: true,
-      },
-      {
-        item_id: "item_vine",
-        qty: 1,
-        consumed: true,
-      },
+      { item_id: "item_copper_ore", qty: 2, consumed: true },
+      { item_id: "item_clay", qty: 1, consumed: true },
+      { item_id: "item_vine", qty: 1, consumed: true },
     ],
     collectionTime: 15,
     type: "workbench",
@@ -727,28 +523,11 @@ export const resources: ResourceModel[] = [
     name: "Spade",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_spade",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_spade", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_stone_01",
-        qty: 1,
-        consumed: true,
-      },
-      {
-        item_id: "item_stick_01",
-        qty: 1,
-        consumed: true,
-      },
-      {
-        item_id: "item_vine",
-        qty: 1,
-        consumed: true,
-      },
+      { item_id: "item_stone_01", qty: 1, consumed: true },
+      { item_id: "item_stick_01", qty: 1, consumed: true },
+      { item_id: "item_vine", qty: 1, consumed: true },
     ],
     collectionTime: 10,
     type: "workbench",
@@ -759,28 +538,11 @@ export const resources: ResourceModel[] = [
     name: "Basic Pickaxe",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_pickaxe",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_pickaxe", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_copper_ore",
-        qty: 3,
-        consumed: true,
-      },
-      {
-        item_id: "item_stick_01",
-        qty: 2,
-        consumed: true,
-      },
-      {
-        item_id: "item_vine",
-        qty: 2,
-        consumed: true,
-      },
+      { item_id: "item_copper_ore", qty: 3, consumed: true },
+      { item_id: "item_stick_01", qty: 2, consumed: true },
+      { item_id: "item_vine", qty: 2, consumed: true },
     ],
     collectionTime: 20,
     type: "workbench",
@@ -791,28 +553,11 @@ export const resources: ResourceModel[] = [
     name: "Advanced Pickaxe",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_advanced_pickaxe",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_advanced_pickaxe", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_pickaxe",
-        qty: 1,
-        consumed: true,
-      },
-      {
-        item_id: "item_iron_ore",
-        qty: 3,
-        consumed: true,
-      },
-      {
-        item_id: "item_leather",
-        qty: 2,
-        consumed: true,
-      },
+      { item_id: "item_pickaxe", qty: 1, consumed: true },
+      { item_id: "item_iron_ore", qty: 3, consumed: true },
+      { item_id: "item_leather", qty: 2, consumed: true },
     ],
     collectionTime: 30,
     type: "workbench",
@@ -823,28 +568,11 @@ export const resources: ResourceModel[] = [
     name: "Ice Pick",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_ice_pick",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_ice_pick", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_copper_ore",
-        qty: 2,
-        consumed: true,
-      },
-      {
-        item_id: "item_rough_gem",
-        qty: 1,
-        consumed: true,
-      },
-      {
-        item_id: "item_leather",
-        qty: 1,
-        consumed: true,
-      },
+      { item_id: "item_copper_ore", qty: 2, consumed: true },
+      { item_id: "item_rough_gem", qty: 1, consumed: true },
+      { item_id: "item_leather", qty: 1, consumed: true },
     ],
     collectionTime: 25,
     type: "workbench",
@@ -855,28 +583,11 @@ export const resources: ResourceModel[] = [
     name: "Gem Pickaxe",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_gem_pickaxe",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_gem_pickaxe", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_advanced_pickaxe",
-        qty: 1,
-        consumed: true,
-      },
-      {
-        item_id: "item_rough_gem",
-        qty: 3,
-        consumed: true,
-      },
-      {
-        item_id: "item_quartz",
-        qty: 2,
-        consumed: true,
-      },
+      { item_id: "item_advanced_pickaxe", qty: 1, consumed: true },
+      { item_id: "item_rough_gem", qty: 3, consumed: true },
+      { item_id: "item_quartz", qty: 2, consumed: true },
     ],
     collectionTime: 40,
     type: "workbench",
@@ -887,23 +598,10 @@ export const resources: ResourceModel[] = [
     name: "Protective Gloves",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_gloves",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_gloves", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_leather",
-        qty: 2,
-        consumed: true,
-      },
-      {
-        item_id: "item_cattail_fiber",
-        qty: 3,
-        consumed: true,
-      },
+      { item_id: "item_leather", qty: 2, consumed: true },
+      { item_id: "item_cattail_fiber", qty: 3, consumed: true },
     ],
     collectionTime: 15,
     type: "workbench",
@@ -914,28 +612,11 @@ export const resources: ResourceModel[] = [
     name: "Pruning Shears",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_pruning_shears",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_pruning_shears", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_copper_ore",
-        qty: 2,
-        consumed: true,
-      },
-      {
-        item_id: "item_stick_01",
-        qty: 1,
-        consumed: true,
-      },
-      {
-        item_id: "item_vine",
-        qty: 2,
-        consumed: true,
-      },
+      { item_id: "item_copper_ore", qty: 2, consumed: true },
+      { item_id: "item_stick_01", qty: 1, consumed: true },
+      { item_id: "item_vine", qty: 2, consumed: true },
     ],
     collectionTime: 20,
     type: "workbench",
@@ -946,28 +627,11 @@ export const resources: ResourceModel[] = [
     name: "Gem Extractor",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_gem_extractor",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_gem_extractor", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_copper_ore",
-        qty: 1,
-        consumed: true,
-      },
-      {
-        item_id: "item_quartz",
-        qty: 3,
-        consumed: true,
-      },
-      {
-        item_id: "item_leather",
-        qty: 1,
-        consumed: true,
-      },
+      { item_id: "item_copper_ore", qty: 1, consumed: true },
+      { item_id: "item_quartz", qty: 3, consumed: true },
+      { item_id: "item_leather", qty: 1, consumed: true },
     ],
     collectionTime: 30,
     type: "workbench",
@@ -978,23 +642,10 @@ export const resources: ResourceModel[] = [
     name: "Water Bottle",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_water_bottle",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_water_bottle", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_clay",
-        qty: 2,
-        consumed: true,
-      },
-      {
-        item_id: "item_vine",
-        qty: 1,
-        consumed: true,
-      },
+      { item_id: "item_clay", qty: 2, consumed: true },
+      { item_id: "item_vine", qty: 1, consumed: true },
     ],
     collectionTime: 10,
     type: "workbench",
@@ -1005,28 +656,11 @@ export const resources: ResourceModel[] = [
     name: "Fishing Net",
     limitless: true,
     amount: 1,
-    reward_items: [
-      {
-        item_id: "item_fishing_net",
-        qty: 1,
-      },
-    ],
+    reward_items: [{ item_id: "item_fishing_net", qty: 1 }],
     required_items: [
-      {
-        item_id: "item_vine",
-        qty: 3,
-        consumed: true,
-      },
-      {
-        item_id: "item_cattail_fiber",
-        qty: 4,
-        consumed: true,
-      },
-      {
-        item_id: "item_stick_01",
-        qty: 2,
-        consumed: true,
-      },
+      { item_id: "item_vine", qty: 3, consumed: true },
+      { item_id: "item_cattail_fiber", qty: 4, consumed: true },
+      { item_id: "item_stick_01", qty: 2, consumed: true },
     ],
     collectionTime: 25,
     type: "workbench",

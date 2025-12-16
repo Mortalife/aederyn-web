@@ -2039,6 +2039,9 @@ app.post("/commands/export/typescript", async (c) => {
 app.post("/commands/export/deploy", async (c) => {
   const fs = await import("fs/promises");
   const path = await import("path");
+  const { exec } = await import("child_process");
+  const { promisify } = await import("util");
+  const execAsync = promisify(exec);
   const result = await exportToTypeScript();
 
   const configDir = path.resolve(
@@ -2046,9 +2049,18 @@ app.post("/commands/export/deploy", async (c) => {
     "../../web/src/config"
   );
 
+  const filePaths: string[] = [];
   for (const file of result.files) {
     const filePath = path.join(configDir, file.filename);
     await fs.writeFile(filePath, file.content, "utf-8");
+    filePaths.push(filePath);
+  }
+
+  // Format files with prettier
+  try {
+    await execAsync(`npx prettier --write ${filePaths.join(" ")}`);
+  } catch (e) {
+    console.error("Prettier formatting failed:", e);
   }
 
   return c.redirect("/export?deployed=true");

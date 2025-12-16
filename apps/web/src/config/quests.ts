@@ -62,15 +62,8 @@ export const quests: Quest[] = [
       y: 9,
     },
     rewards: [
-      {
-        type: "item",
-        item_id: "item_stone_01",
-        amount: 2,
-      },
-      {
-        type: "gold",
-        amount: 10,
-      },
+      { type: "item", item_id: "item_stone_01", amount: 2 },
+      { type: "gold", amount: 10 },
     ],
     is_tutorial: true,
   },
@@ -134,25 +127,14 @@ export const quests: Quest[] = [
       x: 11,
       y: 10,
     },
-    rewards: [
-      {
-        type: "item",
-        item_id: "item_stick_01",
-        amount: 3,
-      },
-    ],
+    rewards: [{ type: "item", item_id: "item_stick_01", amount: 3 }],
     is_tutorial: true,
   },
   {
     id: "quest_tutorial_exploration",
     type: "exploration",
     name: "Exploring New Horizons",
-    giver: {
-      entity_id: "npc_ranger",
-      zone_id: "tile_trees",
-      x: 9,
-      y: 12,
-    },
+    giver: { entity_id: "npc_ranger", zone_id: "tile_trees", x: 9, y: 12 },
     description:
       "Sylvan the Forest Ranger will guide you in exploring the local area and teach you about finding specific resources in different zones.",
     objectives: [
@@ -168,10 +150,7 @@ export const quests: Quest[] = [
             dialog:
               "The forest holds many secrets. Let me show you how to find what you need in the wilderness.",
           },
-          {
-            entity_id: null,
-            dialog: "I'm ready to explore.",
-          },
+          { entity_id: null, dialog: "I'm ready to explore." },
         ],
         x: 9,
         y: 12,
@@ -207,13 +186,7 @@ export const quests: Quest[] = [
       x: 9,
       y: 10,
     },
-    rewards: [
-      {
-        type: "item",
-        item_id: "item_water_bottle",
-        amount: 1,
-      },
-    ],
+    rewards: [{ type: "item", item_id: "item_water_bottle", amount: 1 }],
     is_tutorial: true,
   },
   {
@@ -222,10 +195,7 @@ export const quests: Quest[] = [
     description:
       "Elara the Elder Sage has noticed strange occurrences in the Enchanted Grove involving the fairies. She needs your help to gather evidence about the fairies' activities.",
     type: "collection",
-    giver: {
-      entity_id: "npc_elder_sage",
-      zone_id: "tile_enchanted_grove",
-    },
+    giver: { entity_id: "npc_elder_sage", zone_id: "tile_enchanted_grove" },
     objectives: [
       {
         id: "gather_fairy_petal",
@@ -251,26 +221,17 @@ export const quests: Quest[] = [
         "Thank you for your help! These petals and fungi will help us understand the fairies' intentions.",
       return_message: "You have helped before. The fairies thank you!",
     },
-    rewards: [
-      {
-        type: "item",
-        item_id: "item_flower_petals",
-        amount: 1,
-      },
-    ],
+    rewards: [{ type: "item", item_id: "item_flower_petals", amount: 1 }],
     is_tutorial: false,
     prerequisites: [],
   },
   {
-    id: "whispers-in-the-marsh",
+    id: "whispers_in_the_marsh",
     name: "Whispers in the Marsh",
     description:
       "Vex the Hermit Alchemist has been hearing unsettling whispers coming from the Mystic Marsh. He believes the source may be tied to the ancient magic of the area. He needs your help to gather rare materials and uncover the truth.",
     type: "collection",
-    giver: {
-      entity_id: "npc_hermit_alchemist",
-      zone_id: "tile_mystic_marsh",
-    },
+    giver: { entity_id: "npc_hermit_alchemist", zone_id: "tile_mystic_marsh" },
     objectives: [
       {
         id: "gather_glow_fungus",
@@ -307,13 +268,7 @@ export const quests: Quest[] = [
       return_message:
         "Thank you for your assistance! The whispers grow stronger.",
     },
-    rewards: [
-      {
-        type: "item",
-        item_id: "item_ruby",
-        amount: 1,
-      },
-    ],
+    rewards: [{ type: "item", item_id: "item_ruby", amount: 1 }],
     is_tutorial: false,
     prerequisites: [],
   },
