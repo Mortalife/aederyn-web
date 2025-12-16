@@ -1,12 +1,15 @@
 import type { FC } from "hono/jsx";
-import type { Resource } from "../repository/index.js";
+import type { Resource, Item } from "../repository/index.js";
+import { ItemQuantityList } from "../components/ItemQuantityList.js";
+import { RequiredItemList } from "../components/RequiredItemList.js";
 
 interface ResourceFormProps {
   resource?: Resource;
   isNew?: boolean;
+  items?: Item[];
 }
 
-export const ResourceForm: FC<ResourceFormProps> = ({ resource, isNew = true }) => {
+export const ResourceForm: FC<ResourceFormProps> = ({ resource, isNew = true, items = [] }) => {
   const defaultResource: Partial<Resource> = {
     id: "",
     name: "",
@@ -140,33 +143,24 @@ export const ResourceForm: FC<ResourceFormProps> = ({ resource, isNew = true }) 
             </label>
           </div>
 
-          <div class="col-span-2">
-            <label class="block text-sm font-medium text-gray-300 mb-2">
-              Reward Items (JSON array)
-            </label>
-            <textarea
-              name="reward_items"
-              rows={3}
-              placeholder='[{"item_id": "item_wood", "quantity": 1, "chance": 1}]'
-              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 font-mono text-sm"
-            >
-              {JSON.stringify(r.reward_items, null, 2)}
-            </textarea>
-          </div>
+            <ItemQuantityList
+            name="reward_items"
+            label="Reward Items"
+            items={items}
+            value={r.reward_items || []}
+            placeholder="Select reward item..."
+          />
 
-          <div class="col-span-2">
-            <label class="block text-sm font-medium text-gray-300 mb-2">
-              Required Items (JSON array)
-            </label>
-            <textarea
-              name="required_items"
-              rows={3}
-              placeholder='[{"item_id": "item_axe", "quantity": 1}]'
-              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 font-mono text-sm"
-            >
-              {JSON.stringify(r.required_items, null, 2)}
-            </textarea>
-          </div>
+          <RequiredItemList
+            name="required_items"
+            label="Required Items"
+            items={items}
+            value={(r.required_items || []).map(item => ({
+              ...item,
+              consumed: item.consumed ?? true,
+            }))}
+            placeholder="Select required item..."
+          />
         </div>
 
         <div class="mt-6 flex gap-4">

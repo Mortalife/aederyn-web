@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
 ];
 
 const toolItems: NavItem[] = [
+  { href: "/world", icon: "🌍", label: "World" },
   { href: "/graph", icon: "🔗", label: "Graph" },
   { href: "/validate", icon: "✅", label: "Validate" },
   { href: "/ai", icon: "🤖", label: "AI Gen" },

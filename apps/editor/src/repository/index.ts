@@ -1,96 +1,19 @@
 import * as fs from "fs/promises";
 import * as path from "path";
+import type {
+  Item,
+  ResourceModel,
+  Tile,
+  NPC,
+  TileQuest,
+  HouseTile,
+  WorldBible,
+} from "@aederyn/types";
+import { createDefaultWorldBible } from "@aederyn/types";
 
-export interface Item {
-  id: string;
-  name: string;
-  description: string;
-  type: "resource" | "tool" | "weapon" | "armor" | "consumable" | "quest" | "item";
-  rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
-  stackable: boolean;
-  maxStackSize: number;
-  equippable: boolean;
-  equipSlot?: string;
-  durability?: { current: number; max: number };
-  attributes?: Record<string, unknown>;
-  value: number;
-  weight: number;
-}
-
-export interface Resource {
-  id: string;
-  name: string;
-  amount: number;
-  limitless: boolean;
-  collectionTime: number;
-  reward_items: Array<{ item_id: string; qty: number }>;
-  required_items: Array<{
-    item_id: string;
-    qty: number;
-    consumed?: boolean;
-    itemDurabilityReduction?: number;
-  }>;
-  type: "resource" | "workbench" | "furnace" | "magic";
-  verb: string;
-}
-
-export interface Tile {
-  id: string;
-  name: string;
-  color: string;
-  backgroundColor: string;
-  theme: string;
-  texture?: string;
-  resources: string[];
-  rarity: number;
-  accessible: boolean;
-  description?: string;
-}
-
-export interface NPC {
-  entity_id: string;
-  name: string;
-  backstory: string;
-  personalMission: string;
-  hopes: string;
-  fears: string;
-  relationships: Record<string, string[]>;
-}
-
-export interface Quest {
-  id: string;
-  type: "collection" | "crafting" | "exploration" | "combat" | "delivery" | "dialog";
-  name: string;
-  giver: {
-    entity_id: string;
-    zone_id?: string;
-    x?: number;
-    y?: number;
-  };
-  description: string;
-  objectives: unknown[];
-  completion: Record<string, unknown>;
-  rewards: unknown[];
-  is_tutorial?: boolean;
-  prerequisites?: string[];
-}
-
-export interface HouseTile {
-  id: string;
-  name: string;
-  description: string;
-  sprite: string;
-  bgColor: string;
-  availableActions: Array<{
-    id: string;
-    name: string;
-    description: string;
-    requirements?: Record<string, unknown>;
-    result?: Record<string, unknown>;
-    canUndo?: boolean;
-  }>;
-  flags?: Record<string, unknown>;
-}
+export type { Item, Tile, NPC, HouseTile };
+export type Resource = ResourceModel;
+export type Quest = TileQuest;
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -315,6 +238,26 @@ export const repository = {
       const filePath = path.join(DATA_DIR, "house-tiles.json");
       await fs.writeFile(filePath, JSON.stringify(houseTiles, null, 2), "utf-8");
       return true;
+    },
+  },
+
+  worldBible: {
+    async get(): Promise<WorldBible> {
+      await ensureDataDir();
+      const filePath = path.join(DATA_DIR, "world-bible.json");
+      try {
+        const content = await fs.readFile(filePath, "utf-8");
+        return JSON.parse(content);
+      } catch {
+        return createDefaultWorldBible();
+      }
+    },
+    async save(worldBible: WorldBible): Promise<WorldBible> {
+      await ensureDataDir();
+      const filePath = path.join(DATA_DIR, "world-bible.json");
+      worldBible.updatedAt = new Date().toISOString();
+      await fs.writeFile(filePath, JSON.stringify(worldBible, null, 2), "utf-8");
+      return worldBible;
     },
   },
 

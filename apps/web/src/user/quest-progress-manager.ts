@@ -1,4 +1,4 @@
-import { quests } from "../config/quests.js";
+import { questMap, quests } from "../config/quests.js";
 import { client } from "../database.js";
 import { getTile, type WorldTile } from "../world/index.js";
 import { addGold, addToInventory } from "./inventory.js";
@@ -9,7 +9,7 @@ import type {
   TileObjective,
   TileQuest,
   TileTalkObjective,
-} from "./quest.js";
+} from "../config/types.js";
 import { questManager, type QuestManager } from "./quest-generator.js";
 import { addSystemMessage } from "./system.js";
 import { PubSub, USER_EVENT } from "../sse/pubsub.js";
@@ -619,13 +619,8 @@ export class QuestProgressManager {
     });
   }
 
-  async completeQuest(
-    userId: string,
-    questId: string,
-    questManager: QuestManager
-  ): Promise<void> {
-    let quest: Quest | TileQuest | undefined | null =
-      await questManager.getQuestTemplate(questId);
+  async completeQuest(userId: string, questId: string): Promise<void> {
+    let quest: Quest | TileQuest | undefined | null = questMap.get(questId);
 
     if (!quest) {
       // Is it a tutorial?

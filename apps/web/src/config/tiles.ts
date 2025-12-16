@@ -1,20 +1,6 @@
-import { textureMap } from "./assets.js";
+import { Tile } from "./types.js";
 
-export type TileType = {
-  id: string;
-  name: string;
-  color: string;
-  backgroundColor: string;
-  theme: string;
-  texture?: keyof typeof textureMap;
-  resources: string[];
-  rarity: number;
-  accessible: boolean;
-  image?: string;
-  description?: string;
-};
-
-export const tileTypes: TileType[] = [
+export const tileTypes: Tile[] = [
   {
     id: "tile_castle_wall",
     name: "Castle Wall",

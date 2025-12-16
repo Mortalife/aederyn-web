@@ -558,5 +558,17 @@
     "equippable": false,
     "value": 25,
     "weight": 0.2
+  },
+  {
+    "id": "item_test_1",
+    "name": "This is a test item",
+    "description": "This is the description",
+    "type": "resource",
+    "rarity": "common",
+    "stackable": true,
+    "maxStackSize": 99,
+    "equippable": false,
+    "value": 1,
+    "weight": 0.1
   }
 ]

@@ -1,6 +1,6 @@
-import type { Npc } from "./types.js";
+import type { NPC } from "./types.js";
 
-export const npcs: Npc[] = [
+export const npcs: NPC[] = [
   {
     entity_id: "npc_elder_sage",
     name: "Elara the Elder Sage",

@@ -14,7 +14,7 @@ export const HouseTileForm: FC<HouseTileFormProps> = ({ houseTile, isNew = true 
     sprite: "🏠",
     bgColor: "#374151",
     availableActions: [],
-    flags: {},
+    flags: { isWalkable: true },
   };
 
   const ht = houseTile || defaultHouseTile;

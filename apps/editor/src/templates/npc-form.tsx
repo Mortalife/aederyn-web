@@ -161,86 +161,73 @@ export const NPCForm: FC<NPCFormProps> = ({ npc, isNew = true, allNpcs = [] }) =
               Relationships
             </h2>
             <div data-testid="relationships-editor" class="space-y-4">
-              {/* Visual Relationship Display */}
-              {Object.keys(n.relationships || {}).length > 0 && (
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(n.relationships || {}).map(([type, relations]) => (
-                    <div key={type} class="bg-gray-700 rounded-lg p-3 border border-gray-600">
-                      <div class="flex items-center gap-2 mb-2">
-                        <span class={`text-sm font-semibold ${getRelationshipColor(type)}`}>
-                          {getRelationshipIcon(type)} {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </span>
-                        <span class="text-xs text-gray-500">({(relations as string[]).length})</span>
-                      </div>
-                      <ul class="space-y-1">
-                        {(relations as string[]).map((relation, idx) => (
-                          <li key={idx} class="text-sm text-gray-300 pl-2 border-l-2 border-gray-600">
-                            {relation}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Relationship Categories */}
+              {[
+                { type: "friends", icon: "\uD83E\uDD1D", color: "green", label: "Friends" },
+                { type: "family", icon: "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67", color: "blue", label: "Family" },
+                { type: "rivals", icon: "\u2694\uFE0F", color: "orange", label: "Rivals" },
+                { type: "enemies", icon: "\uD83D\uDC80", color: "red", label: "Enemies" },
+                { type: "mentors", icon: "\uD83C\uDF93", color: "cyan", label: "Mentors" },
+                { type: "students", icon: "\uD83D\uDCDA", color: "yellow", label: "Students" },
+                { type: "acquaintances", icon: "\uD83D\uDC4B", color: "gray", label: "Acquaintances" },
+              ].map(({ type, icon, color, label }) => (
+                <div key={type} class={`bg-gray-700 rounded-lg p-4 border-l-4 border-${color}-500`}>
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="font-medium text-white">
+                      {icon} {label}
+                    </span>
+                    <span class="text-xs text-gray-500">
+                      {((n.relationships || {})[type] || []).length} entries
+                    </span>
+                  </div>
 
-              {/* Other NPCs Reference */}
-              {allNpcs.length > 0 && (
-                <div class="bg-gray-700/50 rounded p-3">
-                  <label class="block text-sm font-medium text-gray-400 mb-2">
-                    Available NPCs for relationships:
-                  </label>
-                  <div class="flex flex-wrap gap-2">
-                    {allNpcs
-                      .filter(other => other.entity_id !== n.entity_id)
-                      .map(other => (
-                        <span
-                          key={other.entity_id}
-                          class="text-xs px-2 py-1 bg-gray-600 rounded text-gray-300 font-mono"
-                          title={other.entity_id}
+                  {/* Existing relationships */}
+                  <div id={`rel-${type}-list`} class="space-y-2 mb-3">
+                    {((n.relationships || {})[type] || []).map((relation: string, idx: number) => (
+                      <div key={idx} class="flex items-center gap-2">
+                        <input
+                          type="text"
+                          name={`relationships[${type}][${idx}]`}
+                          value={relation}
+                          placeholder="NPC Name - Description of relationship"
+                          class="flex-1 px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                        />
+                        <button
+                          type="button"
+                          class="px-2 py-1 text-red-400 hover:text-red-300"
+                          onclick="this.parentElement.remove()"
                         >
-                          {other.name}
-                        </span>
-                      ))}
+                          \u2715
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Quick-add from existing NPCs */}
+                  <div class="flex gap-2">
+                    <select
+                      class="flex-1 px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white text-sm"
+                      onchange={`window.addRelationshipFromSelect(this, '${type}')`}
+                    >
+                      <option value="">+ Add from existing NPC...</option>
+                      {allNpcs
+                        .filter(other => other.entity_id !== n.entity_id)
+                        .map(npc => (
+                          <option key={npc.entity_id} value={npc.name}>
+                            {npc.name}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      class="px-3 py-2 bg-gray-600 hover:bg-gray-500 rounded text-sm text-white"
+                      onclick={`window.addRelationshipEntry('${type}')`}
+                    >
+                      + Custom
+                    </button>
                   </div>
                 </div>
-              )}
-
-              {/* Add Relationship Button */}
-              <button
-                type="button"
-                data-testid="add-relationship"
-                class="w-full py-2 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:border-purple-500 hover:text-purple-400 transition flex items-center justify-center gap-2"
-                onclick="document.getElementById('relationships-json-editor').classList.toggle('hidden')"
-              >
-                <span>+</span>
-                <span>Edit Relationships (JSON)</span>
-              </button>
-
-              {/* JSON Editor */}
-              <div id="relationships-json-editor" class={`bg-gray-700 rounded p-4 ${Object.keys(n.relationships || {}).length > 0 ? 'hidden' : ''}`}>
-                <div class="flex items-center justify-between mb-2">
-                  <label class="text-sm font-medium text-gray-300">Relationships JSON</label>
-                  <span class="text-xs text-gray-500">Format: {"{"}"type": ["NPC - description"]{"}"}</span>
-                </div>
-                <textarea
-                  name="relationships"
-                  rows={8}
-                  data-testid="relationship-type"
-                  placeholder={`{
-  "friends": ["Elder Thorne - Trusted mentor and advisor"],
-  "rivals": ["Blacksmith Grim - Competing for village contracts"],
-  "family": ["Young Mira - Daughter, apprentice herbalist"],
-  "acquaintances": []
-}`}
-                  class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 font-mono text-sm"
-                >
-                  {JSON.stringify(n.relationships || {}, null, 2)}
-                </textarea>
-                <p class="text-xs text-gray-400 mt-2">
-                  Relationship types: friends, rivals, family, acquaintances, enemies, mentors, students
-                </p>
-              </div>
+              ))}
             </div>
           </div>
         </div>

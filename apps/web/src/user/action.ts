@@ -1,9 +1,4 @@
-import {
-  items,
-  resources,
-  type GameUser,
-  type ResourceModel,
-} from "../config.js";
+import { type GameUser, type ResourceModel } from "../config.js";
 import { itemsMap } from "../config/items.js";
 import { resourcesMap } from "../config/resources.js";
 import { client } from "../database.js";
@@ -262,9 +257,7 @@ export const processActions = async () => {
         await addSystemMessage(
           action.user_id,
           `Your inventory is full. Discarded: ${discardedItems
-            .map(
-              (item) => `${item.qty} x ${itemsMap.get(item.item_id)?.name}`
-            )
+            .map((item) => `${item.qty} x ${itemsMap.get(item.item_id)?.name}`)
             .join(", ")}`,
           "error",
           {

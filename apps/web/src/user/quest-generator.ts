@@ -1,11 +1,17 @@
 import { addHours, startOfHour } from "date-fns";
-import { schemas, type Quest, type TileQuest } from "./quest.js";
 import { client } from "../database.js";
-import { generateQuestTemplates } from "../ai/quests.js";
-import { MAP_HEIGHT, MAP_WIDTH, type Tile } from "../config.js";
+import {
+  MAP_HEIGHT,
+  MAP_WIDTH,
+  Quest,
+  TileQuest,
+  type Tile,
+  type TileObjective,
+} from "../config.js";
 import { getTileSelection } from "../world/index.js";
 import { randomIndex } from "../lib/random.js";
 import { quests } from "../config/quests.js";
+import { isTileExploreObjective, isTileTalkObjective } from "@aederyn/types";
 
 export class QuestManager {
   static VERSION = 2;
@@ -13,12 +19,7 @@ export class QuestManager {
     // Create tables if they don't exist
     return [
       `
-      CREATE TABLE IF NOT EXISTS quests_templates (
-        quest_id TEXT NOT NULL,
-        version INT NOT NULL,
-        data TEXT NOT NULL,
-        PRIMARY KEY (quest_id)
-      );`,
+      DROP TABLE IF EXISTS quests_templates;`,
       `
       CREATE TABLE IF NOT EXISTS quests (
         quest_id TEXT NOT NULL,
@@ -33,74 +34,6 @@ export class QuestManager {
         PRIMARY KEY (quest_id)
       );`,
     ];
-  }
-
-  static async addNewTemplates() {
-    try {
-      const templates = await generateQuestTemplates();
-
-      if (!templates) {
-        return;
-      }
-
-      for (const template of templates) {
-        let id = template.id;
-        const { rows } = await client.execute({
-          sql: `
-          SELECT * FROM quests_templates WHERE quest_id = ?
-        `,
-          args: [id],
-        });
-
-        if (rows.length) {
-          id = `${id}-$v${Date.now()}`;
-        }
-
-        console.log("Adding new template", id, template.name);
-
-        await client.execute({
-          sql: `
-        INSERT INTO quests_templates (quest_id, version, data) VALUES (?, ?, ?) ON CONFLICT (quest_id) DO NOTHING;
-      `,
-          args: [
-            template.id,
-            QuestManager.VERSION,
-            JSON.stringify({ ...template, id }),
-          ],
-        });
-      }
-    } catch (error) {
-      console.error("Failed to generate quest templates", error);
-      return;
-    }
-  }
-
-  async getQuestTemplate(questId: string) {
-    const { rows } = await client.execute({
-      sql: `
-        SELECT * FROM quests_templates WHERE quest_id = ?
-      `,
-      args: [questId],
-    });
-
-    if (!rows.length) {
-      return null;
-    }
-    return JSON.parse(rows[0]["data"] as string) as Quest;
-  }
-  async getQuestTemplateNames() {
-    const { rows } = await client.execute({
-      sql: `
-        SELECT * FROM quests_templates 
-      `,
-      args: [],
-    });
-
-    if (!rows.length) {
-      return null;
-    }
-
-    return rows.map((row) => (JSON.parse(row["data"] as string) as Quest).name);
   }
 
   async rotateActiveQuests() {
@@ -174,14 +107,19 @@ export class QuestManager {
   }
 
   private async getRandomQuests(amount: number): Promise<Quest[]> {
-    const { rows } = await client.execute({
-      sql: `
-        SELECT * FROM quests_templates WHERE version = ? ORDER BY RANDOM() LIMIT ?
-      `,
-      args: [QuestManager.VERSION, amount],
-    });
-
-    return rows.map((row) => JSON.parse(row["data"] as string) as Quest);
+    const selectedQuests: Quest[] = [];
+    for (let i = 0; i < amount; i++) {
+      const questIndex = randomIndex(quests);
+      if (questIndex === null) {
+        continue;
+      }
+      const quest = quests[questIndex];
+      if (quest.is_tutorial) {
+        continue;
+      }
+      selectedQuests.push(quest);
+    }
+    return [...selectedQuests, ...quests.filter((quest) => quest.is_tutorial)];
   }
 
   private async generateTileQuests(max: number): Promise<TileQuest[]> {
@@ -254,6 +192,15 @@ export class QuestManager {
         if (objective.type !== "explore" && objective.type !== "talk") {
           return objective;
         }
+
+        if (isTileExploreObjective(objective)) {
+          return objective;
+        }
+
+        if (isTileTalkObjective(objective)) {
+          return objective;
+        }
+
         const index = randomIndex(tiles[objective.zone_id]);
 
         //TODO: Ensure the zone_ids are valid
@@ -281,12 +228,16 @@ export class QuestManager {
         };
       });
 
-      if (objectives.some((objective) => objective === null)) {
+      const filteredObjectives = objectives.filter(
+        (objective): objective is TileObjective => objective !== null
+      );
+
+      if (filteredObjectives.length !== objectives.length) {
         console.warn("No tile found for quest objective, skipping", quest.id);
         continue;
       }
 
-      const tileQuest = schemas.TileQuest.safeParse({
+      const tileQuest = {
         ...quest,
         giver: {
           ...quest.giver,
@@ -298,25 +249,12 @@ export class QuestManager {
           x: finishTile.x,
           y: finishTile.y,
         },
-        objectives: objectives,
+        objectives: filteredObjectives,
         starts_at: starts_at.getTime(),
         ends_at: ends_at.getTime(),
-      });
+      };
 
-      if (tileQuest.error) {
-        console.error(tileQuest.error);
-        continue;
-      }
-
-      tileQuests.push(tileQuest.data);
-    }
-
-    console.log("Adding tutorial quests");
-    for (const tileQuest of quests) {
-      const clone = structuredClone(tileQuest);
-      clone.starts_at = starts_at.getTime();
-      clone.ends_at = ends_at.getTime();
-      tileQuests.push(clone);
+      tileQuests.push(tileQuest);
     }
 
     return tileQuests;

@@ -1,67 +1,7 @@
-import { RequirementReward } from "../user/quest.js";
-
-export interface ActionRequirement {
-  requirements?: RequirementReward[];
-  timeToComplete?: number; // in seconds
-  prerequisites?: {
-    adjacentTiles?: TileType[];
-  };
-}
-
-// Possible results from performing an action
-export interface ActionResult {
-  resultingTileId?: string;
-  yields?: RequirementReward[];
-}
-
-// Definition of an action that can be performed on a tile
-export interface TileAction {
-  id: string;
-  name: string;
-  description: string;
-  requirements: ActionRequirement;
-  result: ActionResult;
-  canUndo: boolean;
-}
-
-// Definition of a tile type
-export interface TileType {
-  id: string;
-  name: string;
-  description: string;
-  sprite: string; // path to sprite asset
-  bgColor: string;
-  availableActions: TileAction[];
-  availableResources?: string[]; //
-  flags?: {
-    isWalkable: boolean;
-    isWaterSource?: boolean;
-    isStructure?: boolean;
-    [key: string]: boolean | undefined;
-  };
-}
-
-export interface HouseMapTile {
-  type: TileType;
-  position: {
-    x: number;
-    y: number;
-  };
-  actionInProgress?: {
-    action: TileAction;
-    startedAt: number;
-    completesAt: number;
-  };
-}
-
-export interface HouseMap {
-  width: number;
-  height: number;
-  tiles: HouseMapTile[];
-}
+import { HouseTile } from "./types.js";
 
 // Example usage
-const grassTile: TileType = {
+const grassTile: HouseTile = {
   id: "grass",
   name: "Grass",
   description: "A patch of wild grass",
@@ -86,7 +26,7 @@ const grassTile: TileType = {
   ],
 };
 
-const soilTile: TileType = {
+const soilTile: HouseTile = {
   id: "soil",
   name: "Tilled Soil",
   description: "Fertile soil ready for planting",
@@ -112,7 +52,7 @@ const soilTile: TileType = {
   ],
 };
 
-const seedlingTile: TileType = {
+const seedlingTile: HouseTile = {
   id: "seedling",
   name: "Seedling",
   description: "A young plant beginning to sprout",
@@ -138,7 +78,7 @@ const seedlingTile: TileType = {
   ],
 };
 
-const plantTile: TileType = {
+const plantTile: HouseTile = {
   id: "plant",
   name: "Mature Plant",
   description: "A fully grown plant ready for harvest",
@@ -164,7 +104,7 @@ const plantTile: TileType = {
   ],
 };
 
-const barrenSoilTile: TileType = {
+const barrenSoilTile: HouseTile = {
   id: "barren_soil",
   name: "Barren Soil",
   description: "Depleted soil that needs fertilizer to be productive again",

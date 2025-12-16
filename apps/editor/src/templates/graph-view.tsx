@@ -61,18 +61,21 @@ export const GraphView: FC<GraphViewProps> = ({ graphData, filters }) => {
           <button
             data-testid="zoom-in"
             class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
+            onclick="window.graphZoomIn && window.graphZoomIn()"
           >
             + Zoom In
           </button>
           <button
             data-testid="zoom-out"
             class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
+            onclick="window.graphZoomOut && window.graphZoomOut()"
           >
             - Zoom Out
           </button>
           <button
             data-testid="fit-screen"
             class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
+            onclick="window.graphFit && window.graphFit()"
           >
             Fit
           </button>
@@ -155,41 +158,16 @@ export const GraphView: FC<GraphViewProps> = ({ graphData, filters }) => {
         <div class="col-span-3">
           <div
             data-testid="graph-container"
-            class="bg-gray-800 rounded-lg p-4 h-[600px] overflow-hidden relative"
+            class="bg-gray-800 rounded-lg h-[600px] overflow-hidden relative"
+            style="background: #1f2937;"
           >
-            {/* Node List View (fallback before full graph implementation) */}
-            <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 overflow-auto h-full">
-              {filteredNodes.slice(0, 50).map((node) => (
-                <a
-                  key={node.id}
-                  href={getNodeEditUrl(node)}
-                  data-testid="graph-node"
-                  data-node-type={node.type}
-                  class="block p-3 rounded-lg border transition hover:scale-105"
-                  style={`border-color: ${getNodeColor(node.type)}40; background: ${getNodeColor(node.type)}10;`}
-                >
-                  <div class="flex items-center gap-2 mb-1">
-                    <span
-                      class="w-3 h-3 rounded-full"
-                      style={`background-color: ${getNodeColor(node.type)};`}
-                    />
-                    <span class="text-sm font-medium text-white truncate">{node.label}</span>
-                  </div>
-                  <div class="text-xs text-gray-500 font-mono truncate">{node.id}</div>
-                  <div class="text-xs text-gray-400 mt-1">
-                    {getConnectionCount(node.id, filteredEdges)} connections
-                  </div>
-                </a>
-              ))}
-              {filteredNodes.length > 50 && (
-                <div class="col-span-full text-center text-gray-400 py-4">
-                  Showing 50 of {filteredNodes.length} nodes. Use filters to narrow down.
-                </div>
-              )}
-            </div>
-
-            {filteredNodes.length === 0 && (
-              <div class="flex items-center justify-center h-full text-gray-400">
+            {filteredNodes.length > 0 ? (
+              <cytoscape-graph
+                graph-data={JSON.stringify({ nodes: filteredNodes, edges: filteredEdges })}
+                class="w-full h-full block"
+              />
+            ) : (
+              <div class="absolute inset-0 flex items-center justify-center text-gray-400">
                 No nodes to display. Adjust filters or add more entities.
               </div>
             )}

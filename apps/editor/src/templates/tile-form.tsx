@@ -1,12 +1,14 @@
 import type { FC } from "hono/jsx";
-import type { Tile } from "../repository/index.js";
+import type { Tile, Resource } from "../repository/index.js";
+import { ResourceSelector } from "../components/ResourceSelector.js";
 
 interface TileFormProps {
   tile?: Tile;
   isNew?: boolean;
+  resources?: Resource[];
 }
 
-export const TileForm: FC<TileFormProps> = ({ tile, isNew = true }) => {
+export const TileForm: FC<TileFormProps> = ({ tile, isNew = true, resources = [] }) => {
   const defaultTile: Partial<Tile> = {
     id: "",
     name: "",
@@ -169,19 +171,13 @@ export const TileForm: FC<TileFormProps> = ({ tile, isNew = true }) => {
             </label>
           </div>
 
-          <div class="col-span-2">
-            <label class="block text-sm font-medium text-gray-300 mb-2">
-              Resources (JSON array of resource IDs)
-            </label>
-            <textarea
-              name="resources"
-              rows={3}
-              placeholder='["resource_tree", "resource_rock"]'
-              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 font-mono text-sm"
-            >
-              {JSON.stringify(t.resources, null, 2)}
-            </textarea>
-          </div>
+          <ResourceSelector
+            name="resources"
+            label="Available Resources"
+            resources={resources}
+            value={t.resources || []}
+            placeholder="Select a resource..."
+          />
 
           <div class="col-span-2">
             <label class="block text-sm font-medium text-gray-300 mb-2">

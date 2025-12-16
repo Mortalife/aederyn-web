@@ -1,0 +1,23 @@
+{
+  "id": "world-bible",
+  "name": "My World",
+  "setting": {
+    "genre": "fantasy",
+    "tone": "heroic",
+    "era": "medieval",
+    "description": "Aederyn Online is a text based MMO which has a world and a social system.\r\nThe world is made up of tiles which contain one or more resources which a user can \r\ninteract with to obtain items.\r\n\r\nThe social system allows users to chat with other users in the world.\r\n\r\nThe aim of the game is to craft, collect and complete tasks, eventually unlocking portal tiles which progress the user into different worlds.\r\n\r\nThe current game is missing tiered items and zones, things like mountains and mines, forests and marshes.\r\n\r\nItems that are not a reward of resources should be obtainable by the user either by new resources, or as rewards to tasks.\r\n\r\nThe game should be a fun and engaging experience."
+  },
+  "regions": [],
+  "factions": [],
+  "history": [],
+  "themes": [],
+  "systems": [],
+  "naming": {
+    "characterPatterns": [],
+    "placePatterns": [],
+    "itemPatterns": [],
+    "examples": {}
+  },
+  "createdAt": "2025-12-16T20:52:12.622Z",
+  "updatedAt": "2025-12-16T20:52:12.623Z"
+}

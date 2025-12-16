@@ -13,9 +13,15 @@ importers:
 
   apps/editor:
     dependencies:
+      '@aederyn/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       '@hono/node-server':
         specifier: ^1.19.7
         version: 1.19.7(hono@4.11.0)
+      cytoscape:
+        specifier: ^3.30.4
+        version: 3.33.1
       hono:
         specifier: ^4.10.8
         version: 4.11.0
@@ -59,6 +65,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@aederyn/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       '@anthropic-ai/sdk':
         specifier: ^0.71.2
         version: 0.71.2(zod@3.25.76)
@@ -129,6 +138,12 @@ importers:
       vite:
         specifier: ^6.4.1
         version: 6.4.1(@types/node@24.10.3)(jiti@1.21.7)(tsx@4.21.0)
+
+  packages/types:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
 
 packages:
 
@@ -972,6 +987,10 @@ packages:
   culori@3.3.0:
     resolution: {integrity: sha512-pHJg+jbuFsCjz9iclQBqyL3B2HLCBF71BwVNujUYEvCeQMvV97R59MNK3R2+jgJ3a1fcZgI9B3vYgz8lzr/BFQ==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+  cytoscape@3.33.1:
+    resolution: {integrity: sha512-iJc4TwyANnOGR1OmWhsS9ayRS3s+XQ185FmuHObThD+5AeJCakAAbWv8KimMTt08xCCLNgneQwFp+JRJOr9qGQ==}
+    engines: {node: '>=0.10'}
 
   daisyui@4.12.24:
     resolution: {integrity: sha512-JYg9fhQHOfXyLadrBrEqCDM6D5dWCSSiM6eTNCRrBRzx/VlOCrLS8eDfIw9RVvs64v2mJdLooKXY8EwQzoszAA==}
@@ -2170,6 +2189,8 @@ snapshots:
   cssesc@3.0.0: {}
 
   culori@3.3.0: {}
+
+  cytoscape@3.33.1: {}
 
   daisyui@4.12.24(postcss@8.5.6):
     dependencies:

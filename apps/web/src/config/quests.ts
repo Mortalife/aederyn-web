@@ -1,6 +1,6 @@
-import type { TileQuest } from "../user/quest.js";
+import { type QuestGroup } from "./types.js";
 
-export const quests: TileQuest[] = [
+export const quests: QuestGroup[] = [
   {
     id: "quest_tutorial_gathering",
     type: "collection",
@@ -221,3 +221,7 @@ export const quests: TileQuest[] = [
     is_tutorial: true,
   },
 ];
+
+export const questMap = new Map<string, QuestGroup>(
+  quests.map((q) => [q.id, q])
+);

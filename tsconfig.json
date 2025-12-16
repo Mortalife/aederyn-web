@@ -1,6 +1,8 @@
 {
   "files": [],
   "references": [
-    { "path": "./apps/web" }
+    { "path": "./packages/types" },
+    { "path": "./apps/web" },
+    { "path": "./apps/editor" }
   ]
 }
