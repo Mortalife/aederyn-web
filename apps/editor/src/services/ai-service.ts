@@ -74,7 +74,7 @@ const AIRewardSchema = z.object({
 });
 
 const AIQuestSchema = z.object({
-  id: z.string().describe("Unique quest identifier slug (lowercase, hyphens)"),
+  id: z.string().describe("Unique quest identifier slug (lowercase, underscores)"),
   name: z.string().describe("Quest display title"),
   description: z.string().describe("Quest description for player journal"),
   type: QuestTypeSchema.describe("Quest category type"),
