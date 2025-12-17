@@ -41,6 +41,15 @@ export const WORLD_BIBLE_GEN_PROGRESS = Symbol("world_bible_gen_progress");
 export const WORLD_BIBLE_GEN_COMPLETED = Symbol("world_bible_gen_completed");
 export const WORLD_BIBLE_GEN_FAILED = Symbol("world_bible_gen_failed");
 
+export const QUEST_GEN_STARTED = Symbol("quest_gen_started");
+export const QUEST_GEN_PROGRESS = Symbol("quest_gen_progress");
+export const QUEST_GEN_REVIEW_REQUIRED = Symbol("quest_gen_review_required");
+export const QUEST_GEN_REVIEW_COMPLETED = Symbol("quest_gen_review_completed");
+export const QUEST_GEN_ENTITY_CREATED = Symbol("quest_gen_entity_created");
+export const QUEST_GEN_COMPLETED = Symbol("quest_gen_completed");
+export const QUEST_GEN_FAILED = Symbol("quest_gen_failed");
+export const QUEST_GEN_CANCELLED = Symbol("quest_gen_cancelled");
+
 export type EditorEvent = {
   type: "view_changed" | "data_updated";
   view?: string;
@@ -57,6 +66,21 @@ export type WorldBibleGenEvent = {
   error?: string;
 };
 
+export type QuestGenEvent = {
+  questId?: string;
+  questName?: string;
+  step?: number;
+  stepName?: string;
+  totalSteps?: number;
+  reviewType?: string;
+  entityType?: string;
+  entityId?: string;
+  entityName?: string;
+  data?: unknown;
+  quest?: unknown;
+  error?: string;
+};
+
 export const PubSub = new TypedEventEmitter<{
   [EDITOR_EVENT]: [EditorEvent];
   [ITEMS_UPDATED]: [EntityUpdatedEvent];
@@ -69,4 +93,12 @@ export const PubSub = new TypedEventEmitter<{
   [WORLD_BIBLE_GEN_PROGRESS]: [WorldBibleGenEvent];
   [WORLD_BIBLE_GEN_COMPLETED]: [WorldBibleGenEvent];
   [WORLD_BIBLE_GEN_FAILED]: [WorldBibleGenEvent];
+  [QUEST_GEN_STARTED]: [QuestGenEvent];
+  [QUEST_GEN_PROGRESS]: [QuestGenEvent];
+  [QUEST_GEN_REVIEW_REQUIRED]: [QuestGenEvent];
+  [QUEST_GEN_REVIEW_COMPLETED]: [QuestGenEvent];
+  [QUEST_GEN_ENTITY_CREATED]: [QuestGenEvent];
+  [QUEST_GEN_COMPLETED]: [QuestGenEvent];
+  [QUEST_GEN_FAILED]: [QuestGenEvent];
+  [QUEST_GEN_CANCELLED]: [QuestGenEvent];
 }>();

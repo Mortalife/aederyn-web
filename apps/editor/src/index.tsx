@@ -68,6 +68,7 @@ import { WorldSystemForm } from "./templates/world-system-form.js";
 import { WorldNamingForm } from "./templates/world-naming-form.js";
 import { AIGenerationView } from "./templates/ai-generation.js";
 import { WorldBibleGeneration } from "./templates/world-bible-generation.js";
+import { QuestGeneration } from "./templates/quest-generation.js";
 import {
   isAIConfigured,
   generateItem,
@@ -79,6 +80,24 @@ import {
   startWorldBibleGeneration,
   cancelGeneration,
 } from "./services/ai-world-bible.js";
+import {
+  startQuestGeneration,
+  cancelQuestGeneration,
+  submitReview,
+  getQuestGenerationStatus,
+  listQuestGenerations,
+  getActiveGenerations,
+} from "./services/ai-quest.js";
+import {
+  QUEST_GEN_STARTED,
+  QUEST_GEN_PROGRESS,
+  QUEST_GEN_REVIEW_REQUIRED,
+  QUEST_GEN_REVIEW_COMPLETED,
+  QUEST_GEN_ENTITY_CREATED,
+  QUEST_GEN_COMPLETED,
+  QUEST_GEN_FAILED,
+  QUEST_GEN_CANCELLED,
+} from "./sse/pubsub.js";
 import type {
   WorldRegion,
   WorldFaction,
@@ -571,6 +590,148 @@ app.get("/sse/quests/new", async (c) => {
       fragmentEvent(QuestForm({ isNew: true, npcs, allQuests }))
     );
   });
+});
+
+// Quest generation routes - MUST be before /quests/:id to avoid route conflict
+app.get("/quests/generate", async (c) => {
+  const counts = await repository.getCounts();
+  return c.html(
+    <Layout
+      title="Quest Generator"
+      sseEndpoint="/sse/quests/generate"
+      counts={counts}
+    />
+  );
+});
+
+app.get("/quests/generate/:questId", async (c) => {
+  const counts = await repository.getCounts();
+  const questId = c.req.param("questId");
+  return c.html(
+    <Layout
+      title="Quest Generator"
+      sseEndpoint={`/sse/quests/generate/${questId}`}
+      counts={counts}
+    />
+  );
+});
+
+app.get("/sse/quests/generate", async (c) => {
+  const stream = getStream(c);
+  const worldBible = await repository.worldBible.get();
+  const aiConfigured = isAIConfigured();
+  const activeGens = await getActiveGenerations();
+
+  const currentState = activeGens.length > 0 ? activeGens[0] : null;
+
+  await stream.writeSSE(
+    fragmentEvent(
+      QuestGeneration({
+        state: currentState,
+        activeGenerations: activeGens,
+        worldBible,
+        aiConfigured,
+      })
+    )
+  );
+
+  const handleUpdate = async () => {
+    const activeGens = await getActiveGenerations();
+    const currentState = activeGens.length > 0 ? activeGens[0] : null;
+    await stream.writeSSE(
+      fragmentEvent(
+        QuestGeneration({
+          state: currentState,
+          activeGenerations: activeGens,
+          worldBible,
+          aiConfigured,
+        })
+      )
+    );
+  };
+
+  PubSub.subscribe(QUEST_GEN_STARTED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_PROGRESS, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_REVIEW_REQUIRED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_REVIEW_COMPLETED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_ENTITY_CREATED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_COMPLETED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_FAILED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_CANCELLED, handleUpdate);
+
+  stream.onAbort(() => {
+    PubSub.off(QUEST_GEN_STARTED, handleUpdate);
+    PubSub.off(QUEST_GEN_PROGRESS, handleUpdate);
+    PubSub.off(QUEST_GEN_REVIEW_REQUIRED, handleUpdate);
+    PubSub.off(QUEST_GEN_REVIEW_COMPLETED, handleUpdate);
+    PubSub.off(QUEST_GEN_ENTITY_CREATED, handleUpdate);
+    PubSub.off(QUEST_GEN_COMPLETED, handleUpdate);
+    PubSub.off(QUEST_GEN_FAILED, handleUpdate);
+    PubSub.off(QUEST_GEN_CANCELLED, handleUpdate);
+  });
+
+  return returnStream(c, stream);
+});
+
+app.get("/sse/quests/generate/:questId", async (c) => {
+  const questId = c.req.param("questId");
+  const stream = getStream(c);
+  const worldBible = await repository.worldBible.get();
+  const aiConfigured = isAIConfigured();
+
+  const state = await getQuestGenerationStatus(questId);
+  const activeGens = await getActiveGenerations();
+
+  await stream.writeSSE(
+    fragmentEvent(
+      QuestGeneration({
+        state,
+        activeGenerations: activeGens,
+        worldBible,
+        aiConfigured,
+      })
+    )
+  );
+
+  const handleUpdate = async (data: unknown) => {
+    const eventData = data as { questId?: string };
+    if (eventData.questId === questId) {
+      const state = await getQuestGenerationStatus(questId);
+      const activeGens = await getActiveGenerations();
+      await stream.writeSSE(
+        fragmentEvent(
+          QuestGeneration({
+            state,
+            activeGenerations: activeGens,
+            worldBible,
+            aiConfigured,
+          })
+        )
+      );
+    }
+  };
+
+  PubSub.subscribe(QUEST_GEN_STARTED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_PROGRESS, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_REVIEW_REQUIRED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_REVIEW_COMPLETED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_ENTITY_CREATED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_COMPLETED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_FAILED, handleUpdate);
+  PubSub.subscribe(QUEST_GEN_CANCELLED, handleUpdate);
+
+  stream.onAbort(() => {
+    PubSub.off(QUEST_GEN_STARTED, handleUpdate);
+    PubSub.off(QUEST_GEN_PROGRESS, handleUpdate);
+    PubSub.off(QUEST_GEN_REVIEW_REQUIRED, handleUpdate);
+    PubSub.off(QUEST_GEN_REVIEW_COMPLETED, handleUpdate);
+    PubSub.off(QUEST_GEN_ENTITY_CREATED, handleUpdate);
+    PubSub.off(QUEST_GEN_COMPLETED, handleUpdate);
+    PubSub.off(QUEST_GEN_FAILED, handleUpdate);
+    PubSub.off(QUEST_GEN_CANCELLED, handleUpdate);
+  });
+
+  return returnStream(c, stream);
 });
 
 app.get("/quests/:id", async (c) => {
@@ -1228,6 +1389,52 @@ app.post("/api/world-bible/cancel", async (c) => {
 app.get("/api/world-bible/status", async (c) => {
   const state = await getGenerationStatus();
   return c.json(state);
+});
+
+// ============================================================================
+// Quest Generation Commands (return 204, use SSE for updates)
+// ============================================================================
+
+// Start new quest generation
+app.post("/commands/quests/generate", async (c) => {
+  const body = await c.req.parseBody();
+  const result = await startQuestGeneration({
+    name: body.name as string,
+    concept: body.concept as string,
+    type: (body.type as "main" | "side" | "faction" | "daily") || "side",
+    region: body.region as string | undefined,
+    faction: body.faction as string | undefined,
+  });
+  if (result.questId) {
+    return c.redirect(`/quests/generate/${result.questId}`);
+  }
+  return c.redirect("/quests/generate");
+});
+
+// Submit review approval/edits
+app.post("/commands/quests/generate/:questId/review", async (c) => {
+  const questId = c.req.param("questId");
+  const body = await c.req.parseBody();
+  await submitReview(
+    questId,
+    body.action as "approve" | "edit" | "regenerate" | "cancel",
+    body.edits ? JSON.parse(body.edits as string) : undefined
+  );
+  return c.body(null, 204);
+});
+
+// Cancel quest generation
+app.post("/commands/quests/generate/:questId/cancel", async (c) => {
+  const questId = c.req.param("questId");
+  await cancelQuestGeneration(questId);
+  return c.body(null, 204);
+});
+
+// Resume paused generation (after review)
+app.post("/commands/quests/generate/:questId/resume", async (c) => {
+  const questId = c.req.param("questId");
+  await submitReview(questId, "approve");
+  return c.body(null, 204);
 });
 
 app.get("/export", async (c) => {

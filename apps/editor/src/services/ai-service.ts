@@ -30,7 +30,11 @@ export function isAIConfigured(): boolean {
 // AI-specific schemas for structured output
 // OpenAI requires .nullable() for optional fields
 const AIItemSchema = z.object({
-  id: z.string().describe("Unique item identifier slug (lowercase, hyphens)"),
+  id: z
+    .string()
+    .describe(
+      "Unique item identifier slug (lowercase, underscores item_[name]_[number])"
+    ),
   name: z.string().describe("Display name for the item"),
   description: z.string().describe("2-3 sentence item description"),
   type: ItemTypeSchema.describe("Item category"),
@@ -38,35 +42,63 @@ const AIItemSchema = z.object({
   stackable: z.boolean().describe("Whether item can stack in inventory"),
   maxStackSize: z.number().min(1).describe("Maximum stack size if stackable"),
   equippable: z.boolean().describe("Whether item can be equipped"),
-  equipSlot: EquipSlotSchema.nullable().describe("Equipment slot if equippable, null otherwise"),
+  equipSlot: EquipSlotSchema.nullable().describe(
+    "Equipment slot if equippable, null otherwise"
+  ),
   value: z.number().min(0).describe("Gold value based on rarity"),
   weight: z.number().min(0).describe("Weight in inventory units"),
 });
 
 const AINPCSchema = z.object({
-  entity_id: z.string().describe("Unique NPC identifier slug (lowercase, hyphens)"),
+  entity_id: z
+    .string()
+    .describe("Unique NPC identifier slug (lowercase, underscores npc_[name])"),
   name: z.string().describe("NPC's full display name"),
   backstory: z.string().describe("2-3 paragraph character backstory"),
   personalMission: z.string().describe("What drives this character"),
   hopes: z.string().describe("What they hope for"),
   fears: z.string().describe("What they fear"),
-  relationships: z.array(z.object({
-    category: z.string().describe("Relationship category (e.g., 'allies', 'enemies', 'family')"),
-    entity_ids: z.array(z.string()).describe("Entity IDs in this relationship category"),
-  })).describe("NPC relationships grouped by category"),
+  relationships: z
+    .array(
+      z.object({
+        category: z
+          .string()
+          .describe(
+            "Relationship category (e.g., 'allies', 'enemies', 'family')"
+          ),
+        entity_ids: z
+          .array(z.string())
+          .describe("Entity IDs in this relationship category"),
+      })
+    )
+    .describe("NPC relationships grouped by category"),
 });
 
 // Simplified objective schema for AI generation
 const AIObjectiveSchema = z.object({
-  id: z.string().describe("Unique objective identifier"),
-  type: z.enum(["gather", "collect", "talk", "explore", "craft"]).describe("Objective type"),
+  id: z.string().describe("Unique objective identifier (lowecase, underscores"),
+  type: z
+    .enum(["gather", "collect", "talk", "explore", "craft"])
+    .describe("Objective type"),
   description: z.string().describe("Player-facing objective text"),
   // Type-specific fields - AI provides based on type
-  resource_id: z.string().nullable().describe("Resource ID for gather/craft objectives"),
+  resource_id: z
+    .string()
+    .nullable()
+    .describe("Resource ID for gather/craft objectives"),
   item_id: z.string().nullable().describe("Item ID for collect objectives"),
-  entity_id: z.string().nullable().describe("NPC entity_id for talk objectives"),
-  zone_id: z.string().nullable().describe("Zone ID for talk/explore objectives"),
-  amount: z.number().nullable().describe("Amount for gather/collect/craft objectives"),
+  entity_id: z
+    .string()
+    .nullable()
+    .describe("NPC entity_id for talk objectives"),
+  zone_id: z
+    .string()
+    .nullable()
+    .describe("Zone ID for talk/explore objectives"),
+  amount: z
+    .number()
+    .nullable()
+    .describe("Amount for gather/collect/craft objectives"),
 });
 
 const AIRewardSchema = z.object({
@@ -77,7 +109,9 @@ const AIRewardSchema = z.object({
 });
 
 const AIQuestSchema = z.object({
-  id: z.string().describe("Unique quest identifier slug (lowercase, underscores)"),
+  id: z
+    .string()
+    .describe("Unique quest identifier slug (lowercase, underscores)"),
   name: z.string().describe("Quest display title"),
   description: z.string().describe("Quest description for player journal"),
   type: QuestTypeSchema.describe("Quest category type"),
@@ -85,7 +119,9 @@ const AIQuestSchema = z.object({
     entity_id: z.string().describe("Quest giver NPC entity_id"),
     zone_id: z.string().describe("Zone where quest giver is located"),
   }),
-  objectives: z.array(AIObjectiveSchema).describe("Quest objectives to complete"),
+  objectives: z
+    .array(AIObjectiveSchema)
+    .describe("Quest objectives to complete"),
   completion: z.object({
     entity_id: z.string().describe("NPC entity_id to return to"),
     zone_id: z.string().describe("Zone where completion NPC is located"),
@@ -94,7 +130,9 @@ const AIQuestSchema = z.object({
   }),
   rewards: z.array(AIRewardSchema).describe("Rewards given on completion"),
   is_tutorial: z.boolean().describe("Whether this is a tutorial quest"),
-  prerequisites: z.array(z.string()).describe("Quest IDs that must be completed first"),
+  prerequisites: z
+    .array(z.string())
+    .describe("Quest IDs that must be completed first"),
 });
 
 // Type for AI-generated item before mapping
@@ -131,32 +169,67 @@ function mapAIQuestToQuest(ai: AIQuest): Quest {
       description: obj.description,
       progress: null,
     };
-    
+
     switch (obj.type) {
       case "gather":
-        return { ...base, type: "gather" as const, resource_id: obj.resource_id || "", amount: obj.amount || 1 };
+        return {
+          ...base,
+          type: "gather" as const,
+          resource_id: obj.resource_id || "",
+          amount: obj.amount || 1,
+        };
       case "collect":
-        return { ...base, type: "collect" as const, item_id: obj.item_id || "", amount: obj.amount || 1 };
+        return {
+          ...base,
+          type: "collect" as const,
+          item_id: obj.item_id || "",
+          amount: obj.amount || 1,
+        };
       case "talk":
-        return { ...base, type: "talk" as const, entity_id: obj.entity_id || "", zone_id: obj.zone_id || "", dialog_steps: [] };
+        return {
+          ...base,
+          type: "talk" as const,
+          entity_id: obj.entity_id || "",
+          zone_id: obj.zone_id || "",
+          dialog_steps: [],
+        };
       case "explore":
-        return { ...base, type: "explore" as const, zone_id: obj.zone_id || "", chance: 1, found_message: null };
+        return {
+          ...base,
+          type: "explore" as const,
+          zone_id: obj.zone_id || "",
+          chance: 1,
+          found_message: null,
+        };
       case "craft":
-        return { ...base, type: "craft" as const, resource_id: obj.resource_id || "", amount: obj.amount || 1 };
+        return {
+          ...base,
+          type: "craft" as const,
+          resource_id: obj.resource_id || "",
+          amount: obj.amount || 1,
+        };
     }
   });
-  
+
   const rewards = ai.rewards.map((r) => {
     switch (r.type) {
       case "item":
-        return { type: "item" as const, item_id: r.item_id || "", amount: r.amount };
+        return {
+          type: "item" as const,
+          item_id: r.item_id || "",
+          amount: r.amount,
+        };
       case "skill":
-        return { type: "skill" as const, skill_id: r.skill_id || "", amount: r.amount };
+        return {
+          type: "skill" as const,
+          skill_id: r.skill_id || "",
+          amount: r.amount,
+        };
       case "gold":
         return { type: "gold" as const, amount: r.amount };
     }
   });
-  
+
   return {
     id: ai.id,
     name: ai.name,
@@ -181,25 +254,26 @@ export async function generateItem(
 ): Promise<Item> {
   const context = await buildAIContext(worldBible);
   const prompt = buildItemGenerationPrompt(context, request);
-  
+
   const completion = await openai.chat.completions.create({
     model: DEFAULT_MODEL,
     messages: [
       {
         role: "system",
-        content: "You are a creative game designer assistant. Generate items that fit the world's theme and lore.",
+        content:
+          "You are a creative game designer assistant. Generate items that fit the world's theme and lore.",
       },
       { role: "user", content: prompt },
     ],
     response_format: zodResponseFormat(AIItemSchema, "item"),
     temperature: 0.8,
   });
-  
+
   const content = completion.choices[0]?.message?.content;
   if (!content) {
     throw new Error("Failed to get AI response for item generation");
   }
-  
+
   const parsed = AIItemSchema.parse(JSON.parse(content));
   return mapAIItemToItem(parsed);
 }
@@ -214,25 +288,26 @@ export async function generateQuest(
 ): Promise<Quest> {
   const context = await buildAIContext(worldBible, request.region);
   const prompt = buildQuestGenerationPrompt(context, request);
-  
+
   const completion = await openai.chat.completions.create({
     model: DEFAULT_MODEL,
     messages: [
       {
         role: "system",
-        content: "You are a creative quest designer. Generate quests using ONLY the entity IDs provided in the prompt. Do not invent new IDs.",
+        content:
+          "You are a creative quest designer. Generate quests using ONLY the entity IDs provided in the prompt. Do not invent new IDs.",
       },
       { role: "user", content: prompt },
     ],
     response_format: zodResponseFormat(AIQuestSchema, "quest"),
     temperature: 0.8,
   });
-  
+
   const content = completion.choices[0]?.message?.content;
   if (!content) {
     throw new Error("Failed to get AI response for quest generation");
   }
-  
+
   const parsed = AIQuestSchema.parse(JSON.parse(content));
   return mapAIQuestToQuest(parsed);
 }
@@ -250,25 +325,26 @@ export async function generateNPC(
     request.region || request.faction
   );
   const prompt = buildNPCGenerationPrompt(context, request);
-  
+
   const completion = await openai.chat.completions.create({
     model: DEFAULT_MODEL,
     messages: [
       {
         role: "system",
-        content: "You are a creative character designer. Generate NPCs that fit the world's theme and can form interesting relationships.",
+        content:
+          "You are a creative character designer. Generate NPCs that fit the world's theme and can form interesting relationships.",
       },
       { role: "user", content: prompt },
     ],
     response_format: zodResponseFormat(AINPCSchema, "npc"),
     temperature: 0.8,
   });
-  
+
   const content = completion.choices[0]?.message?.content;
   if (!content) {
     throw new Error("Failed to get AI response for NPC generation");
   }
-  
+
   const parsed = AINPCSchema.parse(JSON.parse(content));
   return mapAINPCToNPC(parsed);
 }
