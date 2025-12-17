@@ -560,15 +560,15 @@
     "weight": 0.2
   },
   {
-    "id": "item_test_1",
-    "name": "This is a test item",
-    "description": "This is the description",
+    "id": "earthy-moss",
+    "name": "Earthy Moss",
+    "description": "A soft, green moss that clings to the damp earth of the Verdant Thicket. This common resource is known for its gentle healing properties, making it a favorite among herbalists and apothecaries. Often used in potions and poultices, it symbolizes the enduring resilience of nature.",
     "type": "resource",
     "rarity": "common",
     "stackable": true,
-    "maxStackSize": 99,
+    "maxStackSize": 100,
     "equippable": false,
-    "value": 1,
+    "value": 5,
     "weight": 0.1
   }
 ]

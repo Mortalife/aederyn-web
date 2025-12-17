@@ -199,6 +199,22 @@ export const WorldOverview: FC<WorldOverviewProps> = ({ worldBible }) => {
             <p>{worldBible.naming.itemPatterns.length} item patterns</p>
           </div>
         </a>
+
+        <a
+          href="/world/generate"
+          class="block p-6 bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border border-purple-500/30 rounded-lg hover:border-purple-400/50 transition-colors"
+        >
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-2xl">🤖</span>
+            <h2 class="text-lg font-semibold text-white">AI Generator</h2>
+          </div>
+          <p class="text-gray-300 text-sm">
+            Auto-generate world bible content using AI
+          </p>
+          <p class="text-purple-400 text-xs mt-2">
+            Description → Themes → Systems → Factions → Regions → History → Naming
+          </p>
+        </a>
       </div>
 
       <div class="mt-8 p-6 bg-gray-800 rounded-lg">

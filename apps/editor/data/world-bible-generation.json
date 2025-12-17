@@ -1,0 +1,51 @@
+{
+  "status": "completed",
+  "currentStep": 6,
+  "totalSteps": 7,
+  "steps": [
+    {
+      "name": "Description",
+      "status": "completed",
+      "startedAt": "2025-12-17T00:24:48.212Z",
+      "completedAt": "2025-12-17T00:25:20.743Z"
+    },
+    {
+      "name": "Themes",
+      "status": "completed",
+      "startedAt": "2025-12-17T00:25:20.753Z",
+      "completedAt": "2025-12-17T00:25:39.829Z"
+    },
+    {
+      "name": "Systems",
+      "status": "completed",
+      "startedAt": "2025-12-17T00:25:39.845Z",
+      "completedAt": "2025-12-17T00:25:51.925Z"
+    },
+    {
+      "name": "Factions",
+      "status": "completed",
+      "startedAt": "2025-12-17T00:25:51.930Z",
+      "completedAt": "2025-12-17T00:26:16.826Z"
+    },
+    {
+      "name": "Regions",
+      "status": "completed",
+      "startedAt": "2025-12-17T00:26:16.833Z",
+      "completedAt": "2025-12-17T00:26:38.296Z"
+    },
+    {
+      "name": "History",
+      "status": "completed",
+      "startedAt": "2025-12-17T00:26:38.304Z",
+      "completedAt": "2025-12-17T00:27:27.292Z"
+    },
+    {
+      "name": "Naming",
+      "status": "completed",
+      "startedAt": "2025-12-17T00:27:27.299Z",
+      "completedAt": "2025-12-17T00:27:35.637Z"
+    }
+  ],
+  "startedAt": "2025-12-17T00:24:48.167Z",
+  "completedAt": "2025-12-17T00:27:35.641Z"
+}

@@ -50,7 +50,10 @@ const AINPCSchema = z.object({
   personalMission: z.string().describe("What drives this character"),
   hopes: z.string().describe("What they hope for"),
   fears: z.string().describe("What they fear"),
-  relationships: z.record(z.string(), z.array(z.string())).describe("Relationship categories mapped to entity_ids"),
+  relationships: z.array(z.object({
+    category: z.string().describe("Relationship category (e.g., 'allies', 'enemies', 'family')"),
+    entity_ids: z.array(z.string()).describe("Entity IDs in this relationship category"),
+  })).describe("NPC relationships grouped by category"),
 });
 
 // Simplified objective schema for AI generation
@@ -109,7 +112,15 @@ function mapAIItemToItem(ai: AIItem): Item {
 
 // Map AI-generated NPC to full NPC type
 function mapAINPCToNPC(ai: AINPC): NPC {
-  return ai;
+  // Convert array format to Record format for relationships
+  const relationships: Record<string, string[]> = {};
+  for (const rel of ai.relationships) {
+    relationships[rel.category] = rel.entity_ids;
+  }
+  return {
+    ...ai,
+    relationships,
+  };
 }
 
 // Map AI-generated quest to full Quest type

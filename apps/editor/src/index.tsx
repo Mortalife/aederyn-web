@@ -13,6 +13,10 @@ import {
   NPCS_UPDATED,
   QUESTS_UPDATED,
   HOUSE_TILES_UPDATED,
+  WORLD_BIBLE_GEN_STARTED,
+  WORLD_BIBLE_GEN_PROGRESS,
+  WORLD_BIBLE_GEN_COMPLETED,
+  WORLD_BIBLE_GEN_FAILED,
 } from "./sse/pubsub.js";
 import { Dashboard } from "./templates/dashboard.js";
 import { ItemsList } from "./templates/items-list.js";
@@ -63,12 +67,18 @@ import { WorldSystemsList } from "./templates/world-systems-list.js";
 import { WorldSystemForm } from "./templates/world-system-form.js";
 import { WorldNamingForm } from "./templates/world-naming-form.js";
 import { AIGenerationView } from "./templates/ai-generation.js";
+import { WorldBibleGeneration } from "./templates/world-bible-generation.js";
 import {
   isAIConfigured,
   generateItem,
   generateQuest,
   generateNPC,
 } from "./services/ai-service.js";
+import {
+  getGenerationStatus,
+  startWorldBibleGeneration,
+  cancelGeneration,
+} from "./services/ai-world-bible.js";
 import type {
   WorldRegion,
   WorldFaction,
@@ -76,6 +86,7 @@ import type {
   WorldTheme,
   WorldSystem,
 } from "@aederyn/types";
+import { getStream, returnStream } from "./sse/stream.js";
 
 const app = new Hono();
 
@@ -89,37 +100,38 @@ app.get("/", async (c) => {
 
 // Dashboard SSE
 app.get("/sse/dashboard", async (c) => {
-  return streamSSE(c, async (stream) => {
+  const stream = getStream(c);
+  const [counts, validation] = await Promise.all([
+    repository.getCounts(),
+    runValidation(),
+  ]);
+  await stream.writeSSE(fragmentEvent(Dashboard({ counts, validation })));
+
+  const handleUpdate = async () => {
     const [counts, validation] = await Promise.all([
       repository.getCounts(),
       runValidation(),
     ]);
     await stream.writeSSE(fragmentEvent(Dashboard({ counts, validation })));
+  };
 
-    const handleUpdate = async () => {
-      const [counts, validation] = await Promise.all([
-        repository.getCounts(),
-        runValidation(),
-      ]);
-      await stream.writeSSE(fragmentEvent(Dashboard({ counts, validation })));
-    };
+  PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
+  PubSub.subscribe(RESOURCES_UPDATED, handleUpdate);
+  PubSub.subscribe(TILES_UPDATED, handleUpdate);
+  PubSub.subscribe(NPCS_UPDATED, handleUpdate);
+  PubSub.subscribe(QUESTS_UPDATED, handleUpdate);
+  PubSub.subscribe(HOUSE_TILES_UPDATED, handleUpdate);
 
-    PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
-    PubSub.subscribe(RESOURCES_UPDATED, handleUpdate);
-    PubSub.subscribe(TILES_UPDATED, handleUpdate);
-    PubSub.subscribe(NPCS_UPDATED, handleUpdate);
-    PubSub.subscribe(QUESTS_UPDATED, handleUpdate);
-    PubSub.subscribe(HOUSE_TILES_UPDATED, handleUpdate);
-
-    stream.onAbort(() => {
-      PubSub.off(ITEMS_UPDATED, handleUpdate);
-      PubSub.off(RESOURCES_UPDATED, handleUpdate);
-      PubSub.off(TILES_UPDATED, handleUpdate);
-      PubSub.off(NPCS_UPDATED, handleUpdate);
-      PubSub.off(QUESTS_UPDATED, handleUpdate);
-      PubSub.off(HOUSE_TILES_UPDATED, handleUpdate);
-    });
+  stream.onAbort(() => {
+    PubSub.off(ITEMS_UPDATED, handleUpdate);
+    PubSub.off(RESOURCES_UPDATED, handleUpdate);
+    PubSub.off(TILES_UPDATED, handleUpdate);
+    PubSub.off(NPCS_UPDATED, handleUpdate);
+    PubSub.off(QUESTS_UPDATED, handleUpdate);
+    PubSub.off(HOUSE_TILES_UPDATED, handleUpdate);
   });
+
+  return returnStream(c, stream);
 });
 
 // Items routes
@@ -131,18 +143,19 @@ app.get("/items", async (c) => {
 });
 
 app.get("/sse/items", async (c) => {
-  return streamSSE(c, async (stream) => {
+  const stream = getStream(c);
+  const items = await repository.items.getAll();
+  await stream.writeSSE(fragmentEvent(ItemsList({ items })));
+
+  const handleUpdate = async () => {
     const items = await repository.items.getAll();
     await stream.writeSSE(fragmentEvent(ItemsList({ items })));
+  };
 
-    const handleUpdate = async () => {
-      const items = await repository.items.getAll();
-      await stream.writeSSE(fragmentEvent(ItemsList({ items })));
-    };
+  PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
+  stream.onAbort(() => PubSub.off(ITEMS_UPDATED, handleUpdate));
 
-    PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
-    stream.onAbort(() => PubSub.off(ITEMS_UPDATED, handleUpdate));
-  });
+  return returnStream(c, stream);
 });
 
 // Item form routes
@@ -207,18 +220,19 @@ app.get("/resources", async (c) => {
 });
 
 app.get("/sse/resources", async (c) => {
-  return streamSSE(c, async (stream) => {
+  const stream = getStream(c);
+  const resources = await repository.resources.getAll();
+  await stream.writeSSE(fragmentEvent(ResourcesList({ resources })));
+
+  const handleUpdate = async () => {
     const resources = await repository.resources.getAll();
     await stream.writeSSE(fragmentEvent(ResourcesList({ resources })));
+  };
 
-    const handleUpdate = async () => {
-      const resources = await repository.resources.getAll();
-      await stream.writeSSE(fragmentEvent(ResourcesList({ resources })));
-    };
+  PubSub.subscribe(RESOURCES_UPDATED, handleUpdate);
+  stream.onAbort(() => PubSub.off(RESOURCES_UPDATED, handleUpdate));
 
-    PubSub.subscribe(RESOURCES_UPDATED, handleUpdate);
-    stream.onAbort(() => PubSub.off(RESOURCES_UPDATED, handleUpdate));
-  });
+  return returnStream(c, stream);
 });
 
 // Resource form routes
@@ -290,18 +304,18 @@ app.get("/tiles", async (c) => {
 });
 
 app.get("/sse/tiles", async (c) => {
-  return streamSSE(c, async (stream) => {
+  const stream = getStream(c);
+  const tiles = await repository.tiles.getAll();
+  await stream.writeSSE(fragmentEvent(TilesList({ tiles })));
+
+  const handleUpdate = async () => {
     const tiles = await repository.tiles.getAll();
     await stream.writeSSE(fragmentEvent(TilesList({ tiles })));
+  };
 
-    const handleUpdate = async () => {
-      const tiles = await repository.tiles.getAll();
-      await stream.writeSSE(fragmentEvent(TilesList({ tiles })));
-    };
-
-    PubSub.subscribe(TILES_UPDATED, handleUpdate);
-    stream.onAbort(() => PubSub.off(TILES_UPDATED, handleUpdate));
-  });
+  PubSub.subscribe(TILES_UPDATED, handleUpdate);
+  stream.onAbort(() => PubSub.off(TILES_UPDATED, handleUpdate));
+  return returnStream(c, stream);
 });
 
 // Tile form routes
@@ -373,18 +387,18 @@ app.get("/house-tiles", async (c) => {
 });
 
 app.get("/sse/house-tiles", async (c) => {
-  return streamSSE(c, async (stream) => {
+  const stream = getStream(c);
+  const houseTiles = await repository.houseTiles.getAll();
+  await stream.writeSSE(fragmentEvent(HouseTilesList({ houseTiles })));
+
+  const handleUpdate = async () => {
     const houseTiles = await repository.houseTiles.getAll();
     await stream.writeSSE(fragmentEvent(HouseTilesList({ houseTiles })));
+  };
 
-    const handleUpdate = async () => {
-      const houseTiles = await repository.houseTiles.getAll();
-      await stream.writeSSE(fragmentEvent(HouseTilesList({ houseTiles })));
-    };
-
-    PubSub.subscribe(HOUSE_TILES_UPDATED, handleUpdate);
-    stream.onAbort(() => PubSub.off(HOUSE_TILES_UPDATED, handleUpdate));
-  });
+  PubSub.subscribe(HOUSE_TILES_UPDATED, handleUpdate);
+  stream.onAbort(() => PubSub.off(HOUSE_TILES_UPDATED, handleUpdate));
+  return returnStream(c, stream);
 });
 
 // House Tile form routes
@@ -454,18 +468,18 @@ app.get("/npcs", async (c) => {
 });
 
 app.get("/sse/npcs", async (c) => {
-  return streamSSE(c, async (stream) => {
+  const stream = getStream(c);
+  const npcs = await repository.npcs.getAll();
+  await stream.writeSSE(fragmentEvent(NPCsList({ npcs })));
+
+  const handleUpdate = async () => {
     const npcs = await repository.npcs.getAll();
     await stream.writeSSE(fragmentEvent(NPCsList({ npcs })));
+  };
 
-    const handleUpdate = async () => {
-      const npcs = await repository.npcs.getAll();
-      await stream.writeSSE(fragmentEvent(NPCsList({ npcs })));
-    };
-
-    PubSub.subscribe(NPCS_UPDATED, handleUpdate);
-    stream.onAbort(() => PubSub.off(NPCS_UPDATED, handleUpdate));
-  });
+  PubSub.subscribe(NPCS_UPDATED, handleUpdate);
+  stream.onAbort(() => PubSub.off(NPCS_UPDATED, handleUpdate));
+  return returnStream(c, stream);
 });
 
 // NPC form routes
@@ -527,18 +541,18 @@ app.get("/quests", async (c) => {
 });
 
 app.get("/sse/quests", async (c) => {
-  return streamSSE(c, async (stream) => {
+  const stream = getStream(c);
+  const quests = await repository.quests.getAll();
+  await stream.writeSSE(fragmentEvent(QuestsList({ quests })));
+
+  const handleUpdate = async () => {
     const quests = await repository.quests.getAll();
     await stream.writeSSE(fragmentEvent(QuestsList({ quests })));
+  };
 
-    const handleUpdate = async () => {
-      const quests = await repository.quests.getAll();
-      await stream.writeSSE(fragmentEvent(QuestsList({ quests })));
-    };
-
-    PubSub.subscribe(QUESTS_UPDATED, handleUpdate);
-    stream.onAbort(() => PubSub.off(QUESTS_UPDATED, handleUpdate));
-  });
+  PubSub.subscribe(QUESTS_UPDATED, handleUpdate);
+  stream.onAbort(() => PubSub.off(QUESTS_UPDATED, handleUpdate));
+  return returnStream(c, stream);
 });
 
 // Quest form routes
@@ -631,31 +645,32 @@ app.get("/sse/graph", async (c) => {
     houseTiles: query.houseTiles !== "false",
   };
 
-  return streamSSE(c, async (stream) => {
+  const stream = getStream(c);
+  const graphData = await buildGraphData();
+  await stream.writeSSE(fragmentEvent(GraphView({ graphData, filters })));
+
+  const handleUpdate = async () => {
     const graphData = await buildGraphData();
     await stream.writeSSE(fragmentEvent(GraphView({ graphData, filters })));
+  };
 
-    const handleUpdate = async () => {
-      const graphData = await buildGraphData();
-      await stream.writeSSE(fragmentEvent(GraphView({ graphData, filters })));
-    };
+  PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
+  PubSub.subscribe(RESOURCES_UPDATED, handleUpdate);
+  PubSub.subscribe(TILES_UPDATED, handleUpdate);
+  PubSub.subscribe(NPCS_UPDATED, handleUpdate);
+  PubSub.subscribe(QUESTS_UPDATED, handleUpdate);
+  PubSub.subscribe(HOUSE_TILES_UPDATED, handleUpdate);
 
-    PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
-    PubSub.subscribe(RESOURCES_UPDATED, handleUpdate);
-    PubSub.subscribe(TILES_UPDATED, handleUpdate);
-    PubSub.subscribe(NPCS_UPDATED, handleUpdate);
-    PubSub.subscribe(QUESTS_UPDATED, handleUpdate);
-    PubSub.subscribe(HOUSE_TILES_UPDATED, handleUpdate);
-
-    stream.onAbort(() => {
-      PubSub.off(ITEMS_UPDATED, handleUpdate);
-      PubSub.off(RESOURCES_UPDATED, handleUpdate);
-      PubSub.off(TILES_UPDATED, handleUpdate);
-      PubSub.off(NPCS_UPDATED, handleUpdate);
-      PubSub.off(QUESTS_UPDATED, handleUpdate);
-      PubSub.off(HOUSE_TILES_UPDATED, handleUpdate);
-    });
+  stream.onAbort(() => {
+    PubSub.off(ITEMS_UPDATED, handleUpdate);
+    PubSub.off(RESOURCES_UPDATED, handleUpdate);
+    PubSub.off(TILES_UPDATED, handleUpdate);
+    PubSub.off(NPCS_UPDATED, handleUpdate);
+    PubSub.off(QUESTS_UPDATED, handleUpdate);
+    PubSub.off(HOUSE_TILES_UPDATED, handleUpdate);
   });
+
+  return returnStream(c, stream);
 });
 
 app.get("/validate", async (c) => {
@@ -1149,6 +1164,72 @@ app.get("/sse/ai", async (c) => {
   });
 });
 
+// World Bible Generation routes
+app.get("/world/generate", async (c) => {
+  const counts = await repository.getCounts();
+  return c.html(
+    <Layout
+      title="World Bible Generator"
+      sseEndpoint="/sse/world/generate"
+      counts={counts}
+    />
+  );
+});
+
+app.get("/sse/world/generate", async (c) => {
+  const stream = getStream(c);
+  const state = await getGenerationStatus();
+  const aiConfigured = isAIConfigured();
+  await stream.writeSSE(
+    fragmentEvent(WorldBibleGeneration({ state, aiConfigured }))
+  );
+
+  // Subscribe to generation events for real-time updates
+  const handleProgress = async () => {
+    const state = await getGenerationStatus();
+    await stream.writeSSE(
+      fragmentEvent(WorldBibleGeneration({ state, aiConfigured }))
+    );
+  };
+
+  PubSub.subscribe(WORLD_BIBLE_GEN_STARTED, handleProgress);
+  PubSub.subscribe(WORLD_BIBLE_GEN_PROGRESS, handleProgress);
+  PubSub.subscribe(WORLD_BIBLE_GEN_COMPLETED, handleProgress);
+  PubSub.subscribe(WORLD_BIBLE_GEN_FAILED, handleProgress);
+
+  stream.onAbort(() => {
+    PubSub.off(WORLD_BIBLE_GEN_STARTED, handleProgress);
+    PubSub.off(WORLD_BIBLE_GEN_PROGRESS, handleProgress);
+    PubSub.off(WORLD_BIBLE_GEN_COMPLETED, handleProgress);
+    PubSub.off(WORLD_BIBLE_GEN_FAILED, handleProgress);
+  });
+
+  return returnStream(c, stream);
+});
+
+// World Bible Generation API
+app.post("/api/world-bible/generate", async (c) => {
+  const result = await startWorldBibleGeneration();
+  if (!result.success) {
+    return c.redirect(
+      `/world/generate?error=${encodeURIComponent(
+        result.error || "Unknown error"
+      )}`
+    );
+  }
+  return c.redirect("/world/generate");
+});
+
+app.post("/api/world-bible/cancel", async (c) => {
+  await cancelGeneration();
+  return c.redirect("/world/generate");
+});
+
+app.get("/api/world-bible/status", async (c) => {
+  const state = await getGenerationStatus();
+  return c.json(state);
+});
+
 app.get("/export", async (c) => {
   const counts = await repository.getCounts();
   return c.html(
@@ -1422,34 +1503,38 @@ app.post("/commands/npcs/:id/delete", async (c) => {
 app.post("/commands/quests", async (c) => {
   const body = await c.req.parseBody();
   const isTileQuest = body.quest_mode === "tile";
-  
+
   const baseQuest = {
     id: body.id as string,
     name: body.name as string,
     description: body.description as string,
     type: body.type as QuestType,
-    giver: isTileQuest ? {
-      entity_id: body.giver_entity_id as string,
-      zone_id: (body.giver_zone_id as string) || "",
-      x: parseInt(body.giver_x as string) || 0,
-      y: parseInt(body.giver_y as string) || 0,
-    } : {
-      entity_id: body.giver_entity_id as string,
-      zone_id: (body.giver_zone_id as string) || "",
-    },
+    giver: isTileQuest
+      ? {
+          entity_id: body.giver_entity_id as string,
+          zone_id: (body.giver_zone_id as string) || "",
+          x: parseInt(body.giver_x as string) || 0,
+          y: parseInt(body.giver_y as string) || 0,
+        }
+      : {
+          entity_id: body.giver_entity_id as string,
+          zone_id: (body.giver_zone_id as string) || "",
+        },
     objectives: parseObjectives(body, isTileQuest),
     completion: parseCompletion(body, isTileQuest),
     rewards: parseRewards(body),
     is_tutorial: body.is_tutorial === "on",
     prerequisites: parseStringArray(body, "prerequisites"),
   };
-  
-  const quest = isTileQuest ? {
-    ...baseQuest,
-    starts_at: parseInt(body.starts_at as string) || 0,
-    ends_at: parseInt(body.ends_at as string) || 0,
-  } : baseQuest;
-  
+
+  const quest = isTileQuest
+    ? {
+        ...baseQuest,
+        starts_at: parseInt(body.starts_at as string) || 0,
+        ends_at: parseInt(body.ends_at as string) || 0,
+      }
+    : baseQuest;
+
   await repository.quests.create(quest);
   PubSub.publish(QUESTS_UPDATED, { id: quest.id });
   return c.redirect("/quests");
@@ -1460,33 +1545,37 @@ app.post("/commands/quests/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.parseBody();
   const isTileQuest = body.quest_mode === "tile";
-  
+
   const baseUpdates = {
     name: body.name as string,
     description: body.description as string,
     type: body.type as QuestType,
-    giver: isTileQuest ? {
-      entity_id: body.giver_entity_id as string,
-      zone_id: (body.giver_zone_id as string) || "",
-      x: parseInt(body.giver_x as string) || 0,
-      y: parseInt(body.giver_y as string) || 0,
-    } : {
-      entity_id: body.giver_entity_id as string,
-      zone_id: (body.giver_zone_id as string) || "",
-    },
+    giver: isTileQuest
+      ? {
+          entity_id: body.giver_entity_id as string,
+          zone_id: (body.giver_zone_id as string) || "",
+          x: parseInt(body.giver_x as string) || 0,
+          y: parseInt(body.giver_y as string) || 0,
+        }
+      : {
+          entity_id: body.giver_entity_id as string,
+          zone_id: (body.giver_zone_id as string) || "",
+        },
     objectives: parseObjectives(body, isTileQuest),
     completion: parseCompletion(body, isTileQuest),
     rewards: parseRewards(body),
     is_tutorial: body.is_tutorial === "on",
     prerequisites: parseStringArray(body, "prerequisites"),
   };
-  
-  const updates = isTileQuest ? {
-    ...baseUpdates,
-    starts_at: parseInt(body.starts_at as string) || 0,
-    ends_at: parseInt(body.ends_at as string) || 0,
-  } : baseUpdates;
-  
+
+  const updates = isTileQuest
+    ? {
+        ...baseUpdates,
+        starts_at: parseInt(body.starts_at as string) || 0,
+        ends_at: parseInt(body.ends_at as string) || 0,
+      }
+    : baseUpdates;
+
   await repository.quests.update(id, updates);
   PubSub.publish(QUESTS_UPDATED, { id });
   return c.redirect("/quests");
@@ -2044,10 +2133,7 @@ app.post("/commands/export/deploy", async (c) => {
   const execAsync = promisify(exec);
   const result = await exportToTypeScript();
 
-  const configDir = path.resolve(
-    import.meta.dirname,
-    "../../web/src/config"
-  );
+  const configDir = path.resolve(import.meta.dirname, "../../web/src/config");
 
   const filePaths: string[] = [];
   for (const file of result.files) {
