@@ -53,7 +53,9 @@ export const houseTiles: Record<string, HouseTile> = {
         name: "Water Seedling",
         description: "Water the seedling to help it grow",
         requirements: {
-          requirements: [{ type: "item", item_id: "item_water_01", amount: 1 }],
+          requirements: [
+            { type: "item", item_id: "item_spring_water", amount: 1 },
+          ],
           timeToComplete: 5,
         },
         result: { resultingTileId: "plant" },

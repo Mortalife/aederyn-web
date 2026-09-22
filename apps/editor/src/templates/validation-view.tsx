@@ -168,6 +168,8 @@ const ErrorCard: FC<{ error: ValidationError }> = ({ error }) => {
   );
 };
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 const WarningCard: FC<{ warning: ValidationWarning }> = ({ warning }) => {
   const getWarningLabel = () => {
     if (warning.type === "orphaned") {
@@ -182,6 +184,11 @@ const WarningCard: FC<{ warning: ValidationWarning }> = ({ warning }) => {
       return typeLabels[warning.entityType] || `Orphaned ${warning.entityType}`;
     }
     if (warning.type === "duplicate_id") return "Duplicate ID";
+    if (warning.type === "unobtainable") {
+      return warning.entityType === "quest" ? "Unobtainable Objective" : `Unobtainable ${capitalize(warning.entityType)}`;
+    }
+    if (warning.type === "unused") return `Unused ${capitalize(warning.entityType)}`;
+    if (warning.type === "circular_dependency") return "Circular Dependency";
     return "Balance Issue";
   };
 

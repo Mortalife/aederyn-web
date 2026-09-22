@@ -570,5 +570,108 @@
     "equippable": false,
     "value": 5,
     "weight": 0.1
+  },
+  {
+    "id": "item_quest_new__yew_tree_s_essence",
+    "name": "Yew Tree's Essence",
+    "description": "A small vial containing the shimmering essence of the sacred Yew Tree, its luminescent glow pulses gently, resonating with the heartbeat of the forest. This essence is believed to hold the protective magic of the Yew, capable of healing the land and warding off dark forces that threaten its sanctity. The Elunari believe that if harnessed correctly, it can restore the grove's vitality and repel the encroaching darkness from the Mire of Whispers.",
+    "type": "quest",
+    "rarity": "rare",
+    "stackable": false,
+    "maxStackSize": 1,
+    "equippable": false,
+    "value": 150,
+    "weight": 0.1
+  },
+  {
+    "id": "item_quest_new__veiled_crystaltite_shard",
+    "name": "Veiled Crystaltite Shard",
+    "description": "A small, translucent shard of Crystaltite, shimmering with an ethereal glow. It pulsates softly with latent magical energy, echoing the life force of the ancient Yew Tree. This shard is a remnant of the Iron Consortium's reckless mining, embodying both the beauty and peril of the land's resources. It can be used to disrupt mining operations or to forge powerful artifacts. Handle with care, for its connection to the grove's magic is profound and delicate.",
+    "type": "resource",
+    "rarity": "uncommon",
+    "stackable": true,
+    "maxStackSize": 20,
+    "equippable": false,
+    "value": 50,
+    "weight": 0.1
+  },
+  {
+    "id": "item_quest_new__nature_s_embrace_amulet",
+    "name": "Nature’s Embrace Amulet",
+    "description": "Crafted from the luminous bark of the ancient Yew Tree and embedded with a single Radiant Gem, this amulet pulses with the vibrant energies of the Verdant Thicket. It is said to connect its wearer to the very essence of nature, granting the power to heal wounds and summon the forest's protective spirits in times of need. Legends whisper that in the presence of great danger, the amulet can awaken the Yew Tree's protective magic, shielding its bearer from harm.",
+    "type": "item",
+    "rarity": "epic",
+    "stackable": false,
+    "maxStackSize": 1,
+    "equippable": true,
+    "equipSlot": "accessory",
+    "value": 1200,
+    "weight": 1.5
+  },
+  {
+    "id": "item_quest_new__cursed_essence_fern",
+    "name": "Cursed Essence Fern",
+    "description": "A rare and eerie plant found only in the Mire of Whispers, the Cursed Essence Fern pulses with a dark energy that thrums in sync with the heartbeat of the forest. Its fronds shimmer with an otherworldly glow, suggesting a connection to the ancient spirits that inhabit Aederyn. This fern is said to possess the power to pacify restless spirits or unleash their wrath, making it an invaluable resource in the quest to confront Sylvara, the awakened protector of the Heartwood Sanctuary.",
+    "type": "resource",
+    "rarity": "rare",
+    "stackable": false,
+    "maxStackSize": 1,
+    "equippable": false,
+    "value": 150,
+    "weight": 0.2
+  },
+  {
+    "id": "item_quest_new__verdant_embrace_amulet",
+    "name": "Verdant Embrace Amulet",
+    "description": "Crafted from the sacred boughs of the Heartwood Sanctuary, the Verdant Embrace Amulet pulses with the essence of life itself. Adorned with intricate carvings of flora and fauna, this amulet grants its wearer a deep connection to nature, enhancing their ability to commune with the wild and heal the land. It is said that the spirit Sylvara bestowed this amulet upon those who prove themselves as true guardians of the forest, ensuring that the balance of nature remains undisturbed.",
+    "type": "item",
+    "rarity": "epic",
+    "stackable": false,
+    "maxStackSize": 1,
+    "equippable": true,
+    "equipSlot": "accessory",
+    "value": 1500,
+    "weight": 0.3
+  },
+  {
+    "id": "item_seed_01",
+    "name": "Wild Seeds",
+    "description": "A pinch of hardy seeds shaken loose from meadow grass. Plant them in tilled soil to grow your own crops.",
+    "type": "resource",
+    "rarity": "common",
+    "stackable": true,
+    "maxStackSize": 99,
+    "equippable": false,
+    "value": 2,
+    "weight": 0.1
+  },
+  {
+    "id": "item_sickle_01",
+    "name": "Stone Sickle",
+    "description": "A curved stone blade lashed to a wooden handle. Used to harvest crops from your homestead.",
+    "type": "tool",
+    "rarity": "common",
+    "stackable": false,
+    "maxStackSize": 1,
+    "equippable": true,
+    "equipSlot": "mainHand",
+    "durability": {
+      "current": 20,
+      "max": 20
+    },
+    "value": 12,
+    "weight": 1.5
+  },
+  {
+    "id": "item_fertilizer_01",
+    "name": "Ash Compost",
+    "description": "A crumbly mix of campfire ash and moss. Restores exhausted soil so it can be planted again.",
+    "type": "resource",
+    "rarity": "common",
+    "stackable": true,
+    "maxStackSize": 99,
+    "equippable": false,
+    "value": 4,
+    "weight": 0.5
   }
 ]

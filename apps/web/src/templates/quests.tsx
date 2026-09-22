@@ -1,12 +1,12 @@
 import { html } from "hono/html";
-import type { TileObjective, TileQuest } from "../user/quest.js";
+import type { TileObjective, TileQuest } from "../config.js";
 import type {
   ZoneInteraction,
   ZoneQuests,
 } from "../user/quest-progress-manager.js";
-import { formatDistanceToNow } from "date-fns";
-import { npcsMap } from "../config/npcs.js";
-import { resourcesMap } from "../config/resources.js";
+import { formatDistance } from "date-fns";
+import { npcsById } from "../config/npcs.js";
+import { resourcesById } from "../config/resources.js";
 import type { SystemMessage } from "../user/system.js";
 import { ContextualFlash } from "./elements.js";
 
@@ -69,6 +69,8 @@ export const Quests = (props: {
   zoneQuests: ZoneQuests;
   npcInteractions?: ZoneInteraction[];
   flashMessage?: SystemMessage;
+  /** For "time left"; rounded so the render only changes when the text does. */
+  now: number;
 }) => {
   if (!props.zoneQuests) return null;
 
@@ -169,6 +171,7 @@ export const Quests = (props: {
                       ? "available"
                       : "completed",
                   style,
+                  now: props.now,
                 })
               )}
             </div>
@@ -186,7 +189,7 @@ export const Quests = (props: {
 };
 
 export const DialogStep = (entity_id: string | null, dialog: string) => {
-  const speaker = entity_id ? npcsMap.get(entity_id)?.name ?? "Unknown" : "You";
+  const speaker = entity_id ? npcsById.get(entity_id)?.name ?? "Unknown" : "You";
   const isPlayer = entity_id === null;
 
   return html`<div
@@ -206,7 +209,7 @@ export const DialogStep = (entity_id: string | null, dialog: string) => {
 
 export const QuestNPC = (props: { interaction: ZoneInteraction }) => {
   const progress = props.interaction.objective.progress;
-  const npc = npcsMap.get(props.interaction.objective.entity_id);
+  const npc = npcsById.get(props.interaction.objective.entity_id);
   const name = npc?.name ?? "Unknown";
 
   if (!progress) return null;
@@ -293,6 +296,7 @@ export const QuestItem = (props: {
   quest: TileQuest;
   type: "available" | "in_progress" | "completed" | "elsewhere";
   style?: { icon: string; color: string; bg: string; border: string };
+  now: number;
 }) => {
   const style = props.style ?? {
     bg: "bg-gray-500/10",
@@ -329,7 +333,7 @@ export const QuestItem = (props: {
             : html`<span
                 class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-gray-400"
               >
-                ${formatDistanceToNow(props.quest.ends_at)} left
+                ${formatDistance(props.quest.ends_at, props.now)} left
               </span>`}
         </div>
         <p class="text-sm text-gray-300">${props.quest.description}</p>
@@ -508,7 +512,7 @@ export const QuestObjectiveProgress = (props: { objective: TileObjective }) => {
       return null;
     case "craft":
     case "gather": {
-      const resource = resourcesMap.get(objective.resource_id);
+      const resource = resourcesById.get(objective.resource_id);
 
       if (!resource) {
         return null;

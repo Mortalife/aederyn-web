@@ -72,7 +72,7 @@
           "requirements": [
             {
               "type": "item",
-              "item_id": "item_water_01",
+              "item_id": "item_spring_water",
               "amount": 1
             }
           ],

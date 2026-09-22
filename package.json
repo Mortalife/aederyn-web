@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --filter web dev",
+    "cron": "pnpm --filter web cron",
     "build": "pnpm --filter web build",
     "test": "pnpm --filter web test",
     "check": "pnpm --filter web check",
@@ -10,12 +11,5 @@
     "editor:build": "pnpm --filter editor build",
     "editor:test": "pnpm --filter editor test"
   },
-  "pnpm": {
-    "overrides": {
-      "whatwg-url": "13.0.0"
-    },
-    "onlyBuiltDependencies": [
-      "sharp"
-    ]
-  }
+  "packageManager": "pnpm@10.24.0"
 }

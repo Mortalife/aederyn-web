@@ -1,6 +1,4 @@
-import type { ResourceModel } from "../config.js";
-import { client } from "../database.js";
-import { PubSub, ZONE_EVENT } from "../sse/pubsub.js";
+import { reader } from "../db/reader.js";
 
 export type ResourceUsage = {
   x: number;
@@ -10,98 +8,17 @@ export type ResourceUsage = {
   refresh_at: number;
 };
 
-export const markResourceUsed = async (
-  x: number,
-  y: number,
-  resource: ResourceModel
-) => {
-  if (resource.limitless) {
-    return true;
-  }
+const selectAreaUsage = reader.prepare<
+  { fromX: number; toX: number; fromY: number; toY: number },
+  ResourceUsage
+>(
+  "SELECT * FROM resource_usage WHERE x BETWEEN :fromX AND :toX AND y BETWEEN :fromY AND :toY"
+);
 
-  const result = await client.execute({
-    sql: "SELECT * FROM resource_usage WHERE x = ? AND y = ? AND resource_id = ?",
-    args: [x, y, resource.id],
-  });
-
-  if (result.rows.length) {
-    const usage = result.rows[0] as unknown as ResourceUsage;
-    if (usage.qty >= resource.amount) {
-      return false;
-    }
-  }
-
-  const interval = Math.floor(resource.collectionTime * 5 * 1000);
-
-  const refresh_at = Date.now() + interval;
-  await client.execute({
-    sql: "INSERT INTO resource_usage (x, y, resource_id, qty, refresh_at, interval) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (x,y,resource_id) DO UPDATE SET qty = resource_usage.qty + 1",
-    args: [x, y, resource.id, 1, refresh_at, interval],
-  });
-
-  PubSub.publish(ZONE_EVENT, {
-    x,
-    y,
-  });
-
-  return true;
-};
-
-export const getResourceUsage = async (x: number, y: number) => {
-  const result = await client.execute({
-    sql: "SELECT * FROM resource_usage WHERE x = ? AND y = ?",
-    args: [x, y],
-  });
-  return result.rows as unknown as ResourceUsage[];
-};
-
-export const cleanupResources = async () => {
-  // Remove anything that's finished
-  const deletedResources = await client.execute({
-    sql: "SELECT * FROM resource_usage WHERE refresh_at <  (unixepoch('now','subsec') * 1000) AND qty = 1",
-    args: [],
-  });
-
-  await client.execute({
-    sql: "DELETE FROM resource_usage WHERE refresh_at < (unixepoch('now','subsec') * 1000) AND qty = 1",
-    args: [],
-  });
-
-  // Update everything else
-
-  const updatedResources = await client.execute({
-    sql: "SELECT * FROM resource_usage WHERE refresh_at < (unixepoch('now','subsec') * 1000) AND qty > 1",
-    args: [],
-  });
-
-  await client.execute({
-    sql: "UPDATE resource_usage SET qty = resource_usage.qty - 1, refresh_at = resource_usage.refresh_at + resource_usage.interval WHERE refresh_at < (unixepoch('now','subsec') * 1000)",
-    args: [],
-  });
-
-  if (!updatedResources.rows.length && !deletedResources.rows.length) {
-    return;
-  }
-
-  const zones = new Set<string>();
-  for (const row of updatedResources.rows) {
-    const usage = row as unknown as ResourceUsage;
-    zones.add(`${usage.x},${usage.y}`);
-  }
-  for (const row of deletedResources.rows) {
-    const usage = row as unknown as ResourceUsage;
-    zones.add(`${usage.x},${usage.y}`);
-  }
-
-  zones.forEach((zone) => {
-    const [x, y] = zone.split(",");
-    PubSub.publish(ZONE_EVENT, {
-      x: parseInt(x),
-      y: parseInt(y),
-    });
-  });
-
-  zones.clear();
-
-  return;
-};
+/** Usage for every tile in an area (inclusive), in one query. */
+export const getResourceUsageInArea = (area: {
+  fromX: number;
+  toX: number;
+  fromY: number;
+  toY: number;
+}) => selectAreaUsage.all(area);

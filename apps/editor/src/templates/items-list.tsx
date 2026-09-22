@@ -19,7 +19,7 @@ export const ItemsList: FC<ItemsListProps> = ({ items }) => {
         </a>
       </div>
 
-      <div class="bg-gray-800 rounded-lg overflow-hidden">
+      <div class="bg-gray-800 rounded-lg overflow-hidden" data>
         <table data-testid="items-table" class="w-full">
           <thead class="bg-gray-700">
             <tr>

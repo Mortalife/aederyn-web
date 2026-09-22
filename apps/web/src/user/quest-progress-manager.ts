@@ -1,20 +1,16 @@
-import { questMap, quests } from "../config/quests.js";
-import { client } from "../database.js";
-import { getTile, type WorldTile } from "../world/index.js";
-import { addGold, addToInventory } from "./inventory.js";
+import type { Database } from "better-sqlite3";
+import { reader } from "../db/reader.js";
+import { buildTile, isOutOfBounds, type WorldTile } from "../world/index.js";
 import { getItemName } from "./items.js";
+import { questsVersion } from "../game/versions.js";
 import type {
-  Quest,
   RequirementReward,
   TileObjective,
   TileQuest,
   TileTalkObjective,
 } from "../config/types.js";
-import { questManager, type QuestManager } from "./quest-generator.js";
-import { addSystemMessage } from "./system.js";
-import { PubSub, USER_EVENT } from "../sse/pubsub.js";
 
-const getRewardDisplayName = (reward: RequirementReward): string => {
+export const getRewardDisplayName = (reward: RequirementReward): string => {
   switch (reward.type) {
     case "item":
       return getItemName(reward.item_id);
@@ -33,7 +29,7 @@ export interface ZoneQuests {
   discoverableQuests: TileQuest[];
 }
 
-interface QuestProgress {
+export interface QuestProgress {
   user_id: string;
   quest_id: string;
   status: "available" | "in_progress" | "completable" | "completed";
@@ -65,7 +61,7 @@ export type ZoneInteraction = {
   objective: TileTalkObjective;
 };
 
-interface ObjectiveProgress {
+export interface ObjectiveProgress {
   user_id: string;
   quest_id: string;
   objective_id: string;
@@ -78,510 +74,480 @@ interface ObjectiveProgress {
   completed_at: number | null;
 }
 
-export class QuestProgressManager {
-  static migrations() {
-    // Create tables if they don't exist
-    return [
-      `
-      CREATE TABLE IF NOT EXISTS quest_progress (
-        user_id TEXT NOT NULL,
-        quest_id TEXT NOT NULL,
-        status TEXT NOT NULL,
-        started_at INTEGER,
-        completed_at INTEGER,
-        PRIMARY KEY (user_id, quest_id)
-        FOREIGN KEY (quest_id) 
-          REFERENCES quests(quest_id)
-          ON DELETE CASCADE
-      );`,
+/** A user's quest and objective progress rows, loaded once per read. */
+export type UserQuestState = {
+  quests: Map<string, QuestProgress>;
+  /** Keyed by `objectiveKey`. */
+  objectives: Map<string, ObjectiveProgress>;
+};
 
-      `CREATE TABLE IF NOT EXISTS objective_progress (
-        user_id TEXT NOT NULL,
-        quest_id TEXT NOT NULL,
-        objective_id TEXT NOT NULL,
-        current INTEGER NOT NULL DEFAULT 0,
-        required INTEGER NOT NULL,
-        completed BOOLEAN NOT NULL DEFAULT 0,
-        updated_at INTEGER,
-        completed_at INTEGER,
-        PRIMARY KEY (user_id, quest_id, objective_id),
-        FOREIGN KEY (user_id, quest_id) 
-          REFERENCES quest_progress(user_id, quest_id)
-          ON DELETE CASCADE
-      );`,
+const objectiveKey = (questId: string, objectiveId: string) =>
+  `${questId}-${objectiveId}`;
 
-      `CREATE INDEX IF NOT EXISTS idx_quest_progress_user 
-        ON quest_progress(user_id);
-      CREATE INDEX IF NOT EXISTS idx_objective_progress_user 
-        ON objective_progress(user_id);`,
-    ];
-  }
+// Pure selectors: active quests plus a user's progress in, view data out.
 
-  async getZoneQuestsForUser(
-    userId: string,
-    x: number,
-    y: number,
-    questManager: QuestManager
-  ): Promise<ZoneQuests> {
-    const result: ZoneQuests = {
-      availableQuests: [],
-      inProgressQuests: [],
-      completableQuests: [],
-      elsewhereQuests: [],
-      discoverableQuests: [],
-    };
+export const selectZoneQuests = (
+  quests: TileQuest[],
+  state: UserQuestState,
+  x: number,
+  y: number
+): ZoneQuests => {
+  const result: ZoneQuests = {
+    availableQuests: [],
+    inProgressQuests: [],
+    completableQuests: [],
+    elsewhereQuests: [],
+    discoverableQuests: [],
+  };
 
-    const tile = await getTile(x, y);
-
-    if (!tile) {
-      return result;
-    }
-
-    // Get all quest progress for user
-    const { rows: questProgressRows } = await client.execute({
-      sql: `
-      SELECT * FROM quest_progress WHERE user_id = ?
-    `,
-      args: [userId],
-    });
-    const questProgress = questProgressRows as unknown as QuestProgress[];
-
-    const quests = await questManager.getActiveQuests();
-
-    // Get all objective progress for user
-    const { rows: objectiveProgressRows } = await client.execute({
-      sql: `
-      SELECT * FROM objective_progress WHERE user_id = ?
-    `,
-      args: [userId],
-    });
-
-    const objectiveProgress =
-      objectiveProgressRows as unknown as ObjectiveProgress[];
-
-    // Create a map for quick lookups
-    const questProgressMap = new Map(
-      questProgress.map((qp) => [qp.quest_id, qp])
-    );
-    const objectiveProgressMap = new Map(
-      objectiveProgress.map((op) => [`${op.quest_id}-${op.objective_id}`, op])
-    );
-
-    for (const quest of quests) {
-      const userQuestProgress = questProgressMap.get(quest.id);
-
-      // Handle available tasks
-      if (!userQuestProgress) {
-        if (quest.giver.x === x && quest.giver.y === y) {
-          result.availableQuests.push(quest);
-        } else {
-          result.discoverableQuests.push(quest);
-        }
-
-        continue;
-      }
-
-      // Skip completed quests
-      if (userQuestProgress.status === "completed") {
-        continue;
-      }
-
-      // Handle in-progress tasks
-      if (userQuestProgress.status === "in_progress") {
-        const currentObjective = this.findCurrentObjective(
-          quest,
-          objectiveProgressMap
-        );
-
-        if (currentObjective) {
-          switch (currentObjective.type) {
-            case "gather":
-            case "craft":
-              if (
-                currentObjective.resource_id &&
-                tile.resources.some(
-                  (r) => r.id === currentObjective.resource_id
-                )
-              ) {
-                result.inProgressQuests.push({ ...quest, currentObjective });
-                continue;
-              }
-              break;
-            case "collect":
-              if (
-                currentObjective.item_id &&
-                tile.resources.some((r) =>
-                  r.reward_items.some(
-                    (i) => i.item.id === currentObjective.item_id
-                  )
-                )
-              ) {
-                result.inProgressQuests.push({ ...quest, currentObjective });
-                continue;
-              }
-              break;
-            case "talk":
-            case "explore":
-              if (currentObjective.x === x && currentObjective.y === y) {
-                result.inProgressQuests.push({ ...quest, currentObjective });
-                continue;
-              }
-              break;
-          }
-
-          result.elsewhereQuests.push({ ...quest, currentObjective });
-        }
-      }
-
-      // Handle completable tasks
-      if (userQuestProgress?.status === "completable") {
-        const tileQuest = {
-          ...quest,
-          objectives: quest.objectives.map<TileObjective>((o) => {
-            const progress = objectiveProgressMap.get(`${quest.id}-${o.id}`);
-
-            if (!progress) {
-              return o;
-            }
-
-            return {
-              ...o,
-              progress: this.mapProgress(progress, o),
-            };
-          }),
-        };
-
-        if (quest.completion.x === x && quest.completion.y === y) {
-          result.completableQuests.push(tileQuest);
-        } else {
-          result.elsewhereQuests.push(tileQuest);
-        }
-      }
-    }
-
+  if (isOutOfBounds(x, y)) {
     return result;
   }
 
-  async getMapIndicatorsForUser(
-    userId: string,
-    worldMap: WorldTile[]
-  ): Promise<MapIndicator[]> {
-    // Get all quest progress for user
-    const { rows: questProgressRows } = await client.execute({
-      sql: `
-      SELECT * FROM quest_progress WHERE user_id = ?
-    `,
-      args: [userId],
-    });
-    const questProgress = questProgressRows as unknown as QuestProgress[];
+  const tile = buildTile(x, y);
 
-    const quests = await questManager.getActiveQuests();
-
-    // Get all objective progress for user
-    const { rows: objectiveProgressRows } = await client.execute({
-      sql: `
-      SELECT * FROM objective_progress WHERE user_id = ?
-    `,
-      args: [userId],
-    });
-
-    const objectiveProgress =
-      objectiveProgressRows as unknown as ObjectiveProgress[];
-
-    // Create a map for quick lookups
-    const questProgressMap = new Map(
-      questProgress.map((qp) => [qp.quest_id, qp])
-    );
-    const objectiveProgressMap = new Map(
-      objectiveProgress.map((op) => [`${op.quest_id}-${op.objective_id}`, op])
+  for (const quest of quests) {
+    const userQuestProgress = progressForCurrentRun(
+      quest,
+      state.quests.get(quest.id)
     );
 
-    /**
-     *  x: number;
-        y: number;
-        available: boolean;
-        completable: boolean;
-        objective: boolean;
-     */
-
-    const result = new Map<string, MapIndicator>();
-
-    const fromX = worldMap[0].x;
-    const toX = worldMap[worldMap.length - 1].x;
-    const fromY = worldMap[0].y;
-    const toY = worldMap[worldMap.length - 1].y;
-
-    const inRange = (x: number, y: number) => {
-      return x >= fromX && x <= toX && y >= fromY && y <= toY;
-    };
-
-    const addToMap = (x: number, y: number, indicator: MapIndicator) => {
-      const key = `${x}-${y}`;
-      const existing = result.get(key);
-      if (existing) {
-        existing.available = existing.available || indicator.available;
-        existing.completable = existing.completable || indicator.completable;
-        existing.objective = existing.objective || indicator.objective;
+    // Handle available tasks
+    if (!userQuestProgress) {
+      if (quest.giver.x === x && quest.giver.y === y) {
+        result.availableQuests.push(quest);
       } else {
-        result.set(key, indicator);
+        result.discoverableQuests.push(quest);
       }
-    };
 
-    for (const quest of quests) {
-      const userQuestProgress = questProgressMap.get(quest.id);
+      continue;
+    }
 
-      // Handle available tasks
-      if (!userQuestProgress) {
-        if (inRange(quest.giver.x, quest.giver.y)) {
-          addToMap(quest.giver.x, quest.giver.y, {
-            x: quest.giver.x,
-            y: quest.giver.y,
-            available: true,
-            completable: false,
-            objective: false,
-          });
+    // Skip completed quests
+    if (userQuestProgress.status === "completed") {
+      continue;
+    }
+
+    // Handle in-progress tasks
+    if (userQuestProgress.status === "in_progress") {
+      const currentObjective = findCurrentObjective(quest, state.objectives);
+
+      if (currentObjective) {
+        switch (currentObjective.type) {
+          case "gather":
+          case "craft":
+            if (
+              currentObjective.resource_id &&
+              tile.resources.some((r) => r.id === currentObjective.resource_id)
+            ) {
+              result.inProgressQuests.push({ ...quest, currentObjective });
+              continue;
+            }
+            break;
+          case "collect":
+            if (
+              currentObjective.item_id &&
+              tile.resources.some((r) =>
+                r.reward_items.some(
+                  (i) => i.item.id === currentObjective.item_id
+                )
+              )
+            ) {
+              result.inProgressQuests.push({ ...quest, currentObjective });
+              continue;
+            }
+            break;
+          case "talk":
+          case "explore":
+            if (currentObjective.x === x && currentObjective.y === y) {
+              result.inProgressQuests.push({ ...quest, currentObjective });
+              continue;
+            }
+            break;
         }
 
-        continue;
+        result.elsewhereQuests.push({ ...quest, currentObjective });
       }
+    }
 
-      // Skip completed quests
-      if (userQuestProgress.status === "completed") {
-        continue;
+    // Handle completable tasks
+    if (userQuestProgress?.status === "completable") {
+      const tileQuest = withObjectiveProgress(quest, state.objectives);
+
+      if (quest.completion.x === x && quest.completion.y === y) {
+        result.completableQuests.push(tileQuest);
+      } else {
+        result.elsewhereQuests.push(tileQuest);
       }
+    }
+  }
 
-      // Handle in-progress tasks
-      if (userQuestProgress.status === "in_progress") {
-        const currentObjective = this.findCurrentObjective(
-          quest,
-          objectiveProgressMap
-        );
+  return result;
+};
 
-        if (currentObjective) {
-          switch (currentObjective.type) {
-            case "gather":
-            case "craft":
-              if (currentObjective.resource_id) {
-                for (const tile of worldMap) {
-                  if (
-                    tile.tile?.resources.some(
-                      (r) => r.id === currentObjective.resource_id
-                    )
-                  ) {
-                    addToMap(tile.x, tile.y, {
-                      x: tile.x,
-                      y: tile.y,
-                      available: false,
-                      completable: false,
-                      objective: true,
-                    });
-                  }
-                }
-              }
-              break;
-            case "collect":
-              if (currentObjective.item_id) {
-                for (const tile of worldMap) {
-                  if (
-                    tile.tile?.resources.some((r) =>
-                      r.reward_items.some(
-                        (i) => i.item.id === currentObjective.item_id
-                      )
-                    )
-                  ) {
-                    addToMap(tile.x, tile.y, {
-                      x: tile.x,
-                      y: tile.y,
-                      available: false,
-                      completable: false,
-                      objective: true,
-                    });
-                  }
-                }
-              }
-              break;
-            case "talk":
-            case "explore":
-              for (const tile of worldMap) {
-                if (
-                  tile.x === currentObjective.x &&
-                  tile.y === currentObjective.y
-                ) {
-                  addToMap(tile.x, tile.y, {
-                    x: tile.x,
-                    y: tile.y,
-                    available: false,
-                    completable: false,
-                    objective: true,
-                  });
-                }
-              }
-              break;
-          }
-        }
-      }
+export const selectMapIndicators = (
+  quests: TileQuest[],
+  state: UserQuestState,
+  worldMap: WorldTile[]
+): MapIndicator[] => {
+  const result = new Map<string, MapIndicator>();
 
-      // Handle completable tasks
-      if (
-        userQuestProgress?.status === "completable" &&
-        inRange(quest.completion.x, quest.completion.y)
-      ) {
-        addToMap(quest.completion.x, quest.completion.y, {
-          x: quest.completion.x,
-          y: quest.completion.y,
-          available: false,
-          completable: true,
+  const fromX = worldMap[0].x;
+  const toX = worldMap[worldMap.length - 1].x;
+  const fromY = worldMap[0].y;
+  const toY = worldMap[worldMap.length - 1].y;
+
+  const inRange = (x: number, y: number) => {
+    return x >= fromX && x <= toX && y >= fromY && y <= toY;
+  };
+
+  const addToMap = (x: number, y: number, indicator: MapIndicator) => {
+    const key = `${x}-${y}`;
+    const existing = result.get(key);
+    if (existing) {
+      existing.available = existing.available || indicator.available;
+      existing.completable = existing.completable || indicator.completable;
+      existing.objective = existing.objective || indicator.objective;
+    } else {
+      result.set(key, indicator);
+    }
+  };
+
+  const addObjective = (x: number, y: number) =>
+    addToMap(x, y, {
+      x,
+      y,
+      available: false,
+      completable: false,
+      objective: true,
+    });
+
+  for (const quest of quests) {
+    const userQuestProgress = progressForCurrentRun(
+      quest,
+      state.quests.get(quest.id)
+    );
+
+    // Handle available tasks
+    if (!userQuestProgress) {
+      if (inRange(quest.giver.x, quest.giver.y)) {
+        addToMap(quest.giver.x, quest.giver.y, {
+          x: quest.giver.x,
+          y: quest.giver.y,
+          available: true,
+          completable: false,
           objective: false,
         });
       }
+
+      continue;
     }
 
-    return [...result.values()];
-  }
+    // Skip completed quests
+    if (userQuestProgress.status === "completed") {
+      continue;
+    }
 
-  async getZoneNPCInteractionsForUser(
-    userId: string,
-    x: number,
-    y: number
-  ): Promise<ZoneInteraction[]> {
-    const inprogress = await this.getInProgressQuestsForUser(userId);
-    const objectives: ZoneInteraction[] = [];
+    // Handle in-progress tasks
+    if (userQuestProgress.status === "in_progress") {
+      const currentObjective = findCurrentObjective(quest, state.objectives);
 
-    for (const quest of inprogress) {
-      if (
-        quest.currentObjective &&
-        quest.currentObjective.type === "talk" &&
-        quest.currentObjective.x === x &&
-        quest.currentObjective.y === y
-      ) {
-        objectives.push({
-          x: quest.currentObjective.x,
-          y: quest.currentObjective.y,
-          quest_id: quest.id,
-          objective: quest.currentObjective,
-        });
+      if (currentObjective) {
+        switch (currentObjective.type) {
+          case "gather":
+          case "craft":
+            if (currentObjective.resource_id) {
+              for (const tile of worldMap) {
+                if (
+                  tile.tile?.resources.some(
+                    (r) => r.id === currentObjective.resource_id
+                  )
+                ) {
+                  addObjective(tile.x, tile.y);
+                }
+              }
+            }
+            break;
+          case "collect":
+            if (currentObjective.item_id) {
+              for (const tile of worldMap) {
+                if (
+                  tile.tile?.resources.some((r) =>
+                    r.reward_items.some(
+                      (i) => i.item.id === currentObjective.item_id
+                    )
+                  )
+                ) {
+                  addObjective(tile.x, tile.y);
+                }
+              }
+            }
+            break;
+          case "talk":
+          case "explore":
+            if (inRange(currentObjective.x, currentObjective.y)) {
+              addObjective(currentObjective.x, currentObjective.y);
+            }
+            break;
+        }
       }
     }
 
-    return objectives;
+    // Handle completable tasks
+    if (
+      userQuestProgress?.status === "completable" &&
+      inRange(quest.completion.x, quest.completion.y)
+    ) {
+      addToMap(quest.completion.x, quest.completion.y, {
+        x: quest.completion.x,
+        y: quest.completion.y,
+        available: false,
+        completable: true,
+        objective: false,
+      });
+    }
   }
 
-  async getInProgressQuestsForUser(userId: string): Promise<TileQuest[]> {
-    const { rows: questProgressRows } = await client.execute({
-      sql: `
-      SELECT * FROM quest_progress WHERE user_id = ? AND status = 'in_progress'
-    `,
-      args: [userId],
+  return [...result.values()];
+};
+
+export const selectInProgressQuests = (
+  quests: TileQuest[],
+  state: UserQuestState
+): TileQuest[] => {
+  const result: TileQuest[] = [];
+
+  for (const quest of quests) {
+    if (state.quests.get(quest.id)?.status !== "in_progress") {
+      continue;
+    }
+
+    result.push({
+      ...withObjectiveProgress(quest, state.objectives),
+      currentObjective: findCurrentObjective(quest, state.objectives) ?? undefined,
     });
-    const { rows: objectiveProgressRows } = await client.execute({
-      sql: `
-      SELECT * FROM objective_progress WHERE user_id = ?
-    `,
-      args: [userId],
-    });
-
-    const questsProgress = questProgressRows as unknown as QuestProgress[];
-    const objectivesProgress =
-      objectiveProgressRows as unknown as ObjectiveProgress[];
-
-    const objectiveProgressMap = new Map(
-      objectivesProgress.map((op) => [`${op.quest_id}-${op.objective_id}`, op])
-    );
-
-    const quests = await questManager.getActiveQuests();
-
-    const questMap = new Map(quests.map((q) => [q.id, q]));
-
-    return questsProgress
-      .map((questProgress) => {
-        const quest = questMap.get(questProgress.quest_id);
-
-        if (!quest) {
-          return null;
-        }
-
-        const currentObjective = this.findCurrentObjective(
-          quest,
-          objectiveProgressMap
-        );
-
-        return {
-          ...quest,
-          currentObjective,
-          objectives: quest.objectives.map<TileObjective>((o) => {
-            const progress = objectiveProgressMap.get(
-              `${questProgress.quest_id}-${o.id}`
-            );
-
-            if (!progress) {
-              return o;
-            }
-
-            return {
-              ...o,
-              progress: this.mapProgress(progress, o),
-            };
-          }),
-        };
-      })
-      .filter((q) => q !== null) as TileQuest[];
   }
 
-  private mapProgress(
-    progress: ObjectiveProgress | undefined,
-    objective: TileObjective
-  ): TileObjective["progress"] {
+  return result;
+};
+
+export const selectZoneNPCInteractions = (
+  quests: TileQuest[],
+  state: UserQuestState,
+  x: number,
+  y: number
+): ZoneInteraction[] => {
+  const objectives: ZoneInteraction[] = [];
+
+  for (const quest of selectInProgressQuests(quests, state)) {
+    if (
+      quest.currentObjective &&
+      quest.currentObjective.type === "talk" &&
+      quest.currentObjective.x === x &&
+      quest.currentObjective.y === y
+    ) {
+      objectives.push({
+        x: quest.currentObjective.x,
+        y: quest.currentObjective.y,
+        quest_id: quest.id,
+        objective: quest.currentObjective,
+      });
+    }
+  }
+
+  return objectives;
+};
+
+const withObjectiveProgress = (
+  quest: TileQuest,
+  objectives: Map<string, ObjectiveProgress>
+): TileQuest => ({
+  ...quest,
+  objectives: quest.objectives.map<TileObjective>((o) => {
+    const progress = objectives.get(objectiveKey(quest.id, o.id));
+
     if (!progress) {
-      //TODO: Here and on quest start, we should probably check for current and required  being 0 and complete
+      return o;
+    }
+
+    return {
+      ...o,
+      progress: mapProgress(progress, o),
+    };
+  }),
+});
+
+const mapProgress = (
+  progress: ObjectiveProgress | undefined,
+  objective: TileObjective
+): TileObjective["progress"] => {
+  if (!progress) {
+    //TODO: Here and on quest start, we should probably check for current and required  being 0 and complete
+    return {
+      current: 0,
+      required: getDefaultRequiredAmount(objective),
+      completed: false,
+      updated_at: null,
+      completed_at: null,
+    };
+  }
+  return {
+    current: progress.current,
+    required: progress.required,
+    completed: progress.completed,
+    updated_at: progress.updated_at,
+    completed_at: progress.completed_at,
+  };
+};
+
+// Non-tutorial quests can be redone each time they rotate back in, so a
+// completion from an earlier appearance doesn't count against this one.
+// In-progress runs carry over and continue until the new ends_at.
+const progressForCurrentRun = (
+  quest: TileQuest,
+  progress: QuestProgress | undefined
+): QuestProgress | undefined => {
+  if (
+    progress?.status === "completed" &&
+    !quest.is_tutorial &&
+    (progress.completed_at ?? 0) < quest.starts_at
+  ) {
+    return undefined;
+  }
+
+  return progress;
+};
+
+const findCurrentObjective = (
+  quest: TileQuest,
+  objectives: Map<string, ObjectiveProgress>
+): TileObjective | null => {
+  for (const objective of quest.objectives) {
+    const progress = objectives.get(objectiveKey(quest.id, objective.id));
+    if (!progress || !progress.completed) {
       return {
-        current: 0,
-        required: this.getDefaultRequiredAmount(objective),
-        completed: false,
-        updated_at: null,
-        completed_at: null,
+        ...objective,
+        progress: mapProgress(progress, objective),
       };
     }
+  }
+  return null;
+};
+
+/** Re-read active quests at least this often, to pick up `pnpm cron`. */
+const ACTIVE_QUESTS_MAX_AGE = 60_000;
+
+/**
+ * Quest reads, bound to a connection: the reader for renders, the writer's
+ * own instance for command handlers (which must see their tick's writes).
+ */
+export class QuestQueries {
+  private selectUserQuests;
+  private selectUserObjectives;
+  private selectQuest;
+  private selectQuestObjectives;
+  private selectActiveQuests;
+
+  private activeQuests: {
+    version: number;
+    fetchedAt: number;
+    validUntil: number;
+    quests: TileQuest[];
+  } | null = null;
+
+  constructor(db: Database) {
+    this.selectUserQuests = db.prepare<[string], QuestProgress>(
+      "SELECT * FROM quest_progress WHERE user_id = ?"
+    );
+    this.selectUserObjectives = db.prepare<[string], ObjectiveProgress>(
+      "SELECT * FROM objective_progress WHERE user_id = ?"
+    );
+    this.selectQuest = db.prepare<[string, string], QuestProgress>(
+      "SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?"
+    );
+    this.selectQuestObjectives = db.prepare<[string, string], ObjectiveProgress>(
+      "SELECT * FROM objective_progress WHERE user_id = ? AND quest_id = ?"
+    );
+    this.selectActiveQuests = db.prepare<[number], { data: string }>(
+      "SELECT data FROM quests WHERE ends_at > ?"
+    );
+  }
+
+  /**
+   * The quests active at `now`, parsed once and shared until a rotation
+   * bumps the quests version or one of them ends. Don't mutate the result.
+   */
+  getActiveQuests(now = Date.now()) {
+    const cached = this.activeQuests;
+
+    if (
+      cached &&
+      cached.version === questsVersion() &&
+      now >= cached.fetchedAt &&
+      now < cached.validUntil
+    ) {
+      return cached.quests;
+    }
+
+    const quests = this.selectActiveQuests
+      .all(now)
+      .map((row) => JSON.parse(row.data) as TileQuest);
+
+    this.activeQuests = {
+      version: questsVersion(),
+      fetchedAt: now,
+      validUntil: Math.min(
+        now + ACTIVE_QUESTS_MAX_AGE,
+        ...quests.map((q) => q.ends_at)
+      ),
+      quests,
+    };
+
+    return quests;
+  }
+
+  getUserQuestState(userId: string): UserQuestState {
     return {
-      current: progress.current,
-      required: progress.required,
-      completed: progress.completed,
-      updated_at: progress.updated_at,
-      completed_at: progress.completed_at,
+      quests: new Map(
+        this.selectUserQuests.all(userId).map((qp) => [qp.quest_id, qp])
+      ),
+      objectives: new Map(
+        this.selectUserObjectives
+          .all(userId)
+          .map((op) => [objectiveKey(op.quest_id, op.objective_id), op])
+      ),
     };
   }
 
-  private findCurrentObjective(
-    quest: TileQuest,
-    progressMap: Map<string, ObjectiveProgress>
-  ): TileObjective | null {
-    for (const objective of quest.objectives) {
-      const progress = progressMap.get(`${quest.id}-${objective.id}`);
-      if (!progress || !progress.completed) {
-        return {
-          ...objective,
-          progress: this.mapProgress(progress, objective),
-        };
-      }
-    }
-    return null;
+  getZoneQuestsForUser(userId: string, x: number, y: number, now = Date.now()) {
+    return selectZoneQuests(
+      this.getActiveQuests(now),
+      this.getUserQuestState(userId),
+      x,
+      y
+    );
   }
 
-  async getQuestStatus(
+  getZoneNPCInteractionsForUser(
     userId: string,
-    questId: string
-  ): Promise<QuestStatus | null> {
-    const { rows: questProgressRows } = await client.execute({
-      sql: `
-      SELECT * FROM quest_progress WHERE user_id = ? AND quest_id = ?
-    `,
-      args: [userId, questId],
-    });
+    x: number,
+    y: number,
+    now = Date.now()
+  ) {
+    return selectZoneNPCInteractions(
+      this.getActiveQuests(now),
+      this.getUserQuestState(userId),
+      x,
+      y
+    );
+  }
 
-    if (!questProgressRows.length) {
+  getQuestStatus(userId: string, questId: string): QuestStatus | null {
+    const questProgress = this.selectQuest.get(userId, questId);
+
+    if (!questProgress) {
       return null;
     }
-
-    const [questProgress] = questProgressRows as unknown as QuestProgress[];
 
     return {
       status: questProgress.status,
@@ -590,248 +556,36 @@ export class QuestProgressManager {
     };
   }
 
-  async startQuest(userId: string, quest: TileQuest): Promise<void> {
-    await client.execute({
-      sql: `
-      INSERT INTO quest_progress (
-        user_id, quest_id, status, started_at, completed_at
-      ) VALUES (?, ?, 'in_progress', ?, NULL)
-    `,
-      args: [userId, quest.id, Date.now()],
-    });
-
-    // Initialize objective progress
-    for (const objective of quest.objectives) {
-      const required = this.getDefaultRequiredAmount(objective);
-
-      await client.execute({
-        sql: `
-        INSERT INTO objective_progress (
-          user_id, quest_id, objective_id, current, required, completed, updated_at, completed_at
-        ) VALUES (?, ?, ?, 0, ?, 0, ?, NULL)
-      `,
-        args: [userId, quest.id, objective.id, required, Date.now()],
-      });
-    }
-
-    PubSub.publish(USER_EVENT, {
-      user_id: userId,
-    });
-  }
-
-  async completeQuest(userId: string, questId: string): Promise<void> {
-    let quest: Quest | TileQuest | undefined | null = questMap.get(questId);
-
-    if (!quest) {
-      // Is it a tutorial?
-      quest = quests.find((q) => q.id === questId);
-
-      if (!quest) {
-        await addSystemMessage(userId, "Quest not found", "error", {
-          action_type: "quest",
-          action_id: questId,
-        });
-        return;
-      }
-    }
-
-    await client.execute({
-      sql: `
-      UPDATE quest_progress 
-      SET 
-        status = 'completed',
-        completed_at = :completed_at
-      WHERE user_id = :user_id AND quest_id = :quest_id
-    `,
-      args: {
-        completed_at: Date.now(),
-        user_id: userId,
-        quest_id: questId,
-      },
-    });
-
-    for (const reward of quest.rewards) {
-      if (reward.type === "item") {
-        await addToInventory(userId, {
-          qty: reward.amount,
-          item_id: reward.item_id,
-        });
-      } else if (reward.type === "gold") {
-        await addGold(userId, reward.amount);
-      }
-    }
-
-    await addSystemMessage(
-      userId,
-      `Quest completed - You have gained ${quest.rewards
-        .map((r) => `${r.amount} x ${getRewardDisplayName(r)}`)
-        .join(", ")}`,
-      "success",
-      { action_type: "quest", action_id: questId }
-    );
-
-    PubSub.publish(USER_EVENT, {
-      user_id: userId,
-    });
-  }
-
-  private getDefaultRequiredAmount(objective: TileObjective): number {
-    switch (objective.type) {
-      case "gather":
-      case "collect":
-      case "craft":
-        return objective.amount;
-      case "talk":
-        return objective.dialog_steps.length + 1; // 0 is not started, 1-length are steps - User needs to complete all dialog steps
-      case "explore":
-        return 1;
-      default:
-        return 0;
-    }
-  }
-
-  async cancelQuest(userId: string, questId: string): Promise<void> {
-    await client.execute({
-      sql: `
-      DELETE FROM quest_progress 
-      WHERE user_id = :user_id AND quest_id = :quest_id
-    `,
-      args: {
-        user_id: userId,
-        quest_id: questId,
-      },
-    });
-
-    PubSub.publish(USER_EVENT, {
-      user_id: userId,
-    });
-  }
-
-  async updateObjectiveProgress(
-    userId: string,
-    questId: string,
-    objectiveId: string,
-    current: number
-  ): Promise<void> {
-    // Get current objective state to determine completion
-    const { rows: beforeRows } = await client.execute({
-      sql: `SELECT current, required, completed FROM objective_progress WHERE user_id = ? AND quest_id = ? AND objective_id = ?`,
-      args: [userId, questId, objectiveId],
-    });
-    const beforeState = beforeRows[0] as unknown as
-      | { current: number; required: number; completed: number }
-      | undefined;
-
-    if (!beforeState) {
-      return;
-    }
-
-    const wasCompleted = beforeState.completed === 1;
-    const isNowCompleted = current >= beforeState.required;
-    const now = Date.now();
-
-    await client.execute({
-      sql: `
-      UPDATE objective_progress 
-      SET 
-        current = :current,
-        completed = :completed,
-        updated_at = :updated_at,
-        completed_at = :completed_at
-      WHERE user_id = :user_id AND quest_id = :quest_id AND objective_id = :objective_id
-    `,
-      args: {
-        current,
-        completed: isNowCompleted ? 1 : 0,
-        updated_at: now,
-        completed_at: isNowCompleted ? now : null,
-        user_id: userId,
-        quest_id: questId,
-        objective_id: objectiveId,
-      },
-    });
-
-    // Send system message when objective is newly completed
-    if (isNowCompleted && !wasCompleted) {
-      const quests = await questManager.getActiveQuests();
-      const quest =
-        quests.find((q) => q.id === questId) ??
-        quests.find((q) => q.id === questId);
-      const objective = quest?.objectives.find((o) => o.id === objectiveId);
-
-      if (quest && objective) {
-        await addSystemMessage(
-          userId,
-          `Step complete: ${objective.description}`,
-          "success",
-          { action_type: "quest", action_id: questId }
-        );
-      }
-    }
-
-    // Check if all objectives are complete
-    const { rows: allCompleteRows } = await client.execute({
-      sql: `
-      SELECT COUNT(*) as total, 
-             SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as completed
-      FROM objective_progress
-      WHERE user_id = ? AND quest_id = ?
-    `,
-      args: [userId, questId],
-    });
-
-    const allComplete = allCompleteRows[0] as unknown as {
-      total: number;
-      completed: number;
-    };
-
-    if (allComplete.total === allComplete.completed) {
-      await client.execute({
-        sql: `
-        UPDATE quest_progress
-        SET status = 'completable'
-        WHERE user_id = ? AND quest_id = ?
-      `,
-        args: [userId, questId],
-      });
-    }
-
-    PubSub.publish(USER_EVENT, {
-      user_id: userId,
-    });
-  }
-
-  async getQuestProgress(
+  getQuestProgress(
     userId: string,
     questId: string
-  ): Promise<{
+  ): {
     quest: QuestProgress;
     objectives: ObjectiveProgress[];
-  } | null> {
-    const { rows: questRows } = await client.execute({
-      sql: `
-      SELECT * FROM quest_progress 
-      WHERE user_id = ? AND quest_id = ?
-    `,
-      args: [userId, questId],
-    });
-
-    const quest = questRows[0] as unknown as QuestProgress;
+  } | null {
+    const quest = this.selectQuest.get(userId, questId);
 
     if (!quest) return null;
 
-    const { rows: objectivesRows } = await client.execute({
-      sql: `
-      SELECT * FROM objective_progress 
-      WHERE user_id = ? AND quest_id = ?
-    `,
-      args: [userId, questId],
-    });
-
-    const objectives = objectivesRows as unknown as ObjectiveProgress[];
+    const objectives = this.selectQuestObjectives.all(userId, questId);
 
     return { quest, objectives };
   }
 }
 
-export const questProgressManager = new QuestProgressManager();
+export const getDefaultRequiredAmount = (objective: TileObjective): number => {
+  switch (objective.type) {
+    case "gather":
+    case "collect":
+    case "craft":
+      return objective.amount;
+    case "talk":
+      return objective.dialog_steps.length + 1; // 0 is not started, 1-length are steps - User needs to complete all dialog steps
+    case "explore":
+      return 1;
+    default:
+      return 0;
+  }
+};
+
+export const questProgressManager = new QuestQueries(reader);

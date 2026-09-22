@@ -9,6 +9,14 @@ export const fragmentEvent = (
   };
 };
 
+/** One event patching several elements, each matched by its id. */
+export const patchEvent = (elements: string[]) => {
+  return {
+    data: `elements ${elements.join("").replaceAll("\n", "")}`,
+    event: "datastar-patch-elements",
+  };
+};
+
 export const redirectEvent = (url: string) => {
   return {
     data: [

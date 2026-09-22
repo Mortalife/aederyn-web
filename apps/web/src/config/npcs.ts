@@ -297,6 +297,144 @@ export const npcs: NPC[] = [
       respects: ["Doran the Elder - fellow retired adventurer"],
     },
   },
+  {
+    entity_id: "silvanis-the-wandering-bloom",
+    name: "Silvanis the Wandering Bloom",
+    backstory:
+      "Silvanis was born under the luminescent canopy of the Verdant Thicket during a rare celestial event known as the Night of Blossoms, where the flora glows with heightened magic. From a young age, he exhibited a strong affinity for Nature's Weave, able to coax flowers into bloom and communicate with the spirits of the forest. As he grew, he became a dedicated protector of the Thicket, using his abilities to heal the land and educate others about the importance of harmony with nature. However, during one fateful encounter with the Iron Consortium, an operation to extract Crystaltite from a sacred grove led to the destruction of a beloved clearing. This incident ignited a fire within Silvanis, pushing him to adopt the title of 'Wandering Bloom' as he now travels Aederyn, seeking allies to safeguard the Thicket and eliminate the threat of industrialization.\r\n" +
+      "\r\n" +
+      "Silvanis carries with him a deep connection to the land, feeling the pain of its wounds as if they were his own. His travels have taken him to various regions, where he learns about the struggles of other factions, particularly the Nerathi and their efforts to maintain balance. He often collaborates with the Elunari to orchestrate defensive measures against the encroaching Iron Consortium, while also acting as a bridge between the natural world and the more industrialized societies that threaten it. Silvanis's adventures are not just about combating threats; he seeks to spread knowledge and foster understanding between the differing peoples of Aederyn.",
+    personalMission:
+      "Silvanis is driven by the mission to protect the Verdant Thicket and ensure that the teachings of nature are respected and preserved. He aims to unite the Elunari and other factions against the Iron Consortium, using diplomacy as much as his innate powers to foster alliances and defend against exploitation.",
+    hopes:
+      "Silvanis hopes to see Aederyn flourish in a way where nature and civilization can coexist harmoniously, with respect for the land at the forefront of decision-making. He dreams of a day when the Elunari's wisdom is not only acknowledged but sought after by all.",
+    fears:
+      "His greatest fear is the irreversible damage that the Iron Consortium's greed could inflict on the Thicket and the loss of his connection to the land. He worries that without intervention, future generations will never experience the sanctity of nature's true beauty.",
+    relationships: {},
+  },
+  {
+    entity_id: "npc_quest_new__lyara_glimmerleaf",
+    name: "Lyara Glimmerleaf",
+    backstory:
+      "Lyara Glimmerleaf, a guardian of the sacred grove in the Verdant Thicket, was born under the ancient branches of the Yew Tree, a powerful source of life and magic. Her mother, a revered healer, taught her the secrets of nature and the importance of balance between the realms of magic and the earth. As a child, she often played among the roots of the Yew, feeling its pulsing energy connect her to the very essence of Aederyn. Yet, her idyllic life was shattered when her village began to hear whispers of the Iron Consortium's encroachment on their sacred lands, threatening not just their home but also the delicate harmony they had nurtured. Lyara has since dedicated her life to protecting the grove, gathering her fellow Elunari to stand against the growing industrialization that seeks to destroy their way of life.",
+    personalMission:
+      "Lyara is driven by a fierce determination to protect the Yew Tree and the grove it nurtures. She believes that if the Yew is lost, the magic that sustains the forest and its inhabitants will fade, leading to the awakening of dark forces from the Mire of Whispers. Her mission is to unite the Elunari and seek allies, including the adventurers who dare to challenge the Iron Consortium, in a desperate race against time to reclaim the grove.",
+    hopes:
+      "Lyara hopes to restore balance to Aederyn by preserving the sacred grove and demonstrating to the Iron Consortium that coexistence with nature is possible. She dreams of a future where the Elunari and the industrial factions can find common ground, but doubts linger in her heart about whether such unity can truly be achieved amidst the chaos.",
+    fears:
+      "Lyara fears losing the Yew Tree and the grove to the Iron Consortium, which would not only mean the betrayal of her people but also the awakening of monstrous entities from the Mire of Whispers. The thought of these dark forces being unleashed upon Aederyn weighs heavily on her, as she knows that the balance of magic and nature must be upheld at all costs.",
+    relationships: {
+      allies: [
+        "Thalen Glimmerwood - the Elunari elder who taught her the old rites of the Yew Tree",
+        "The Elunari - her people, sworn to protect the Verdant Thicket's sacred groves",
+      ],
+      enemies: [
+        "Gorak Ironfist - his forges and clear-cutting threaten the grove she guards",
+      ],
+    },
+  },
+  {
+    entity_id: "npc_quest_new__gorak_ironfist",
+    name: "Gorak Ironfist",
+    backstory:
+      "Gorak Ironfist started his life in the harsh Sunstone Desert, where survival meant embracing the flames of industry and ambition. Born to a family of blacksmiths, he learned the art of forging at an early age and quickly grew to believe that metal was the key to civilization's progress. After witnessing the collapse of his hometown due to dwindling resources, Gorak vowed not to let the same fate befall others. He spearheaded the Iron Consortium’s expansion into Aederyn, convinced that the bounty of Crystaltite would empower his people to rise above their past. However, his relentless pursuit of wealth and progress has made him blind to the consequences of his actions, especially towards the sacred lands of the Elunari.",
+    personalMission:
+      "Gorak's primary motivation is to extract as much Crystaltite as possible to establish an economic stronghold for the Iron Consortium. He believes that through mining and industrialization, he can prevent his people from facing another economic collapse, no matter the cost to the land or its inhabitants.",
+    hopes:
+      "Gorak hopes to create a prosperous future for the Iron Consortium, where every member has access to resources and power. He dreams of building a thriving city where industry and craftsmanship reign supreme, free from the constraints he faced in his youth.",
+    fears:
+      "Gorak fears the loss of his power and influence, particularly the thought of being usurped by rival factions like the Shadow Syndicate or the Elunari. He is also haunted by the possibility of history repeating itself, where his people could once again find themselves powerless and destitute if they do not harness the land's resources fully.",
+    relationships: {
+      rivals: [
+        "Lyara Glimmerleaf - the grove guardian who stands between him and the Thicket's timber",
+        "Thalen Glimmerwood - the Elunari elder who rallies the forest against his industry",
+      ],
+    },
+  },
+  {
+    entity_id: "npc_quest_new__thalen_glimmerwood",
+    name: "Thalen Glimmerwood",
+    backstory:
+      "Thalen Glimmerwood, a revered elder of the Elunari, has spent centuries in the Verdant Thicket, serving as a guardian of the forest's ancient wisdom. His lineage traces back to the first Elunari who forged a sacred bond with the Yew Tree, which is said to be the heart of Aederyn’s ley lines. The Yew Tree's roots intertwine with magical currents that nourish the land and its inhabitants. Thalen witnessed the rise of the Iron Consortium and their ruthless pursuit of Crystaltite, which threatens to disrupt the balance of magic in the realm. Haunted by visions of a dark future should the Yew Tree fall, he has dedicated himself to teaching the next generation the importance of preserving the forest and its sacred sites. He believes that the fate of Aederyn rests on the shoulders of those willing to stand against the encroaching darkness, leading him to seek out champions who can protect the grove.",
+    personalMission:
+      "To protect the Yew Tree and ensure that its magic continues to sustain Aederyn, while educating others about the importance of harmony with nature.",
+    hopes:
+      "Thalen hopes to rally enough support among the Elunari and other allies to prevent the Iron Consortium from destroying the sacred grove, believing that if the Yew Tree remains safe, Aederyn can thrive in balance with both nature and progress.",
+    fears:
+      "Thalen fears that if the Yew Tree is compromised, the protective magic it provides will wither, unleashing dark forces from the Mire of Whispers that could plunge Aederyn into chaos. He dreads the thought of his people losing their connection to the land and the ancient wisdom that sustains them.",
+    relationships: {
+      allies: [
+        "Lyara Glimmerleaf - his former pupil and the grove's sworn guardian",
+        "The Elunari - the people he has served as elder for centuries",
+      ],
+      enemies: [
+        "Gorak Ironfist - an industrialist who sees the Thicket only as fuel for his forges",
+        "The Iron Consortium - whose expansion endangers the forest's ancient wisdom",
+      ],
+    },
+  },
+  {
+    entity_id: "npc_quest_new__sylvara_of_the_heartwood",
+    name: "Sylvara of the Heartwood",
+    backstory:
+      "Sylvara is the awakened spirit of the Heartwood Sanctuary, a sacred grove that has stood for centuries as a nexus of life and magic within the Verdant Thicket. Once a guardian who maintained the delicate balance between nature and the forces that sought to exploit it, she fell into a deep slumber to protect the sanctuary from the encroaching chaos of the outside world. However, the awakening of the Iron Consortium, which seeks to extract resources from the Thicket, has caused a disturbance that has roused her from her slumber, flooding her with anger and a sense of betrayal. Sylvara’s essence is intertwined with the very heart of the forest, and the pain of its suffering echoes through her being. As she emerges, she struggles with the power of her feelings, seeking to reclaim her role while confronting the looming threat of those who disregard the sanctity of her home.",
+    personalMission:
+      "Sylvara's mission is to restore the balance of nature within the Heartwood Sanctuary by confronting the forces of the Iron Consortium that threaten her sacred grove. She desires to teach those who intrude on her territory the consequences of their actions while protecting the Elunari guardians who are caught in a moral conflict between their duties and the demands of industrial progress.",
+    hopes:
+      "Sylvara hopes to unify the Elunari and the Nerathi in a common cause to stand against the Iron Consortium, fostering a deep respect for nature among the peoples of Aederyn. She dreams of a future where the Heartwood Sanctuary flourishes and serves as a beacon of harmony, rather than a battleground for exploitation.",
+    fears:
+      "Sylvara fears that if her anger consumes her, she may become a force of destruction rather than a protector, potentially leading to irrevocable harm to the very forest she swore to guard. She also fears that the increasing conflict will lead to the ultimate decay of the Heartwood Sanctuary, leaving behind only echoes of its former glory.",
+    relationships: {
+      alliance: ["Korrin of the Thicket", "Elunari Guardians"],
+      antagonistic: ["Aric Faldin", "Iron Consortium"],
+    },
+  },
+  {
+    entity_id: "npc_quest_new__korrin_of_the_thicket",
+    name: "Korrin of the Thicket",
+    backstory:
+      "Korrin of the Thicket was born under the canopy of the Verdant Thicket, raised among the Elunari who have long revered the Heartwood Sanctuary as a sacred site. His parents were respected herbalists, known for their deep knowledge of the forest's flora and their ability to heal both body and spirit. Growing up, Korrin was enchanted by their work and the whispers of the ancient trees, often spending hours listening to the tales of the Elders about the spirit Sylvara who safeguards the grove. However, as he grew older, he began to recognize the growing reliance of his people on the sanctuary's power, and the resulting complacency that followed. The recent awakening of Sylvara, now wrought with fury, leaves Korrin torn between his loyalty to his people and his fear of the consequences of their actions. He now stands at the precipice of change, seeking to restore harmony but grappling with doubts about whether his people can truly change their ways.",
+    personalMission:
+      "Korrin's personal mission is to uncover the truth behind the spirit's awakening and restore balance between the Elunari and the Heartwood Sanctuary, believing that they must forge a new path that honors the land without sacrificing their strength.",
+    hopes:
+      "Korrin hopes to unite the Elunari in a new understanding of their relationship with the sanctuary, fostering a deeper respect for nature and its spirits, while also seeking redemption for the past mistakes of his people.",
+    fears:
+      "Korrin fears that if the spirit's wrath is not quelled, the Heartwood Sanctuary will be lost forever, along with his people's connection to nature. He also fears his own inability to convince them to change, leading to further destruction of their home.",
+    relationships: {
+      friends: [
+        "Sylvara of the Heartwood - the sanctuary's spirit, whom he has revered since childhood",
+      ],
+      allies: [
+        "The Elunari - the people who raised him beneath the Thicket's canopy",
+      ],
+      adversaries: [
+        "Aric Faldin - his mining ambitions put the Heartwood Sanctuary at risk",
+      ],
+    },
+  },
+  {
+    entity_id: "npc_quest_new__aric_faldin",
+    name: "Aric Faldin",
+    backstory:
+      "Aric Faldin was born into a family of miners and craftsmen who were once part of the Sunforged civilization. Growing up amidst the remnants of grandeur, he learned to appreciate the power of industry and the potential it held to bring prosperity to Aederyn. As a young boy, he witnessed his parents struggle to make ends meet, and he vowed to change their fate. This desire to uplift his family drove him to join the Iron Consortium, where he quickly climbed the ranks due to his keen intellect and ruthless ambition. Now, as a representative for the Consortium, Aric is determined to extract the energies of the Heartwood Sanctuary, believing it to be the key to a new age of progress for Aederyn.",
+    personalMission:
+      "To harness the mystical energies of the Heartwood Sanctuary to advance the Iron Consortium's cause, ensuring prosperity and security for his people, while overcoming the archaic beliefs of the Elunari.",
+    hopes:
+      "Aric hopes to unveil the potential of Aederyn's untapped resources, believing that industrial progress will lead to a golden age for all, where no one will ever have to suffer from poverty or hardship again.",
+    fears:
+      "He fears that if he fails to secure the Heartwood's power, the Iron Consortium will lose its influence and that Aederyn will fall into chaos and stagnation, returning to a time of struggle and despair. His greatest fear is that he will become just another forgotten tale of ambition gone wrong, like the fallen Sunforged.",
+    relationships: {
+      rivals: [
+        "Korrin of the Thicket - a stubborn defender of the Heartwood who blocks his surveys",
+      ],
+      enemies: [
+        "Sylvara of the Heartwood - the grove spirit whose power guards the ore beneath her roots",
+      ],
+      allies: [
+        "The Iron Consortium - his backers, eager to reclaim the Sunforged's buried wealth",
+      ],
+    },
+  },
 ];
 
 export const npcsById = new Map<string, NPC>(npcs.map((n) => [n.entity_id, n]));

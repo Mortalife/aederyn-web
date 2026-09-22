@@ -298,5 +298,68 @@
     ],
     "is_tutorial": false,
     "prerequisites": []
+  },
+  {
+    "id": "quest_new_side_quest_mj9cssmr",
+    "name": "The Forbidden Grove",
+    "description": "As you traverse the Verdant Thicket, a sudden tremor shakes the ground beneath your feet. The air seems to crackle with urgency as Elunari emissaries, their faces pale and eyes wide with fear, rush to your side. They speak of a forbidden grove, the Heartwood Sanctuary, where a dormant spirit has awakened—an ancient protector whose fury threatens to consume the forest. This disruption has caused the delicate balance of nature to spiral into chaos. The Elunari plead for your aid, hoping you can uncover the truth and quell the spirit's wrath before it brings devastation to their sacred land.",
+    "type": "exploration",
+    "giver": {
+      "entity_id": "npc_quest_new__sylvara_of_the_heartwood",
+      "zone_id": "tile_quest_new__sylvara_s_embrace"
+    },
+    "objectives": [
+      {
+        "id": "quest_new_side_quest_mj9cssmr_obj_0",
+        "description": "Speak with Korrin of the Thicket to learn about the Heartwood Sanctuary.",
+        "progress": null,
+        "type": "talk",
+        "entity_id": "npc_quest_new__korrin_of_the_thicket",
+        "zone_id": "tile_quest_new__sylvara_s_embrace",
+        "dialog_steps": []
+      },
+      {
+        "id": "quest_new_side_quest_mj9cssmr_obj_1",
+        "description": "Investigate the Heartwood Sanctuary to find Sylvara.",
+        "progress": null,
+        "type": "explore",
+        "zone_id": "tile_quest_new__sylvara_s_embrace",
+        "chance": 1,
+        "found_message": null
+      },
+      {
+        "id": "quest_new_side_quest_mj9cssmr_obj_2",
+        "description": "Defend the Heartwood Sanctuary from aggressive wildlife while trying to pacify Sylvara.",
+        "progress": null,
+        "type": "talk",
+        "entity_id": "npc_quest_new__sylvara_of_the_heartwood",
+        "zone_id": "tile_quest_new__sylvara_s_embrace",
+        "dialog_steps": []
+      },
+      {
+        "id": "quest_new_side_quest_mj9cssmr_obj_3",
+        "description": "Confront Aric Faldin about the Iron Consortium's actions.",
+        "progress": null,
+        "type": "talk",
+        "entity_id": "npc_quest_new__aric_faldin",
+        "zone_id": "tile_quest_new__sylvara_s_embrace",
+        "dialog_steps": []
+      }
+    ],
+    "completion": {
+      "entity_id": "npc_quest_new__sylvara_of_the_heartwood",
+      "zone_id": "tile_quest_new__sylvara_s_embrace",
+      "message": "Thank you for your help! The grove is safe once more.",
+      "return_message": "You have already completed this quest."
+    },
+    "rewards": [
+      {
+        "type": "item",
+        "item_id": "item_quest_new__verdant_embrace_amulet",
+        "amount": 1
+      }
+    ],
+    "prerequisites": [],
+    "is_tutorial": false
   }
 ]

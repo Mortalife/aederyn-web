@@ -1,5 +1,5 @@
 import { items } from "./items.js";
-import { resources, resourcesMap } from "./resources.js";
+import { resources, resourcesById } from "./resources.js";
 import { tileTypes } from "./tiles.js";
 import type { ResourceModel } from "./types.js";
 
@@ -36,7 +36,7 @@ function checkCircularDependencies(resources: ResourceModel[]): boolean {
     visited.add(resourceId);
     path.add(resourceId);
 
-    const resource = resourcesMap.get(resourceId);
+    const resource = resourcesById.get(resourceId);
     if (!resource) return false;
 
     for (const requiredItem of resource.required_items) {

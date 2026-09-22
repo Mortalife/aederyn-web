@@ -1,4 +1,5 @@
 import { html } from "hono/html";
+import type { HtmlEscapedString } from "hono/utils/html";
 import { textureMap } from "../config/assets.js";
 import type { WorldTile } from "../world/index.js";
 import {
@@ -10,7 +11,7 @@ import {
   MAX_INVENTORY_SIZE,
   type RewardItem,
 } from "../config.js";
-import { calculateProgress, type UserAction } from "../user/action.js";
+import type { UserAction } from "../user/action.js";
 import { restrictUserId, type ChatMessage } from "../social/chat.js";
 import { formatDistance } from "date-fns";
 import type { SystemMessage, SystemMessageActionType } from "../user/system.js";
@@ -674,31 +675,135 @@ const ZoneSectionHeader = (
   </div>
 `;
 
-export const Zone = (
-  user: GameUser,
-  worldTile: WorldTile,
-  inprogress?: UserAction,
-  players: OtherUser[] = [],
-  chatMessages: ChatMessage[] = [],
-  zoneQuests: ZoneQuests = {
-    availableQuests: [],
-    inProgressQuests: [],
-    completableQuests: [],
-    elsewhereQuests: [],
-    discoverableQuests: [],
-  },
-  npcInteractions: ZoneInteraction[] = [],
-  messages: SystemMessage[] = [],
-  resourceObjectives: Set<string> = new Set([]),
-  contextFlashes: Map<string, SystemMessage> = new Map([])
-) => {
-  const groupedResources = Object.groupBy(
-    worldTile.tile?.resources ?? [],
-    (resource) => resource.type
-  );
+/**
+ * The zone screen's layout. Each part is a fragment with a stable id,
+ * rendered separately so it can be patched on its own.
+ */
+export const Zone = (parts: {
+  header: HtmlEscapedString;
+  nav: HtmlEscapedString;
+  resources: HtmlEscapedString;
+  quests: HtmlEscapedString;
+  inventory: HtmlEscapedString;
+  players: HtmlEscapedString;
+  chatMessages: HtmlEscapedString;
+}) => html`<div id="zone" class="flex flex-col gap-4 pr-1">
+  ${parts.header} ${parts.nav} ${parts.resources} ${parts.quests}
+  ${parts.inventory}
 
+  <!-- Social Panel -->
+  <div
+    id="social"
+    class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
+    data-show="$_showSocial"
+  >
+    ${parts.players}
+
+    <!-- Chat Section -->
+    <div
+      id="chat"
+      class="flex flex-col gap-3 pt-4 border-t border-white/10"
+      data-signals__ifmissing="${JSON.stringify({ message: "" })}"
+    >
+      <h3 class="text-lg font-semibold">Zone Chat</h3>
+      <form
+        class="flex flex-row gap-2"
+        data-on:submit="@post('/game/chat'); $message = ''"
+      >
+        <input
+          type="text"
+          class="flex-grow px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-white/30 focus:outline-none transition-colors"
+          autocomplete="off"
+          data-bind="message"
+          maxlength="100"
+          data-on-keys__el__stop="1"
+          placeholder="Say something..."
+        />
+        <button class="btn btn-primary">Send</button>
+      </form>
+      ${parts.chatMessages}
+    </div>
+  </div>
+</div>`;
+
+export const ZoneHeader = (worldTile: WorldTile) => {
   const theme = getThemeColors(worldTile.tile?.theme);
-  const totalResources = worldTile.tile?.resources?.length ?? 0;
+
+  return html`<div
+    id="zone-header"
+    class="${theme.bg} ${theme.border} border rounded-xl p-4"
+  >
+    <div
+      class="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+    >
+      <div class="flex items-center gap-4">
+        <div class="p-3 rounded-xl bg-white/10 ${theme.accent}">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="size-8"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
+            />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold ${theme.text}">
+            ${worldTile.tile?.name}
+          </h1>
+          <p class="text-sm ${theme.accent} opacity-80">
+            ${worldTile.tile?.description ??
+            `Coordinates: ${worldTile.x}, ${worldTile.y}`}
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button
+          class="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-200 text-sm font-medium"
+          data-on:click="@post('/game/move/exit')"
+          data-on-keys:escape="el.click()"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="size-4"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+            />
+          </svg>
+          Exit Zone ${KeyboardShortcut("esc")}
+        </button>
+      </div>
+    </div>
+  </div>`;
+};
+
+export const ZoneNav = (props: {
+  worldTile: WorldTile;
+  user: GameUser;
+  playerCount: number;
+  zoneQuests: ZoneQuests;
+  npcInteractions: ZoneInteraction[];
+  contextFlashes: Map<string, SystemMessage>;
+}) => {
+  const { zoneQuests, contextFlashes } = props;
   const totalQuests =
     zoneQuests.availableQuests.length +
     zoneQuests.inProgressQuests.length +
@@ -706,262 +811,185 @@ export const Zone = (
   const hasQuestNotification =
     zoneQuests.availableQuests.length > 0 ||
     zoneQuests.completableQuests.length > 0 ||
-    npcInteractions.length > 0;
+    props.npcInteractions.length > 0;
 
-  return html`<div id="zone" class="flex flex-col gap-4 pr-1">
-    <!-- Zone Header -->
-    <div class="${theme.bg} ${theme.border} border rounded-xl p-4">
-      <div
-        class="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
-      >
-        <div class="flex items-center gap-4">
-          <div class="p-3 rounded-xl bg-white/10 ${theme.accent}">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="size-8"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h1 class="text-2xl md:text-3xl font-bold ${theme.text}">
-              ${worldTile.tile?.name}
-            </h1>
-            <p class="text-sm ${theme.accent} opacity-80">
-              ${worldTile.tile?.description ??
-              `Coordinates: ${worldTile.x}, ${worldTile.y}`}
-            </p>
-          </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <button
-            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-200 text-sm font-medium"
-            data-on:click="@post('/game/move/exit')"
-            data-on-keys:escape="el.click()"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="size-4"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
-              />
-            </svg>
-            Exit Zone ${KeyboardShortcut("esc")}
-          </button>
-        </div>
-      </div>
-    </div>
+  return html`<div
+    id="zone-nav"
+    class="sticky top-0 md:top-auto flex justify-center md:justify-start gap-1 md:gap-2 p-2 rounded-xl bg-[#0d0d0d] md:bg-black/20 border-b border-white/10 md:border"
+  >
+    ${ZoneNavButton(
+      "Actions",
+      "A",
+      "_showActions",
+      props.worldTile.tile?.resources?.length ?? 0,
+      ActionsIcon,
+      contextFlashes.has("resource")
+    )}
+    ${ZoneNavButton(
+      "Quests",
+      "Q",
+      "_showQuests",
+      totalQuests,
+      QuestsIcon,
+      hasQuestNotification || contextFlashes.has("quest")
+    )}
+    ${ZoneNavButton(
+      "Inventory",
+      "I",
+      "_showInventory",
+      props.user.i.length,
+      InventoryIcon,
+      contextFlashes.has("inventory")
+    )}
+    ${ZoneNavButton(
+      "Social",
+      "S",
+      "_showSocial",
+      props.playerCount,
+      SocialIcon,
+      false
+    )}
+  </div>`;
+};
 
-    <!-- Navigation Tabs -->
-    <div
-      id="zone-nav"
-      class="sticky top-0 md:top-auto flex justify-center md:justify-start gap-1 md:gap-2 p-2 rounded-xl bg-[#0d0d0d] md:bg-black/20 border-b border-white/10 md:border"
-    >
-      ${ZoneNavButton(
-        "Actions",
-        "A",
-        "_showActions",
-        totalResources,
-        ActionsIcon,
-        contextFlashes.has("resource")
-      )}
-      ${ZoneNavButton(
-        "Quests",
-        "Q",
-        "_showQuests",
-        totalQuests,
-        QuestsIcon,
-        hasQuestNotification || contextFlashes.has("quest")
-      )}
-      ${ZoneNavButton(
-        "Inventory",
-        "I",
-        "_showInventory",
-        user.i.length,
-        InventoryIcon,
-        contextFlashes.has("inventory")
-      )}
-      ${ZoneNavButton(
-        "Social",
-        "S",
-        "_showSocial",
-        players.length,
-        SocialIcon,
-        false
-      )}
-    </div>
+export const ZoneResources = (props: {
+  worldTile: WorldTile;
+  user: GameUser;
+  inprogress?: UserAction;
+  resourceObjectives: Set<string>;
+  contextFlashes: Map<string, SystemMessage>;
+}) => {
+  const { worldTile, inprogress } = props;
+  const groupedResources = Object.groupBy(
+    worldTile.tile?.resources ?? [],
+    (resource) => resource.type
+  );
+  const theme = getThemeColors(worldTile.tile?.theme);
+  const totalResources = worldTile.tile?.resources?.length ?? 0;
 
-    <!-- Actions Panel -->
-    <div
-      id="resources"
-      class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
-      data-show="$_showActions"
-    >
-      ${ZoneSectionHeader(
-        "Actions",
-        totalResources > 0
-          ? `${totalResources} activities available`
-          : "Nothing to do here",
-        ActionsIcon
-      )}
-      ${Object.entries(groupedResources).length === 0
-        ? html`<div class="text-center py-8 text-gray-400">
-            <p>No resources or activities available in this area.</p>
-            <p class="text-sm mt-2">Try exploring other zones!</p>
-          </div>`
-        : Object.entries(groupedResources).map(
-            ([type, resources]) => html`
-              <div class="flex flex-col gap-3">
-                <div class="flex items-center gap-2 ${theme.accent}">
-                  ${getResourceTypeIcon(type)}
-                  <h3 class="text-lg font-semibold capitalize">
-                    ${type === "workbench" ? "Crafting" : "Gathering"}
-                  </h3>
-                  <span class="text-xs opacity-60">(${resources.length})</span>
-                </div>
-                <div class="grid grid-cols-1 gap-2">
-                  ${resources.map((resource) =>
-                    ResourceItem({
-                      resource,
-                      inventory: user.i,
-                      inprogress:
-                        inprogress?.resource_id === resource.id
-                          ? {
-                              total: resource.collectionTime,
-                              current: calculateProgress(inprogress),
-                            }
-                          : undefined,
-                      flashMessage: contextFlashes.get(
-                        `resource:${resource.id}`
-                      ),
-                      isObjective: resourceObjectives.has(resource.id),
-                    })
-                  )}
-                </div>
+  return html`<div
+    id="resources"
+    class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
+    data-show="$_showActions"
+  >
+    ${ZoneSectionHeader(
+      "Actions",
+      totalResources > 0
+        ? `${totalResources} activities available`
+        : "Nothing to do here",
+      ActionsIcon
+    )}
+    ${Object.entries(groupedResources).length === 0
+      ? html`<div class="text-center py-8 text-gray-400">
+          <p>No resources or activities available in this area.</p>
+          <p class="text-sm mt-2">Try exploring other zones!</p>
+        </div>`
+      : Object.entries(groupedResources).map(
+          ([type, resources]) => html`
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center gap-2 ${theme.accent}">
+                ${getResourceTypeIcon(type)}
+                <h3 class="text-lg font-semibold capitalize">
+                  ${type === "workbench" ? "Crafting" : "Gathering"}
+                </h3>
+                <span class="text-xs opacity-60">(${resources.length})</span>
               </div>
-            `
-          )}
-    </div>
+              <div class="grid grid-cols-1 gap-2">
+                ${resources.map((resource) =>
+                  ResourceItem({
+                    resource,
+                    inventory: props.user.i,
+                    inprogress:
+                      inprogress?.resource_id === resource.id
+                        ? {
+                            startedAt: inprogress.inprogress_at,
+                            endsAt: inprogress.completed_at,
+                          }
+                        : undefined,
+                    flashMessage: props.contextFlashes.get(
+                      `resource:${resource.id}`
+                    ),
+                    isObjective: props.resourceObjectives.has(resource.id),
+                  })
+                )}
+              </div>
+            </div>
+          `
+        )}
+  </div>`;
+};
 
-    <!-- Quests Panel -->
-    ${Quests({
-      zoneQuests,
-      npcInteractions,
-      flashMessage: contextFlashes.get("quest"),
-    })}
+export const ZoneInventory = (user: GameUser) => html`<div
+  id="inventory"
+  class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
+  data-show="$_showInventory"
+>
+  ${ZoneSectionHeader(
+    "Inventory",
+    `${user.i.length}/${MAX_INVENTORY_SIZE} slots used`,
+    InventoryIcon
+  )}
+  <div
+    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 w-fit"
+  >
+    ${GoldIcon}
+    <span class="font-bold text-yellow-400">${user.$}</span>
+    <span class="text-sm text-yellow-400/70">Gold</span>
+  </div>
+  ${user.i.length === 0
+    ? html`<div class="text-center py-8 text-gray-400">
+        <p>Your inventory is empty.</p>
+        <p class="text-sm mt-2">Gather resources to fill it up!</p>
+      </div>`
+    : html`<div class="grid grid-cols-1 gap-2">
+        ${user.i.map((item, index) =>
+          InventorySlot({
+            slot: item,
+            index,
+          })
+        )}
+      </div>`}
+</div>`;
 
-    <!-- Inventory Panel -->
-    <div
-      id="inventory"
-      class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
-      data-show="$_showInventory"
-    >
-      ${ZoneSectionHeader(
-        "Inventory",
-        `${user.i.length}/${MAX_INVENTORY_SIZE} slots used`,
-        InventoryIcon
-      )}
-      <div
-        class="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 w-fit"
-      >
-        ${GoldIcon}
-        <span class="font-bold text-yellow-400">${user.$}</span>
-        <span class="text-sm text-yellow-400/70">Gold</span>
-      </div>
-      ${user.i.length === 0
-        ? html`<div class="text-center py-8 text-gray-400">
-            <p>Your inventory is empty.</p>
-            <p class="text-sm mt-2">Gather resources to fill it up!</p>
-          </div>`
-        : html`<div class="grid grid-cols-1 gap-2">
-            ${user.i.map((item, index) =>
-              InventorySlot({
-                slot: item,
-                index,
-              })
-            )}
+/**
+ * Who's in the zone. Rendered once per zone version and shared by everyone
+ * there, so it lists every player, the viewer included, and the client
+ * hides the viewer's own entry using the `user_id` signal.
+ */
+export const ZonePlayers = (players: OtherUser[]) => {
+  // Everyone who sees this is in the zone, so is on the list.
+  const others = Math.max(players.length - 1, 0);
+
+  return html`<div id="zone-players" class="flex flex-col gap-4">
+    ${ZoneSectionHeader(
+      "Social",
+      others > 0 ? `${others} players nearby` : "You're alone here",
+      SocialIcon
+    )}
+
+    <!-- Players Section -->
+    <div class="flex flex-col gap-3">
+      <h3 class="text-lg font-semibold flex items-center gap-2">
+        <span class="size-2 bg-green-500 rounded-full animate-pulse"></span>
+        Active Players
+      </h3>
+      ${others === 0
+        ? html`<p class="text-gray-400 text-sm">
+            No other players in this zone.
+          </p>`
+        : html`<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            ${players.map((player) => OtherPlayerInfo(player))}
           </div>`}
-    </div>
-
-    <!-- Social Panel -->
-    <div
-      id="social"
-      class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
-      data-show="$_showSocial"
-    >
-      ${ZoneSectionHeader(
-        "Social",
-        players.length > 0
-          ? `${players.length} players nearby`
-          : "You're alone here",
-        SocialIcon
-      )}
-
-      <!-- Players Section -->
-      <div class="flex flex-col gap-3">
-        <h3 class="text-lg font-semibold flex items-center gap-2">
-          <span class="size-2 bg-green-500 rounded-full animate-pulse"></span>
-          Active Players
-        </h3>
-        ${players.length === 0
-          ? html`<p class="text-gray-400 text-sm">
-              No other players in this zone.
-            </p>`
-          : html`<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              ${players.map((player) => OtherPlayerInfo(player))}
-            </div>`}
-      </div>
-
-      <!-- Chat Section -->
-      <div
-        id="chat"
-        class="flex flex-col gap-3 pt-4 border-t border-white/10"
-        data-signals__ifmissing="${JSON.stringify({ message: "" })}"
-      >
-        <h3 class="text-lg font-semibold">Zone Chat</h3>
-        <form
-          class="flex flex-row gap-2"
-          data-on:submit="@post('/game/chat'); $message = ''"
-        >
-          <input
-            type="text"
-            class="flex-grow px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-white/30 focus:outline-none transition-colors"
-            autocomplete="off"
-            data-bind="message"
-            maxlength="100"
-            data-on-keys__el__stop="1"
-            placeholder="Say something..."
-          />
-          <button class="btn btn-primary">Send</button>
-        </form>
-        ${ChatMessages(chatMessages, user)}
-      </div>
     </div>
   </div>`;
 };
 
-export const ChatMessages = (messages: ChatMessage[], user: GameUser) => {
-  const now = new Date();
+
+export const ChatMessages = (
+  messages: ChatMessage[],
+  user: GameUser,
+  now: number
+) => {
   return html` <div id="chat-messages" class="max-h-[400px] overflow-auto">
     ${messages.map((message) => {
       const isYou = message.user_id === user.id;
@@ -985,15 +1013,18 @@ export const ChatMessages = (messages: ChatMessage[], user: GameUser) => {
   </div>`;
 };
 
-export const GameMenu = (user: GameUser, messages?: SystemMessage[]) => {
+/** `alert` is the newest message while it's recent enough to colour the badge. */
+export const GameMenu = (
+  user: GameUser,
+  messages?: SystemMessage[],
+  alert?: SystemMessage | null
+) => {
   const hasMessages = messages && messages.length > 0;
-  const recentMessage = messages?.[0];
-  const hasRecentAlert =
-    recentMessage && recentMessage.sent_at > Date.now() - 10000;
+  const hasRecentAlert = !!alert;
 
   let alertColor = "";
-  if (hasRecentAlert) {
-    switch (recentMessage.type) {
+  if (alert) {
+    switch (alert.type) {
       case "error":
         alertColor = "text-red-400";
         break;
@@ -1242,7 +1273,8 @@ export const GameMenu = (user: GameUser, messages?: SystemMessage[]) => {
 export const UserInfo = (
   user: GameUser,
   messages?: SystemMessage[],
-  totalPlayersOnline?: number
+  totalPlayersOnline?: number,
+  alert?: SystemMessage | null
 ) => html`<div
   id="user-info"
   class="w-full flex flex-row justify-between items-center px-2"
@@ -1280,10 +1312,11 @@ export const UserInfo = (
         >`
       : null}
   </div>
-  ${GameMenu(user, messages)}
+  ${GameMenu(user, messages, alert)}
 </div>`;
 export const OtherPlayerInfo = (otherUser: OtherUser) => html` <div
   id="other-user-${otherUser.id}"
+  data-show="$user_id !== '${otherUser.id}'"
   class="w-full flex flex-row justify-between"
 >
   <p>${restrictUserId(otherUser.id)}</p>
@@ -1331,21 +1364,60 @@ export const ContextualFlash = (props: { message?: SystemMessage }) => {
   `;
 };
 
+type ProgressTimes = { startedAt: number; endsAt: number };
+
+/**
+ * A bar that fills from `startedAt` to `endsAt` (server clock, ms) on its own,
+ * so the server only sends it when the action starts.
+ *
+ * Each animated element starts a Web Animation in `data-init`, seeked to the
+ * elapsed time using the `_serverOffset` signal from `Game` to correct for
+ * the client's clock. Nothing in the HTML depends on the time of the render,
+ * and morphing doesn't touch running animations, so a later patch of the
+ * same bar leaves it running.
+ */
+const ProgressBar = (props: ProgressTimes & { id: string }) => {
+  const duration = props.endsAt - props.startedAt;
+  const seconds = Math.round(duration / 1000);
+  const animate = (keyframes: object) =>
+    `el.animate(${JSON.stringify(keyframes)}, { duration: ${duration}, delay: ${
+      props.startedAt
+    } - Date.now() - $_serverOffset, fill: 'forwards' })`;
+
+  return html`<div id="${props.id}" class="flex flex-col gap-1">
+    <div class="flex items-center justify-between text-xs text-gray-400">
+      <span>In Progress...</span>
+      <span class="font-mono"
+        ><span
+          id="${props.id}-seconds"
+          class="progress-seconds"
+          data-init="${animate([
+            { "--progress-seconds": 0 },
+            { "--progress-seconds": seconds },
+          ])}"
+        ></span
+        >/${seconds}s</span
+      >
+    </div>
+    <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+      <div
+        id="${props.id}-fill"
+        class="h-full w-0 bg-blue-500"
+        data-init="${animate([{ width: "0%" }, { width: "100%" }])}"
+      ></div>
+    </div>
+  </div>`;
+};
+
 export const ResourceItem = (props: {
   resource: Resource;
   inventory: InventoryItem[];
-  inprogress?: {
-    total: number;
-    current: number;
-  };
+  inprogress?: ProgressTimes;
   flashMessage?: SystemMessage;
   isObjective?: boolean;
 }) => {
   const hasRequirements = props.resource.required_items.length > 0;
   const hasRewards = props.resource.reward_items.length > 0;
-  const progressPercent = props.inprogress
-    ? Math.round((props.inprogress.current / props.inprogress.total) * 100)
-    : 0;
 
   const flashMessage = ContextualFlash({ message: props.flashMessage });
 
@@ -1414,20 +1486,10 @@ export const ResourceItem = (props: {
 
     <!-- Progress Bar (when active) -->
     ${props.inprogress
-      ? html`<div class="flex flex-col gap-1">
-          <div class="flex items-center justify-between text-xs text-gray-400">
-            <span>In Progress...</span>
-            <span class="font-mono"
-              >${props.inprogress.current}/${props.inprogress.total}s</span
-            >
-          </div>
-          <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-            <div
-              class="h-full bg-blue-500 transition-all duration-300"
-              style="width: ${progressPercent}%"
-            ></div>
-          </div>
-        </div>`
+      ? ProgressBar({
+          id: `progress-${props.resource.id}`,
+          ...props.inprogress,
+        })
       : null}
 
     <!-- Requirements & Rewards -->
@@ -1622,104 +1684,3 @@ export const DurabilityIcon = html`<svg
     d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
   />
 </svg>`;
-
-export const Messages = (messages: SystemMessage[], showLatest = false) => {
-  const last = messages[0];
-
-  let alertClass = "";
-
-  if (last && last.sent_at > Date.now() - 10000) {
-    switch (last.type) {
-      case "error":
-        alertClass = "text-red-500";
-        break;
-      case "warning":
-        alertClass = "text-yellow-500";
-        break;
-      case "success":
-        alertClass = "text-green-500";
-        break;
-      default:
-        break;
-    }
-    if (showLatest) {
-      return Message(last);
-    }
-  }
-
-  if (showLatest) {
-    return null;
-  }
-
-  return html`
-    <div class="drawer w-auto">
-      <input id="my-drawer" type="checkbox" class="drawer-toggle" />
-      <div class="drawer-content">
-        <label for="my-drawer" class="btn btn-ghost drawer-button"
-          ><svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="size-6 ${alertClass}"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
-            />
-          </svg>
-        </label>
-      </div>
-      <div class="drawer-side  z-20">
-        <label
-          for="my-drawer"
-          aria-label="close sidebar"
-          class="drawer-overlay"
-        ></label>
-
-        <div
-          class="menu min-w-[75%] md:min-w-[50%] h-full bg-base-100 flex flex-col gap-2"
-        >
-          <button
-            class="btn btn-sm btn-primary"
-            data-on:click="@delete('/game/system-messages')"
-          >
-            Remove All
-          </button>
-          <div
-            class="flex flex-col h-[90vh] max-h-full overflow-y-scroll gap-4"
-          >
-            ${messages.map((message) => Message(message))}
-          </div>
-        </div>
-      </div>
-      <div class="flex flex-col gap-2"></div>
-    </div>
-  `;
-};
-
-export const Message = (message: SystemMessage) => html`
-  <div
-    role="alert"
-    id="message-${message.id}"
-    class="flex flex-row justify-between alert ${message.type === "error"
-      ? "alert-error"
-      : message.type === "warning"
-      ? "alert-warning"
-      : message.type === "success"
-      ? "alert-success"
-      : "alert-info"}"
-  >
-    <span>${message.message}</span>
-    <div>
-      <button
-        class="btn btn-sm"
-        data-on:click="@delete('/game/system-messages/${message.id}')"
-      >
-        Remove
-      </button>
-    </div>
-  </div>
-`;

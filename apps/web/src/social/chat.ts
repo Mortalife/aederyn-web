@@ -1,4 +1,4 @@
-import { client } from "../database.js";
+import { reader } from "../db/reader.js";
 
 /**
  * 
@@ -12,20 +12,14 @@ export type ChatMessage = {
   sent_at: number;
 };
 
-export const saveMessage = async (user_id: string, message: string) => {
-  await client.execute({
-    sql: "INSERT INTO messages (id, user_id, message, sent_at) VALUES (null, ?, ?, ?)",
-    args: [user_id, message, Date.now()],
-  });
-};
-export const getMessages = async (since: number) => {
-  const result = await client.execute({
-    sql: "SELECT * FROM messages WHERE sent_at > ? ORDER BY sent_at DESC",
-    args: [since],
-  });
+export const MAX_CHAT_MESSAGE_LENGTH = 100;
 
-  return result.rows as unknown as ChatMessage[];
-};
+const selectMessagesSince = reader.prepare<[number], ChatMessage>(
+  "SELECT * FROM messages WHERE sent_at > ? ORDER BY sent_at DESC"
+);
+
+export const getMessages = (since: number) =>
+  selectMessagesSince.all(since);
 
 export const calculateMessageHistory = (online_at: number) =>
   online_at - 60 * 60 * 1000;

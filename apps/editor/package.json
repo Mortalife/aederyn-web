@@ -6,6 +6,7 @@
     "build": "vite build --mode client && tsup",
     "start": "NODE_ENV=production node --env-file=.env dist/index.js",
     "import-data": "tsx scripts/import-data.ts",
+    "validate": "tsx scripts/validate.ts",
     "test": "playwright test",
     "test:ui": "playwright test --ui"
   },
@@ -14,9 +15,7 @@
     "@hono/node-server": "^1.19.7",
     "cytoscape": "^3.30.4",
     "hono": "^4.10.8",
-    "openai": "^4.77.0",
-    "zod": "^3.25.76",
-    "zod-to-json-schema": "^3.25.0"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@hono/vite-build": "^1.2.1",

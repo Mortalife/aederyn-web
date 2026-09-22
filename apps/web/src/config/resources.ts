@@ -292,7 +292,10 @@ export const resources: ResourceModel[] = [
     amount: 15,
     limitless: false,
     collectionTime: 3,
-    reward_items: [{ item_id: "item_wild_grass", qty: 1 }],
+    reward_items: [
+      { item_id: "item_wild_grass", qty: 1 },
+      { item_id: "item_seed_01", qty: 1 },
+    ],
     required_items: [],
     type: "resource",
     verb: "Collect",
@@ -666,8 +669,36 @@ export const resources: ResourceModel[] = [
     type: "workbench",
     verb: "Craft",
   },
+  {
+    id: "resource_crafting_sickle",
+    name: "Stone Sickle",
+    limitless: true,
+    amount: 1,
+    reward_items: [{ item_id: "item_sickle_01", qty: 1 }],
+    required_items: [
+      { item_id: "item_stick_01", qty: 1, consumed: true },
+      { item_id: "item_stone_01", qty: 1, consumed: true },
+    ],
+    collectionTime: 10,
+    type: "workbench",
+    verb: "Craft",
+  },
+  {
+    id: "resource_crafting_fertilizer",
+    name: "Ash Compost",
+    limitless: true,
+    amount: 1,
+    reward_items: [{ item_id: "item_fertilizer_01", qty: 2 }],
+    required_items: [
+      { item_id: "item_ash_01", qty: 2, consumed: true },
+      { item_id: "item_moss_clump", qty: 1, consumed: true },
+    ],
+    collectionTime: 10,
+    type: "workbench",
+    verb: "Craft",
+  },
 ];
 
 export const resourcesById = new Map<string, ResourceModel>(
-  resources.map((r) => [r.id, r])
+  resources.map((r) => [r.id, r]),
 );

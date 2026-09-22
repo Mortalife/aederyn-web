@@ -1,231 +1,118 @@
 # Aederyn Online
 
-A web-based multiplayer RPG built with modern web standards, focusing on simplicity and performance. This monorepo contains both the game client/server and a comprehensive game design editor.
+A web-based multiplayer RPG built on web standards, focused on simplicity and performance. This monorepo contains the game and a game design editor.
 
 **Live Demo:** [https://web.aederyn.online/](https://web.aederyn.online/)
 
 ## 📁 Monorepo Structure
 
-This project uses [pnpm workspaces](https://pnpm.io/workspaces) to manage multiple packages:
+This project uses [pnpm workspaces](https://pnpm.io/workspaces):
 
 ```
 ├── apps/
-│   ├── web/          # Main game application
-│   └── editor/       # Game Design Editor GUI
+│   ├── web/          # The game (client + server)
+│   └── editor/       # Game design editor
 ├── packages/
-│   └── types/        # Shared TypeScript types
+│   └── types/        # Shared Zod schemas and TypeScript types
+└── .claude/skills/   # Claude Code skills for authoring game content
 ```
 
 ## 🚀 Tech Stack
 
 ### Game (`apps/web`)
-- **Framework**: [Hono](https://hono.dev/) (Running on Node.js)
-- **Frontend**: Hypermedia-driven UI (HTML over-the-wire) with [Datastar](https://data-star.dev/) patterns
-- **Templating**: TSX (JSX for server-side HTML generation)
-- **Database**: [LibSQL](https://turso.tech/libsql) (SQLite compatible)
+- **Framework**: [Hono](https://hono.dev/) on Node.js
+- **Frontend**: Hypermedia-driven UI (HTML over the wire) with [Datastar](https://data-star.dev/) patterns
+- **Templating**: TSX (server-side JSX)
+- **Database**: SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
 - **Styling**: [TailwindCSS](https://tailwindcss.com/) + [DaisyUI](https://daisyui.com/)
-- **AI Integration**: Anthropic integration for dynamic content generation
+- **Testing**: [Vitest](https://vitest.dev/)
 - **Build Tooling**: [Vite](https://vitejs.dev/) & [tsup](https://tsup.egoist.dev/)
 
 ### Editor (`apps/editor`)
 - **Framework**: [Hono](https://hono.dev/) with TSX templating
-- **AI Integration**: OpenAI for quest and world bible generation
 - **Visualization**: [Cytoscape.js](https://js.cytoscape.org/) for relationship graphs
-- **Validation**: [Zod](https://zod.dev/) schemas for data integrity
-- **Testing**: [Playwright](https://playwright.dev/) for E2E testing
+- **Validation**: [Zod](https://zod.dev/) schemas from `@aederyn/types`
+- **Testing**: [Playwright](https://playwright.dev/) for E2E tests
 
-## 🛠️ Prerequisites
+## 📦 Setup
 
-- Node.js (v20+ recommended)
-- [pnpm](https://pnpm.io/) (Package manager)
+Requires Node.js 20+ and [pnpm](https://pnpm.io/).
 
-## 📦 Installation & Setup
+```bash
+git clone git@github.com:Mortalife/aederyn-web.git
+cd aederyn-web
+pnpm install
+cp apps/web/.env.example apps/web/.env
+```
 
-1.  **Clone the repository**
+**Game (`apps/web/.env`):**
+- `SESSION_SECRET`: Random string used to encrypt sessions
+- `DATABASE_PATH`: Directory for the SQLite database (e.g. `./data/`)
 
-    ```bash
-    git clone https://github.com/your-username/game-html.git
-    cd game-html
-    ```
+```bash
+pnpm dev       # Game at http://localhost:3000
+pnpm editor    # Editor at http://localhost:3001
+```
 
-2.  **Install dependencies**
-
-    ```bash
-    pnpm install
-    ```
-
-3.  **Environment Configuration**
-    Copy the example environment file and fill in your API keys in each app.
-
-    ```bash
-    # For the game
-    cp apps/web/.env.example apps/web/.env
-    
-    # For the editor
-    cp apps/editor/.env.example apps/editor/.env
-    ```
-
-    **Game (`apps/web/.env`):**
-    - `SESSION_SECRET`: A random string for securing sessions
-    - `DATABASE_PATH`: (Optional) Path to the database file
-
-    **Editor (`apps/editor/.env`):**
-    - `OPENROUTER_API_KEY`: Required for AI quest and world bible generation
-
-4.  **Run Development Servers**
-    ```bash
-    # Run the game
-    pnpm dev
-    
-    # Run the editor (in a separate terminal)
-    pnpm editor
-    ```
-    - Game: `http://localhost:3000`
-    - Editor: `http://localhost:5173`
-
-## 🏗️ Architecture Overview
+## 🏗️ Game Architecture
 
 The game follows a basic CQRS pattern:
 
-- **Commands**: User actions (moving, crafting, chatting) are sent to specific endpoints (e.g., `/game/move/:direction`)
-- **Queries/Updates**: The game state is streamed back to the client via Server-Sent Events (SSE)
-- **Game Loop**: A central loop processes actions, resource regeneration, and system messages every 100ms
+- **Commands**: Player actions (moving, gathering, crafting, chatting) are posted to endpoints and queued
+- **Game loop** (`apps/web/src/game/`): A tick every 200ms applies queued commands and runs the game systems (resources, quests, presence, chat)
+- **Updates**: State is streamed to the client via Server-Sent Events (SSE)
 
-## 🎨 Game Design Editor
+## 🎨 Game Content
 
-The editor (`apps/editor`) is a comprehensive GUI for designing and managing game content without editing code directly.
+All game content (items, resources, tiles, NPCs, quests, house tiles and the world bible) lives as JSON in `apps/editor/data/`. That is the source of truth. The game reads generated TypeScript in `apps/web/src/config/`, which the editor's **Export** page writes.
 
-### Features
-
-- **Entity Management**: Create, edit, and delete Items, Resources, Tiles, NPCs, Quests, and House Tiles
-- **Visual Relationship Graph**: Interactive Cytoscape.js visualization showing connections between all entities
-- **Validation System**: Real-time validation with health scores, missing reference detection, and balance warnings
-- **Impact Analysis**: See how changes to one entity affect others across the game
-- **Export System**: Export configured entities to TypeScript files for the game
-
-### AI-Powered Generation
-
-- **Quest Generation**: AI-assisted quest creation with context-aware objectives, rewards, and dialog
-- **World Bible Generation**: Generate comprehensive lore including regions, factions, history, themes, and naming conventions
-- **Review System**: AI reviews generated content for consistency and balance
-
-### Editor Sections
+### Editor
 
 | Section | Description |
 |---------|-------------|
-| **Dashboard** | Overview with entity counts and health check status |
-| **Items** | Weapons, armor, tools, consumables with attributes and effects |
-| **Resources** | Gatherable materials, crafting stations, and workbenches |
-| **Tiles** | Map zones with themes, colors, and available resources |
-| **NPCs** | Characters with backstories, relationships, and dialog |
-| **Quests** | Multi-objective quests with prerequisites and rewards |
-| **House Tiles** | Player housing furniture and decorations |
-| **World Bible** | Lore management (regions, factions, history, themes) |
-| **Validation** | Data integrity checks and balance analysis |
-| **Graph View** | Visual entity relationship explorer |
-| **Export** | Generate TypeScript config files |
+| **Dashboard** | Entity counts and data health |
+| **Items / Resources / Tiles / NPCs / Quests / House Tiles** | Create, edit and delete entities |
+| **World Bible** | Lore: setting, themes, systems, factions, regions, history, naming conventions |
+| **Graph** | Interactive map of how entities reference each other |
+| **Validate** | Schema, reference and balance checks, with impact analysis |
+| **Export** | Writes `apps/web/src/config/*.ts` for the game |
 
-### Running the Editor
+### Authoring content with Claude Code
+
+Run Claude Code at the repo root and ask for content, for example *"create a side quest in the Mire of Whispers involving the Shadow Syndicate"* or *"add a fifth faction based in the Sunstone Desert"*. The skills in `.claude/skills/` guide it through the process:
+
+- `game-data`: shared rules (file layout, how entities reference each other, ID conventions, finding existing entities to reuse, lore)
+- `world-bible`: builds or extends the lore (setting, themes, systems, factions, regions, history, naming)
+- `create-item`, `create-resource`, `create-tile`, `create-npc`, `create-house-tile`: one per entity type
+- `create-quest`: plans a quest from the lore and creates everything it needs
+
+The agent edits `apps/editor/data/*.json` directly and must pass the validator before finishing. Review the result as a git diff and in the editor, then export.
+
+### Validation
 
 ```bash
-pnpm editor        # Run the editor
+pnpm --filter editor validate [--ids a,b] [--warnings] [--json]
 ```
 
-## 🎮 Game Configuration
+It checks every entity and the world bible against their schemas, cross-entity references (including those within the world bible), duplicate IDs, and whether quest objectives can actually be completed. It exits non-zero on errors. `--ids` limits pass/fail to the given entities. The editor's Validate page runs the same checks.
 
-The game content is defined in code-based configuration files located in `apps/web/src/config/`.
+## 🧪 Tests
 
-> ⚠️ **Recommendation:** Use the [Game Design Editor](#-game-design-editor) instead of editing config files directly. The editor provides validation, relationship visualization, and AI-assisted content generation to ensure data integrity.
-
-### Adding New Items
-
-Use the editor at `/items` or manually edit `apps/web/src/config/items.ts`:
-
-```typescript
-{
-  id: "item_new_sword",
-  name: "New Sword",
-  description: "A shiny new sword.",
-  type: "item", // or "resource", "tool"
-  rarity: "common",
-  stackable: false,
-  equippable: true,
-  equipSlot: "mainHand",
-  value: 100,
-  weight: 5,
-  attributes: {
-    damage: 10
-  }
-}
+```bash
+pnpm test          # Game unit tests (Vitest)
+pnpm editor:test   # Editor E2E tests (Playwright)
 ```
-
-### Adding NPCs
-
-Use the editor at `/npcs` or manually edit `apps/web/src/config/npcs.ts`:
-
-```typescript
-{
-  entity_id: "npc_guard",
-  name: "City Guard",
-  backstory: "A loyal protector of the realm.",
-  personalMission: "To keep the peace.",
-  // ... relationships, hopes, fears
-}
-```
-
-### Adding Tiles/Zones
-
-Use the editor at `/tiles` or manually edit `apps/web/src/config/tiles.ts`. Tiles define the look and available resources of a map area.
-
-```typescript
-{
-  id: "tile_volcano",
-  name: "Volcano",
-  color: "#FF0000",
-  theme: "fire",
-  resources: ["resource_obsidian"],
-  rarity: 0.1,
-  accessible: true
-}
-```
-
-### Adding Quests
-
-Use the editor at `/quests` for a visual quest builder with AI assistance, or:
-
-- **Static Quests**: Edit `apps/web/src/config/quests.ts`
-- **Dynamic Quests**: The `QuestManager` in `apps/web/src/user/quest-generator.ts` handles procedural generation
 
 ## 🤝 Contributing
 
-We welcome contributions! Please follow these guidelines:
+1. Create a branch for your change (`git checkout -b feature/my-change`)
+2. Commit, push and open a pull request
 
-1.  **Fork the repository**.
-2.  **Create a branch** for your feature or fix (`git checkout -b feature/amazing-feature`).
-3.  **Commit your changes** (`git commit -m 'Add amazing feature'`).
-4.  **Push to the branch** (`git push origin feature/amazing-feature`).
-5.  **Open a Pull Request**.
+Where things live:
 
-### Guidelines
-
-- Ensure code style is consistent (Prettier is configured)
-- If adding new game mechanics, please include relevant tests or configuration entries
-- Respect the existing directory structure:
-
-**Game (`apps/web/src/`):**
-- `config/`: Static game data (items, NPCs, tiles, quests)
-- `templates/`: TSX UI components
-- `user/`: User state and logic
-- `world/`: World state and logic
-- `ai/`: AI generation logic
-
-**Editor (`apps/editor/src/`):**
-- `templates/`: Editor UI components
-- `services/`: AI generation, validation, export logic
-- `repository/`: Data persistence
-
-**Shared (`packages/types/`):**
-- Type definitions shared between apps
+- **`apps/web/src/`**: `game/` (loop, commands, systems), `db/` (SQLite persistence), `user/`, `world/`, `social/`, `templates/` (TSX UI), `config/` (generated by the editor export)
+- **`apps/editor/src/`**: `templates/` (UI), `services/` (validation, graph, impact analysis, export), `repository/` (JSON data access)
+- **`packages/types/`**: Zod schemas and types shared by both apps
 
 ## 📜 License
 

@@ -1,65 +1,30 @@
 import { Context, Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { Session, sessionMiddleware } from "hono-sessions";
-import { Content, Layout } from "./templates/layout.js";
-import { fragmentEvent, redirectEvent } from "./sse/index.js";
-import { getTile, getTileSelection, isOutOfBounds } from "./world/index.js";
+import { Content } from "./templates/layout.js";
+import { fragmentEvent, patchEvent, redirectEvent } from "./sse/index.js";
 import { GameLogin } from "./templates/game.js";
-import {
-  getPopulatedUser,
-  getUser,
-  getUserSync,
-  saveUser,
-  transformUser,
-} from "./user/user.js";
-import { ChatMessages } from "./templates/elements.js";
-import { cleanupResources } from "./world/resources.js";
-import { removeFromInventoryById } from "./user/inventory.js";
-import {
-  CHAT_EVENT,
-  PubSub,
-  USER_EVENT,
-  ZONE_EVENT,
-  type ChatEvent,
-  type UserEvent,
-  type ZoneEvent,
-} from "./sse/pubsub.js";
-import {
-  calculateMessageHistory,
-  getMessages,
-  saveMessage,
-} from "./social/chat.js";
-import {
-  getOnlineStatus,
-  markUserOffline,
-  markUserOnline,
-} from "./social/active.js";
-import { sendGame } from "./templates/game-update.js";
-import {
-  markActionComplete,
-  markActionInProgress,
-  processActions,
-} from "./user/action.js";
-import type { GameUser } from "./config.js";
-import { addUserToZone, removeUserFromZone } from "./user/zone.js";
+import { getUser } from "./user/user.js";
+import { MAX_CHAT_MESSAGE_LENGTH } from "./social/chat.js";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { serve } from "@hono/node-server";
-import {
-  addSystemMessage,
-  cleanupSystemMessages,
-  clearAllUserSystemMessages,
-  removeSystemMessage,
-} from "./user/system.js";
-import { questProgressManager } from "./user/quest-progress-manager.js";
-import { questManager } from "./user/quest-generator.js";
-import { sessionStore } from "./lib/libsql-store.js";
-// import { houseRoutes } from "./house/routes.js";
-import pDebounce from "p-debounce";
-import { setTimeout as delay } from "timers/promises";
+import { sessionStore } from "./lib/sqlite-store.js";
 import { compression } from "./lib/compression.js";
 import { getStream, returnStream } from "./sse/stream.js";
 import { isProduction } from "./lib/runtime.js";
 import { env } from "./lib/env.js";
+import {
+  enqueue,
+  isDirection,
+  submit,
+  type Command,
+} from "./game/commands.js";
+import { startLoop } from "./game/loop.js";
+import {
+  closeConnection,
+  openConnection,
+  renderGameFor,
+} from "./game/connections.js";
 
 type SessionDataTypes = {
   user_id: string;
@@ -125,23 +90,21 @@ app.get("/", async (c) => {
   );
 });
 
-// app.route("/house", houseRoutes);
-
 app.post("/game/login", async (c) => {
   const { user_id = "", isMobile = false } = await c.req.json<{
     user_id: string;
     isMobile: boolean;
   }>();
-  const user = await getUserSync(user_id);
+  const id = await submit({ type: "login", userId: user_id });
 
-  if (user) {
+  if (id) {
     const session = c.get("session");
-    session.set("user_id", user.id);
+    session.set("user_id", id);
   }
 
   const stream = getStream(c);
 
-  if (!user) {
+  if (!id) {
     await stream.writeSSE(
       fragmentEvent(
         GameLogin({
@@ -160,9 +123,8 @@ app.post("/game/login", async (c) => {
 app.delete("/game/logout", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
-  const user = await getUserSync(user_id);
 
-  if (user) {
+  if (user_id) {
     session.deleteSession();
   }
   const stream = getStream(c);
@@ -174,103 +136,35 @@ app.delete("/game/logout", async (c) => {
 
 app.get("/game", async (c) => {
   const session = c.get("session");
-  const session_user_id = session.get("user_id") ?? "";
-  let id = 0;
+  const userId = session.get("user_id") ?? "";
 
   const datastarParam = c.req.query("datastar");
   const signals = datastarParam ? JSON.parse(datastarParam) : {};
-  const isMobile = signals.isMobile as boolean | undefined;
+  const isMobile = Boolean(signals.isMobile);
 
   const stream = getStream(c);
-  const tempUser = await getPopulatedUser(session_user_id);
-  if (!tempUser) {
+
+  if (!userId || !getUser(userId)) {
+    await stream.writeSSE(fragmentEvent(GameLogin({ user_id: "" })));
+    return returnStream(c, stream);
+  }
+
+  // Wait for it to commit so the first render sees the player online.
+  await submit({ type: "connect", userId });
+
+  // From here the tick sends this stream whatever changes.
+  const connection = openConnection(userId, isMobile, stream);
+
+  if (!connection) {
     await stream.writeSSE(
-      fragmentEvent(
-        GameLogin({
-          user_id: "",
-        })
-      )
+      fragmentEvent(GameLogin({ user_id: userId, error: "User not found" }))
     );
     return returnStream(c, stream);
   }
 
-  let user: GameUser = tempUser;
-
-  await markUserOnline(user.id);
-  if (user.z) {
-    await addUserToZone(user.id, user.p.x, user.p.y);
-  }
-
-  await sendGame(stream, {
-    user_id: user.id,
-    user,
-    isMobile,
-  });
-
-  const processChatEvent = pDebounce.promise(
-    async ({ user_id, message }: ChatEvent) => {
-      await delay(200);
-      console.log("chat message", user_id, message);
-
-      const status = await getOnlineStatus(session_user_id);
-      if (!status) {
-        return;
-      }
-
-      const messages = await getMessages(
-        calculateMessageHistory(status.online_at)
-      );
-
-      stream.writeSSE(fragmentEvent(ChatMessages(messages, user))).then(() => {
-        console.log("chat messages sent to user");
-      });
-    }
-  );
-
-  PubSub.subscribe(CHAT_EVENT, processChatEvent);
-
-  const sendUpdate = pDebounce.promise(async () => {
-    await delay(500);
-
-    await sendGame(stream, {
-      user_id: session_user_id,
-      isMobile,
-    });
-  });
-
-  const processZoneUpdate = async ({ x, y }: ZoneEvent) => {
-    if (x !== user.p.x || y !== user.p.y) {
-      // No need to process zones the user isn't in
-      return;
-    }
-
-    await sendUpdate();
-  };
-
-  PubSub.subscribe(ZONE_EVENT, processZoneUpdate);
-
-  const processUserEvent = async ({ user_id }: UserEvent) => {
-    if (user_id !== session_user_id) {
-      // Not for this user
-      return;
-    }
-
-    await sendUpdate();
-  };
-
-  PubSub.subscribe(USER_EVENT, processUserEvent);
-
-  stream.onAbort(async () => {
-    console.log("user aborted");
-    PubSub.off(CHAT_EVENT, processChatEvent);
-    PubSub.off(USER_EVENT, processUserEvent);
-    PubSub.off(ZONE_EVENT, processZoneUpdate);
-    await markUserOffline(user.id);
-    if (user.z) {
-      await removeUserFromZone(user.id);
-    }
-
-    console.log("user offline");
+  stream.onAbort(() => {
+    closeConnection(connection);
+    enqueue({ type: "disconnect", userId });
   });
 
   return returnStream(c, stream);
@@ -282,29 +176,17 @@ app.get("/game/refresh", async (c) => {
 
   const datastarParam = c.req.query("datastar");
   const signals = datastarParam ? JSON.parse(datastarParam) : {};
-  const isMobile = signals.isMobile as boolean | undefined;
+  const isMobile = Boolean(signals.isMobile);
 
   return streamSSE(
     c,
     async (stream) => {
-      const user = await getPopulatedUser(user_id);
-
-      if (!user) {
-        await stream.writeSSE(
-          fragmentEvent(
-            GameLogin({
-              user_id: "",
-              error: "User not found",
-            })
-          )
-        );
-        return;
-      }
-      await sendGame(stream, {
-        user_id: user.id,
-        user,
-        isMobile,
-      });
+      const game = renderGameFor(user_id, isMobile);
+      await stream.writeSSE(
+        game
+          ? patchEvent([game])
+          : fragmentEvent(GameLogin({ user_id, error: "User not found" }))
+      );
     },
     async (err, stream) => {
       console.error(err);
@@ -312,372 +194,136 @@ app.get("/game/refresh", async (c) => {
   );
 });
 
-app.post("/game/move/:direction", async (c) => {
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-  const direction = c.req.param("direction");
-
-  const user = await getPopulatedUser(user_id);
-
-  if (!user) {
-    return c.redirect("");
-  }
-
-  if (user.z && direction !== "exit") {
-    return c.body(null, 204);
-  }
-
-  // Cancel inprogress actions
-  await markActionComplete(user.id, user.p.x, user.p.y);
-
-  switch (direction) {
-    case "up":
-      user.p.y -= 1;
-      break;
-    case "down":
-      user.p.y += 1;
-      break;
-    case "left":
-      user.p.x -= 1;
-      break;
-    case "right":
-      user.p.x += 1;
-      break;
-    case "enter":
-      user.z = true;
-      await addUserToZone(user.id, user.p.x, user.p.y);
-      break;
-    case "exit":
-      user.z = false;
-      await removeUserFromZone(user.id);
-      break;
-    default:
-      console.error("Invalid direction");
-      return c.body(null, 204);
-  }
-
-  const mapTile = getTileSelection(user.p.x, user.p.y);
-
-  if (!isOutOfBounds(user.p.x, user.p.y) && mapTile.accessible) {
-    await saveUser(user.id, transformUser(user));
-  }
-
-  return c.body(null, 204);
-});
-
-app.get("/game/resources/:resource_id", async (c) => {
-  const resource_id = c.req.param("resource_id");
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-
-  const user = await getPopulatedUser(user_id);
-
-  if (!user) {
-    return c.redirect("");
-  }
-
-  const mapTile = await getTile(user.p.x, user.p.y);
-
-  if (!mapTile) {
-    return c.body(null, 204);
-  }
-
-  const resource = mapTile.resources.find(
-    (resource) => resource.id === resource_id
-  );
-
-  if (!resource) {
-    return c.body(null, 204);
-  }
-
-  const success = await markActionInProgress(user, resource.id);
-  if (!success) {
-    await addSystemMessage(user.id, "You can't do that yet.", "warning", {
-      action_type: "resource",
-      action_id: resource.id,
-    });
-    return c.body(null, 204);
-  }
-
-  return c.body(null, 204);
-});
-
-app.delete("/game/resources/:resource_id", async (c) => {
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-  const resource_id = c.req.param("resource_id");
-
-  const user = await getPopulatedUser(user_id);
-
-  if (!user) {
-    return c.redirect("");
-  }
-
-  const mapTile = await getTile(user.p.x, user.p.y);
-
-  if (!mapTile) {
-    return c.body(null, 204);
-  }
-
-  const resource = mapTile.resources.find(
-    (resource) => resource.id === resource_id
-  );
-
-  if (!resource) {
-    return c.body(null, 204);
-  }
-
-  await markActionComplete(user.id, user.p.x, user.p.y);
-
-  return c.body(null, 204);
-});
-
-app.post("/game/chat", async (c) => {
-  const { message } = await c.req.json();
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-
-  const user = await getUser(user_id);
-
-  if (!user) {
-    return c.redirect("");
-  }
-
-  const trimmedMessage = message.trim().slice(0, 100);
-
-  if (trimmedMessage.length === 0) {
-    return c.body(null, 204);
-  }
-
-  await saveMessage(user_id, trimmedMessage);
-
-  PubSub.publish(CHAT_EVENT, {
-    user_id,
-    message: trimmedMessage,
-  });
-
-  return c.body(null, 204);
-});
-
-app.delete("/game/inventory/:inventory_id", async (c) => {
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-  const inventory_id = c.req.param("inventory_id");
-
-  await removeFromInventoryById(user_id, inventory_id);
-
-  return c.body(null, 204);
-});
-
-app.delete("/game/system-messages", async (c) => {
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-
-  const user = await getPopulatedUser(user_id);
-
-  if (!user) {
-    return c.redirect("");
-  }
-
-  await clearAllUserSystemMessages(user.id);
-
-  return c.body(null, 204);
-});
-
-app.delete("/game/system-messages/:system_message_id", async (c) => {
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-  const systemMessageId = c.req.param("system_message_id");
-
-  const user = await getPopulatedUser(user_id);
-
-  if (!user) {
-    return c.redirect("");
-  }
-
-  if (!systemMessageId) {
-    return c.body(null, 204);
-  }
-
-  await removeSystemMessage(user.id, systemMessageId);
-
-  return c.body(null, 204);
-});
-
-app.post("/game/quest/:quest_id", async (c) => {
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-  const quest_id = c.req.param("quest_id");
-
-  const user = await getUser(user_id);
-
-  if (!user) {
-    return c.redirect("");
-  }
-
-  if (!quest_id) {
-    return c.body(null, 204);
-  }
-
-  const { availableQuests } = await questProgressManager.getZoneQuestsForUser(
-    user.id,
-    user.p.x,
-    user.p.y,
-    questManager
-  );
-
-  const quest = availableQuests.find((q) => q.id === quest_id);
-
-  if (!quest) {
-    //TODO: Add update event
-    await addSystemMessage(user.id, "No such quest", "error", {
-      action_type: "quest",
-      action_id: quest_id,
-    });
-    return c.body(null, 204);
-  }
-
-  await questProgressManager.startQuest(user.id, quest);
-
-  return c.body(null, 204);
-});
-
-app.put("/game/quest/:quest_id/objective/:objective_id", async (c) => {
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-  const quest_id = c.req.param("quest_id");
-  const objective_id = c.req.param("objective_id");
-
-  const user = await getUser(user_id);
-
-  console.log(user_id, quest_id, objective_id);
-
-  if (!user) {
-    return c.redirect("");
-  }
-
-  if (!quest_id) {
-    return c.body(null, 204);
-  }
-
-  const interactions = await questProgressManager.getZoneNPCInteractionsForUser(
-    user.id,
-    user.p.x,
-    user.p.y
-  );
-
-  const interaction = interactions.find(
-    (i) => i.quest_id === quest_id && i.objective.id === objective_id
-  );
-
-  if (!interaction || !interaction.objective.progress) {
-    await addSystemMessage(
-      user.id,
-      "Not sure what we're doing here...",
-      "error",
-      { action_type: "quest", action_id: quest_id }
-    );
+const commandRoute = (
+  toCommand: (c: Context<HonoApp>, userId: string) => Promise<Command | null>
+) =>
+  async (c: Context<HonoApp>) => {
+    const userId = c.get("session").get("user_id") ?? "";
+
+    if (!userId) {
+      return c.redirect("");
+    }
+
+    const command = await toCommand(c, userId);
+    if (command) {
+      enqueue(command);
+    }
 
     return c.body(null, 204);
-  }
+  };
 
-  await questProgressManager.updateObjectiveProgress(
-    user.id,
-    interaction.quest_id,
-    interaction.objective.id,
-    interaction.objective.progress?.current + 1
-  );
+app.post(
+  "/game/move/:direction",
+  commandRoute(async (c, userId) => {
+    const direction = c.req.param("direction");
 
-  return c.body(null, 204);
-});
+    return isDirection(direction)
+      ? { type: "move", userId, direction }
+      : null;
+  })
+);
 
-app.post("/game/quest/:quest_id/complete", async (c) => {
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-  const quest_id = c.req.param("quest_id");
+app.get(
+  "/game/resources/:resource_id",
+  commandRoute(async (c, userId) => ({
+    type: "gather_start",
+    userId,
+    resourceId: c.req.param("resource_id"),
+  }))
+);
 
-  const user = await getUser(user_id);
-  console.log(user_id, quest_id);
+app.delete(
+  "/game/resources/:resource_id",
+  commandRoute(async (c, userId) => ({
+    type: "gather_cancel",
+    userId,
+    resourceId: c.req.param("resource_id"),
+  }))
+);
 
-  if (!user) {
-    return c.redirect("");
-  }
+app.post(
+  "/game/chat",
+  commandRoute(async (c, userId) => {
+    const { message } = await c.req.json<{ message?: unknown }>();
 
-  if (!quest_id) {
-    return c.body(null, 204);
-  }
+    if (typeof message !== "string") {
+      return null;
+    }
 
-  const status = await questProgressManager.getQuestStatus(user.id, quest_id);
+    const trimmed = message.trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
 
-  if (!status) {
-    await addSystemMessage(user.id, "No such quest", "error", {
-      action_type: "quest",
-      action_id: quest_id,
-    });
-  } else if (status?.status === "in_progress") {
-    await addSystemMessage(user.id, "You're still on this quest!", "error", {
-      action_type: "quest",
-      action_id: quest_id,
-    });
-  } else if (status?.status === "completed") {
-    await addSystemMessage(
-      user.id,
-      "You've already completed this quest!",
-      "error",
-      { action_type: "quest", action_id: quest_id }
-    );
-  } else if (status?.status === "available") {
-    await addSystemMessage(
-      user.id,
-      "You haven't started this quest!",
-      "error",
-      { action_type: "quest", action_id: quest_id }
-    );
-  } else if (status?.status === "completable") {
-    await questProgressManager.completeQuest(user.id, quest_id, questManager);
-  }
+    return trimmed ? { type: "chat", userId, message: trimmed } : null;
+  })
+);
 
-  return c.body(null, 204);
-});
+app.delete(
+  "/game/inventory/:inventory_id",
+  commandRoute(async (c, userId) => ({
+    type: "inventory_drop",
+    userId,
+    inventoryId: c.req.param("inventory_id"),
+  }))
+);
 
-app.delete("/game/quest/:quest_id", async (c) => {
-  const session = c.get("session");
-  const user_id = session.get("user_id") ?? "";
-  const quest_id = c.req.param("quest_id");
-  const user = await getUser(user_id);
-  console.log(user_id, quest_id);
+app.delete(
+  "/game/system-messages",
+  commandRoute(async (_c, userId) => ({
+    type: "system_messages_clear",
+    userId,
+  }))
+);
 
-  if (!user) {
-    return c.redirect("");
-  }
+app.delete(
+  "/game/system-messages/:system_message_id",
+  commandRoute(async (c, userId) => ({
+    type: "system_message_remove",
+    userId,
+    messageId: c.req.param("system_message_id"),
+  }))
+);
 
-  if (!quest_id) {
-    return c.body(null, 204);
-  }
+app.post(
+  "/game/quest/:quest_id",
+  commandRoute(async (c, userId) => ({
+    type: "quest_start",
+    userId,
+    questId: c.req.param("quest_id"),
+  }))
+);
 
-  await questProgressManager.cancelQuest(user.id, quest_id);
+app.put(
+  "/game/quest/:quest_id/objective/:objective_id",
+  commandRoute(async (c, userId) => ({
+    type: "quest_advance",
+    userId,
+    questId: c.req.param("quest_id"),
+    objectiveId: c.req.param("objective_id"),
+  }))
+);
 
-  return c.body(null, 204);
-});
+app.post(
+  "/game/quest/:quest_id/complete",
+  commandRoute(async (c, userId) => ({
+    type: "quest_complete",
+    userId,
+    questId: c.req.param("quest_id"),
+  }))
+);
+
+app.delete(
+  "/game/quest/:quest_id",
+  commandRoute(async (c, userId) => ({
+    type: "quest_cancel",
+    userId,
+    questId: c.req.param("quest_id"),
+  }))
+);
 
 app.get("/health", (c) => {
   return c.text("OK");
 });
 
-setInterval(() => {
-  Promise.resolve()
-    .then(async () => {
-      const start = Date.now();
-      await cleanupResources();
-      await processActions();
-      await cleanupSystemMessages();
-
-      if (Date.now() - start > 100) {
-        console.log(`LAG: Processed actions in ${Date.now() - start}ms`);
-      }
-    })
-    .catch((err) => console.error(err));
-}, 100);
+startLoop();
 
 if (isProduction()) {
   serve({

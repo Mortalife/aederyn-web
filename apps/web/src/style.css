@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * The seconds counter on progress bars (`ProgressBar` in
+ * templates/elements.tsx), which animates --progress-seconds.
+ */
+@property --progress-seconds {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+.progress-seconds {
+  counter-reset: progress-seconds var(--progress-seconds);
+}
+
+.progress-seconds::before {
+  content: counter(progress-seconds);
+}

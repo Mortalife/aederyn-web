@@ -18,10 +18,8 @@ const navItems: NavItem[] = [
 
 const toolItems: NavItem[] = [
   { href: "/world", icon: "🌍", label: "World" },
-  { href: "/quests/generate", icon: "✨", label: "Quest Gen" },
   { href: "/graph", icon: "🔗", label: "Graph" },
   { href: "/validate", icon: "✅", label: "Validate" },
-  { href: "/ai", icon: "🤖", label: "AI Gen" },
   { href: "/export", icon: "📤", label: "Export" },
 ];
 

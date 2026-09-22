@@ -1,8 +1,6 @@
-import { questManager } from "./user/quest-generator.js";
+// The app rotates quests itself every hour (see game/loop.ts). This script is
+// for forcing a rotation by hand, e.g. after adding quests: `pnpm cron --force`.
+import { rotateQuestsOutsideLoop } from "./game/systems/quest-rotation.js";
 
-const main = async () => {
-  console.log("Rotating active quests");
-  await questManager.rotateActiveQuests();
-};
-
-main().catch(console.error);
+console.log("Rotating active quests");
+rotateQuestsOutsideLoop({ force: process.argv.includes("--force") });

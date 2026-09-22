@@ -1,38 +1,25 @@
 import { html } from "hono/html";
-import type { WorldTile } from "../world/index.js";
-import { UserInfo, WorldMap, Zone } from "./elements.js";
-import type { GameUser, OtherUser } from "../config.js";
-import type { UserAction } from "../user/action.js";
-import type { ChatMessage } from "../social/chat.js";
-import type { SystemMessage } from "../user/system.js";
-import type {
-  MapIndicator,
-  ZoneInteraction,
-  ZoneQuests,
-} from "../user/quest-progress-manager.js";
+import type { HtmlEscapedString } from "hono/utils/html";
 
+/**
+ * The game screen's shell. `info` and `content` are fragments rendered by
+ * `game/view/fragments.ts`, which also patches their parts on their own.
+ */
 export const Game = (props: {
-  map: WorldTile[];
-  mapIndicators: MapIndicator[];
-  user: GameUser;
-  inprogress?: UserAction;
-  messages?: SystemMessage[];
-  players?: OtherUser[];
-  chatMessages?: ChatMessage[];
-  quests?: ZoneQuests;
-  npcInteractions?: ZoneInteraction[];
-  isMobile?: boolean;
-  resourceObjectives?: Set<string>;
-  contextFlashes?: Map<string, SystemMessage>;
-  totalPlayersOnline?: number;
+  userId: string;
+  /** The server's clock when this was rendered. */
+  now: number;
+  info: HtmlEscapedString;
+  content: HtmlEscapedString;
 }) => {
   return html`
     <div
       id="game"
       class="md:container md:mx-auto flex flex-col gap-4 h-full"
-      data-signals="${JSON.stringify({
-        user_id: props.user.id,
-      })}"
+      data-signals="{
+        user_id: ${JSON.stringify(props.userId)},
+        _serverOffset: ${props.now} - Date.now(),
+      }"
       data-signals__if-missing="${JSON.stringify({
         _showActions: true,
         _showQuests: true,
@@ -40,33 +27,18 @@ export const Game = (props: {
         _showSocial: true,
       })}"
     >
-      <div id="info">
-        ${UserInfo(props.user, props.messages, props.totalPlayersOnline)}
-      </div>
-      <div id="content" class="flex-1 flex flex-col gap-4 overflow-auto">
-        ${!props.user.z
-          ? WorldMap(
-              props.map,
-              props.mapIndicators,
-              props.isMobile,
-              props.quests
-            )
-          : Zone(
-              props.user,
-              props.map.find((z) => z.here)!,
-              props.inprogress,
-              props.players,
-              props.chatMessages,
-              props.quests,
-              props.npcInteractions,
-              props.messages,
-              props.resourceObjectives,
-              props.contextFlashes
-            )}
-      </div>
+      ${props.info} ${props.content}
     </div>
   `;
 };
+
+/** The world map or the zone, whichever the player is in. */
+export const GameContent = (inner: HtmlEscapedString) => html`<div
+  id="content"
+  class="flex-1 flex flex-col gap-4 overflow-auto"
+>
+  ${inner}
+</div>`;
 
 export const GameContainer = (props: { user_id: string }) => html`
   <div
