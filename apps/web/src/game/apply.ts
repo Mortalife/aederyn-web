@@ -23,10 +23,12 @@ import {
   removeSystemMessage,
 } from "./systems/system-messages.js";
 import {
+  equipItem,
   loadUser,
   loginUser,
   removeFromInventoryById,
   saveUser,
+  unequipItem,
 } from "./systems/users.js";
 
 /**
@@ -144,6 +146,14 @@ export const apply = (command: Command, now: number): unknown => {
 
     case "inventory_drop":
       removeFromInventoryById(user.id, command.inventoryId, now);
+      return;
+
+    case "equip":
+      equipItem(user.id, command.inventoryId, now);
+      return;
+
+    case "unequip":
+      unequipItem(user.id, command.slot, now);
       return;
 
     case "system_messages_clear":

@@ -4,7 +4,11 @@ import { textureMap } from "../config/assets.js";
 import type { WorldTile } from "../world/index.js";
 import {
   type InventoryItem,
+  type EquipSlot,
   type GameUser,
+  type ItemAttributes,
+  type ItemDurability,
+  EQUIP_SLOTS,
   type OtherUser,
   type Resource,
   type RequiredItem,
@@ -27,6 +31,7 @@ import {
   ActionsIcon,
   QuestsIcon,
   InventoryIcon,
+  EquipmentIcon,
   SocialIcon,
 } from "./icons.js";
 
@@ -685,11 +690,12 @@ export const Zone = (parts: {
   resources: HtmlEscapedString;
   quests: HtmlEscapedString;
   inventory: HtmlEscapedString;
+  equipment: HtmlEscapedString;
   players: HtmlEscapedString;
   chatMessages: HtmlEscapedString;
 }) => html`<div id="zone" class="flex flex-col gap-4 pr-1">
   ${parts.header} ${parts.nav} ${parts.resources} ${parts.quests}
-  ${parts.inventory}
+  ${parts.inventory} ${parts.equipment}
 
   <!-- Social Panel -->
   <div
@@ -842,6 +848,14 @@ export const ZoneNav = (props: {
       contextFlashes.has("inventory")
     )}
     ${ZoneNavButton(
+      "Equipment",
+      "E",
+      "_showEquipment",
+      Object.keys(props.user.e).length,
+      EquipmentIcon,
+      false
+    )}
+    ${ZoneNavButton(
       "Social",
       "S",
       "_showSocial",
@@ -949,6 +963,87 @@ export const ZoneInventory = (user: GameUser) => html`<div
           })
         )}
       </div>`}
+</div>`;
+
+const EQUIP_SLOT_NAMES: Record<EquipSlot, string> = {
+  mainHand: "Main Hand",
+  offHand: "Off Hand",
+  head: "Head",
+  chest: "Chest",
+  legs: "Legs",
+  feet: "Feet",
+  hands: "Hands",
+  accessory: "Accessory",
+};
+
+/** "+2 damage, +1 armor" for the attributes that are set. */
+const formatAttributes = (attributes: ItemAttributes) =>
+  Object.entries(attributes)
+    .filter(([, value]) => value)
+    .map(([name, value]) => `${value > 0 ? "+" : ""}${value} ${name}`)
+    .join(", ");
+
+export const ZoneEquipment = (user: GameUser) => {
+  const totals: ItemAttributes = {};
+  for (const equipped of Object.values(user.e)) {
+    for (const [name, value] of Object.entries(
+      equipped.item.attributes ?? {}
+    )) {
+      const key = name as keyof ItemAttributes;
+      totals[key] = (totals[key] ?? 0) + (value ?? 0);
+    }
+  }
+  const bonuses = formatAttributes(totals);
+
+  return html`<div
+    id="equipment"
+    class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
+    data-show="$_showEquipment"
+  >
+    ${ZoneSectionHeader(
+      "Equipment",
+      bonuses || "No bonuses from equipment",
+      EquipmentIcon
+    )}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+      ${EQUIP_SLOTS.map((slot) => EquipmentSlot(slot, user.e[slot]))}
+    </div>
+  </div>`;
+};
+
+const EquipmentSlot = (slot: EquipSlot, equipped?: InventoryItem) => html`<div
+  id="equipment-${slot}"
+  class="flex flex-row gap-3 items-center p-3 rounded-xl border ${equipped
+    ? "bg-white/5 border-white/10"
+    : "border-dashed border-white/10"}"
+>
+  <div class="flex flex-col gap-0.5 flex-1 min-w-0">
+    <span class="text-xs uppercase tracking-wide text-gray-400"
+      >${EQUIP_SLOT_NAMES[slot]}</span
+    >
+    ${equipped
+      ? html`<span class="font-semibold text-white truncate"
+            >${equipped.item.name}</span
+          >
+          ${equipped.item.attributes
+            ? html`<span class="text-xs text-green-400"
+                >${formatAttributes(equipped.item.attributes)}</span
+              >`
+            : null}`
+      : html`<span class="text-sm text-gray-500">Empty</span>`}
+  </div>
+  ${equipped?.item.durability
+    ? DurabilityMeter(equipped.item.durability)
+    : null}
+  ${equipped
+    ? html`<button
+        class="px-3 py-1.5 rounded-lg text-sm bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
+        data-on:click="@delete('/game/equipment/${slot}')"
+        title="Move to inventory"
+      >
+        Unequip
+      </button>`
+    : null}
 </div>`;
 
 /**
@@ -1588,17 +1683,7 @@ export const InventorySlot = (props: {
   slot: InventoryItem;
   index: number;
 }) => {
-  const durability = props.slot.item.durability;
-  const durabilityPercent = durability
-    ? Math.round((durability.current / durability.max) * 100)
-    : null;
-  const durabilityColor = durabilityPercent
-    ? durabilityPercent > 50
-      ? "text-green-400"
-      : durabilityPercent > 25
-      ? "text-yellow-400"
-      : "text-red-400"
-    : "";
+  const { item } = props.slot;
 
   return html`<div
     id="inventory-${props.slot.id}"
@@ -1614,36 +1699,24 @@ export const InventorySlot = (props: {
     <!-- Item Info -->
     <div class="flex flex-col gap-0.5 flex-1 min-w-0">
       <span class="font-semibold text-white truncate"
-        >${props.slot.item.name}</span
+        >${item.name}</span
       >
       <span class="text-xs text-gray-400 line-clamp-1"
-        >${props.slot.item.description}</span
+        >${item.description}</span
       >
     </div>
 
     <!-- Durability (if applicable) -->
-    ${durability
-      ? html`<div class="flex items-center gap-2">
-          <div class="flex flex-col items-end gap-0.5">
-            <div class="flex items-center gap-1 ${durabilityColor}">
-              ${DurabilityIcon}
-              <span class="text-sm font-mono"
-                >${durability.current}/${durability.max}</span
-              >
-            </div>
-            <div class="w-16 h-1.5 rounded-full bg-white/10 overflow-hidden">
-              <div
-                class="h-full transition-all duration-300 ${durabilityPercent &&
-                durabilityPercent > 50
-                  ? "bg-green-500"
-                  : durabilityPercent && durabilityPercent > 25
-                  ? "bg-yellow-500"
-                  : "bg-red-500"}"
-                style="width: ${durabilityPercent}%"
-              ></div>
-            </div>
-          </div>
-        </div>`
+    ${item.durability ? DurabilityMeter(item.durability) : null}
+
+    ${item.equippable && item.equipSlot
+      ? html`<button
+          class="px-3 py-1.5 rounded-lg text-sm bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
+          data-on:click="@post('/game/equipment/${props.slot.id}')"
+          title="Equip to ${EQUIP_SLOT_NAMES[item.equipSlot]}"
+        >
+          Equip
+        </button>`
       : null}
 
     <!-- Delete Button -->
@@ -1667,6 +1740,33 @@ export const InventorySlot = (props: {
         />
       </svg>
     </button>
+  </div>`;
+};
+
+const DurabilityMeter = (durability: ItemDurability) => {
+  const percent = Math.round((durability.current / durability.max) * 100);
+  const [text, bar] =
+    percent > 50
+      ? ["text-green-400", "bg-green-500"]
+      : percent > 25
+      ? ["text-yellow-400", "bg-yellow-500"]
+      : ["text-red-400", "bg-red-500"];
+
+  return html`<div class="flex items-center gap-2">
+    <div class="flex flex-col items-end gap-0.5">
+      <div class="flex items-center gap-1 ${text}">
+        ${DurabilityIcon}
+        <span class="text-sm font-mono"
+          >${durability.current}/${durability.max}</span
+        >
+      </div>
+      <div class="w-16 h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <div
+          class="h-full transition-all duration-300 ${bar}"
+          style="width: ${percent}%"
+        ></div>
+      </div>
+    </div>
   </div>`;
 };
 

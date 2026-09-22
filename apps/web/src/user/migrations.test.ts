@@ -96,6 +96,12 @@ describe("migrations", () => {
       expect(result.$).toBe(0);
     });
 
+    it("replaces the old placeholder equipment with empty slots", () => {
+      const user = createTestUser({ v: 1, e: { mh: "x" } as never });
+
+      expect(migrateUser(user).e).toEqual({});
+    });
+
     it("preserves existing user data during migration", () => {
       const user = createTestUser({
         id: "preserve-test",

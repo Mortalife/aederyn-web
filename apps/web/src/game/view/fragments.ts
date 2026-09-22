@@ -6,6 +6,7 @@ import {
   WorldMap,
   Zone,
   ZoneHeader,
+  ZoneEquipment,
   ZoneInventory,
   ZoneNav,
   ZonePlayers,
@@ -150,6 +151,11 @@ export const buildScreen = (
       render: () => ZoneInventory(user),
     },
     {
+      id: "equipment",
+      key: u,
+      render: () => ZoneEquipment(user),
+    },
+    {
       id: "zone-players",
       // Shared by everyone in the zone: no user in the key.
       key: `${zone}:${z}`,
@@ -176,6 +182,7 @@ export const buildScreen = (
               resources: part(parts, "resources"),
               quests: part(parts, "quests"),
               inventory: part(parts, "inventory"),
+              equipment: part(parts, "equipment"),
               players: part(parts, "zone-players"),
               chatMessages: part(parts, "chat-messages"),
             })

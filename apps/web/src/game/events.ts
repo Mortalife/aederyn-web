@@ -10,6 +10,7 @@ export type GameEvent =
   | {
       type: "inventory_changed";
       userId: string;
+      /** Everything the user owns: the inventory and what's equipped. */
       inventory: UserInventoryItem[];
     }
   | { type: "resource_completed"; userId: string; resourceId: string };

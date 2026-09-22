@@ -1,3 +1,4 @@
+import { EquipSlotSchema } from "@aederyn/types";
 import type { GameUserModel } from "./config/types.js";
 import type { Point } from "./world/index.js";
 
@@ -17,7 +18,9 @@ export const START_POSITION: Point = {
   y: Math.ceil(MAP_HEIGHT / 2),
 };
 
-export const USER_VERSION = 1;
+export const EQUIP_SLOTS = EquipSlotSchema.options;
+
+export const USER_VERSION = 2;
 
 export const BASE_USER: GameUserModel = {
   id: "",

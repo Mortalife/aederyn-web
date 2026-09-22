@@ -8,7 +8,12 @@ import { userChanged, zoneChanged } from "../changes.js";
 import { emit } from "../events.js";
 import { markResourceUsed } from "./resources.js";
 import { addSystemMessage } from "./system-messages.js";
-import { addToInventory, loadUser, updateInventory } from "./users.js";
+import {
+  addToInventory,
+  loadUser,
+  ownedItems,
+  saveInventory,
+} from "./users.js";
 
 const countUserActions = writer.prepare<[string], { count: number }>(
   "SELECT count(*) AS count FROM inprogress WHERE user_id = ?"
@@ -57,7 +62,7 @@ export const markActionComplete = (user_id: string, x: number, y: number) => {
 
 /**
  * Checks the user has the items the resource needs, and if so consumes them
- * and wears down tools.
+ * and wears down tools. Equipped items count as well as the inventory.
  */
 const resourceRequirementsCheck = (
   user_id: string,
@@ -69,7 +74,14 @@ const resourceRequirementsCheck = (
     return true;
   }
 
-  const inventory = loadUser(user_id)?.i ?? [];
+  const user = loadUser(user_id);
+
+  if (!user) {
+    return false;
+  }
+
+  // Equipped tools count too, and wear down in their slot.
+  const inventory = ownedItems(user);
 
   for (const requiredItem of resource.required_items) {
     const [qty, durability] = inventory.reduce(
@@ -165,11 +177,7 @@ const resourceRequirementsCheck = (
     }
   }
 
-  updateInventory(
-    user_id,
-    inventory.filter((i) => i.qty > 0),
-    now
-  );
+  saveInventory(user);
 
   return true;
 };

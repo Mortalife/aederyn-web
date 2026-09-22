@@ -19,7 +19,11 @@ const { questProgressManager } = await import(
 );
 const { getTileSelection } = await import("../world/index.js");
 const { resourcesById } = await import("../config/resources.js");
-const { MAP_HEIGHT, MAP_WIDTH } = await import("../config.js");
+const { MAP_HEIGHT, MAP_WIDTH, MAX_INVENTORY_SIZE } = await import(
+  "../config.js"
+);
+type GameUserModel = import("../config.js").GameUserModel;
+type Resource = import("../config.js").ResourceModel;
 const { writer } = await import("../db/writer.js");
 const { bumpQuests } = await import("./versions.js");
 const { quests: questConfig } = await import("../config/quests.js");
@@ -40,25 +44,33 @@ const freeResourceAt = (x: number, y: number) =>
     .resources.map((id) => resourcesById.get(id))
     .find((r) => r && r.required_items.length === 0 && r.limitless);
 
+/** Overwrite parts of the stored user, for state no command can reach. */
+const setUser = (changes: Partial<GameUserModel>) => {
+  const user = getUser(userId)!;
+  writer
+    .prepare("UPDATE users SET data = ? WHERE id = ?")
+    .run(JSON.stringify({ ...user, ...changes }), userId);
+};
+
 /**
- * Put the player on a tile with a limitless resource that needs no items.
+ * Put the player in a zone with a resource `find` picks out.
  * There's no teleport command, so this writes the position directly.
  */
-const placeOnResource = async () => {
+const placeOn = (find: (x: number, y: number) => Resource | undefined) => {
   for (let x = 0; x < MAP_WIDTH; x++) {
     for (let y = 0; y < MAP_HEIGHT; y++) {
-      const resource = freeResourceAt(x, y);
+      const resource = find(x, y);
       if (resource && getTileSelection(x, y).accessible) {
-        const user = getUser(userId)!;
-        writer
-          .prepare("UPDATE users SET data = ? WHERE id = ?")
-          .run(JSON.stringify({ ...user, p: { x, y }, z: true }), userId);
+        setUser({ p: { x, y }, z: true });
         return resource;
       }
     }
   }
-  throw new Error("No gatherable resource on the map");
+  throw new Error("No matching resource on the map");
 };
+
+/** A limitless resource that needs no items. */
+const placeOnResource = async () => placeOn(freeResourceAt);
 
 beforeAll(async () => {
   userId = (await run({ type: "login", userId: "" }))!;
@@ -274,5 +286,85 @@ describe("game loop", () => {
     expect(questProgressManager.getQuestStatus(userId, questId)?.status).toBe(
       "completed"
     );
+  });
+});
+
+describe("equipment", () => {
+  const axe = (id: string, currentDurability = 10) => ({
+    id,
+    qty: 1,
+    item_id: "item_stone_axe_01",
+    metadata: { currentDurability },
+  });
+
+  it("moves an equipped item out of the inventory, swapping what was there", async () => {
+    setUser({ i: [axe("axe-1"), axe("axe-2")], e: {} });
+
+    await run({ type: "equip", userId, inventoryId: "axe-1" });
+    expect(getUser(userId)!.e.mainHand?.id).toBe("axe-1");
+    expect(getUser(userId)!.i.map((i) => i.id)).toEqual(["axe-2"]);
+
+    await run({ type: "equip", userId, inventoryId: "axe-2" });
+    expect(getUser(userId)!.e.mainHand?.id).toBe("axe-2");
+    expect(getUser(userId)!.i.map((i) => i.id)).toEqual(["axe-1"]);
+  });
+
+  it("won't equip an item without a slot", async () => {
+    setUser({ i: [{ id: "grass", qty: 1, item_id: "item_grass_01" }], e: {} });
+
+    await run({ type: "equip", userId, inventoryId: "grass" });
+
+    expect(getUser(userId)!.e).toEqual({});
+    expect(getUser(userId)!.i.map((i) => i.id)).toEqual(["grass"]);
+    expect(getSystemMessages(userId).map((m) => m.message)).toContain(
+      "You can't equip Wild Grass."
+    );
+  });
+
+  it("unequips into the inventory only when there's room", async () => {
+    const full = Array.from({ length: MAX_INVENTORY_SIZE }, (_, n) => ({
+      id: `grass-${n}`,
+      qty: 1,
+      item_id: "item_grass_01",
+    }));
+    setUser({ i: full, e: { mainHand: axe("axe-1") } });
+
+    await run({ type: "unequip", userId, slot: "mainHand" });
+    expect(getUser(userId)!.e.mainHand?.id).toBe("axe-1");
+    expect(getSystemMessages(userId).map((m) => m.message)).toContainEqual(
+      expect.stringMatching(/^Your inventory is full/)
+    );
+
+    setUser({ i: full.slice(1) });
+    await run({ type: "unequip", userId, slot: "mainHand" });
+    expect(getUser(userId)!.e).toEqual({});
+    expect(getUser(userId)!.i.at(-1)?.id).toBe("axe-1");
+  });
+
+  it("gathers with an equipped tool and wears it down in its slot", async () => {
+    const resource = placeOn((x, y) =>
+      getTileSelection(x, y)
+        .resources.map((id) => resourcesById.get(id))
+        .find(
+          (r) =>
+            r?.required_items.length === 1 &&
+            r.required_items[0]!.item_id === "item_stone_axe_01" &&
+            r.required_items[0]!.itemDurabilityReduction
+        )
+    );
+    const wear = resource.required_items[0]!.itemDurabilityReduction!;
+    setUser({ i: [], e: { mainHand: axe("axe-1") } });
+
+    await run({ type: "gather_start", userId, resourceId: resource.id });
+    now += resource.collectionTime * 1000 + 1;
+    tick(now);
+
+    const user = getUser(userId)!;
+    expect(user.e.mainHand?.metadata?.currentDurability).toBe(10 - wear);
+    for (const reward of resource.reward_items) {
+      expect(user.i.find((i) => i.item_id === reward.item_id)?.qty).toBe(
+        reward.qty
+      );
+    }
   });
 });

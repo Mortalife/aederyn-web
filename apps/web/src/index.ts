@@ -16,6 +16,7 @@ import { env } from "./lib/env.js";
 import {
   enqueue,
   isDirection,
+  isEquipSlot,
   submit,
   type Command,
 } from "./game/commands.js";
@@ -263,6 +264,24 @@ app.delete(
     userId,
     inventoryId: c.req.param("inventory_id"),
   }))
+);
+
+app.post(
+  "/game/equipment/:inventory_id",
+  commandRoute(async (c, userId) => ({
+    type: "equip",
+    userId,
+    inventoryId: c.req.param("inventory_id"),
+  }))
+);
+
+app.delete(
+  "/game/equipment/:slot",
+  commandRoute(async (c, userId) => {
+    const slot = c.req.param("slot");
+
+    return isEquipSlot(slot) ? { type: "unequip", userId, slot } : null;
+  })
 );
 
 app.delete(

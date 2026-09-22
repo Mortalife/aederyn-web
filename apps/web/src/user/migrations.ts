@@ -14,6 +14,16 @@ const migrations: Migration[] = [
       $: 0,
     }),
   },
+  {
+    // Equipment used to be a placeholder `{ mh?: string }` that nothing
+    // wrote to. Slots now hold the equipped inventory item.
+    version: 2,
+    up: (user) => ({
+      ...user,
+      v: 2,
+      e: {},
+    }),
+  },
 ];
 
 export const getCurrentVersion = (): number => USER_VERSION;

@@ -1,4 +1,9 @@
-import { type GameUser, type GameUserModel } from "../config.js";
+import {
+  type GameUser,
+  type GameUserModel,
+  type InventoryItem,
+  type UserInventoryItem,
+} from "../config.js";
 import { reader } from "../db/reader.js";
 import { itemsById } from "../config/items.js";
 import { migrateUser, needsMigration } from "./migrations.js";
@@ -22,23 +27,28 @@ export const getUser = (id: string) => {
   return row ? parseUser(row.data) : null;
 };
 
+const populateItem = (item: UserInventoryItem): InventoryItem => {
+  const itemObj = itemsById.get(item.item_id)!;
+  const userObj = structuredClone(itemObj);
+
+  if (userObj.durability) {
+    userObj.durability.current =
+      item.metadata?.currentDurability ?? userObj.durability.current;
+  }
+
+  return {
+    id: item.id,
+    qty: item.qty,
+    item: userObj,
+  };
+};
+
 export const populateUser = (user: GameUserModel): GameUser => ({
   ...user,
-  i: user.i.map((item) => {
-    const itemObj = itemsById.get(item.item_id)!;
-    const userObj = structuredClone(itemObj);
-
-    if (userObj.durability) {
-      userObj.durability.current =
-        item.metadata?.currentDurability ?? userObj.durability.current;
-    }
-
-    return {
-      id: item.id,
-      qty: item.qty,
-      item: userObj,
-    };
-  }),
+  i: user.i.map(populateItem),
+  e: Object.fromEntries(
+    Object.entries(user.e).map(([slot, item]) => [slot, populateItem(item)])
+  ),
 });
 
 export const getPopulatedUser = (id: string): GameUser | null => {

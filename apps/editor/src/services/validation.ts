@@ -125,6 +125,20 @@ export async function runValidation(): Promise<ValidationResult> {
     }
   }
 
+  // The game equips items by slot, so an equippable item without one can't be equipped
+  for (const item of items) {
+    if (item.equippable && !item.equipSlot) {
+      errors.push({
+        type: "invalid_schema",
+        source: item.id,
+        sourceName: item.name,
+        sourceType: "item",
+        reference: "equippable items need an equipSlot",
+        location: "equipSlot",
+      });
+    }
+  }
+
   checkSchema([{ id: "world-bible", name: worldBible.name, data: worldBible }], WorldBibleSchema, "world-bible");
 
   // Duplicate IDs within a type: lookups by ID silently return the first match

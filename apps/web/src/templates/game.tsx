@@ -24,6 +24,7 @@ export const Game = (props: {
         _showActions: true,
         _showQuests: true,
         _showInventory: true,
+        _showEquipment: true,
         _showSocial: true,
       })}"
     >
