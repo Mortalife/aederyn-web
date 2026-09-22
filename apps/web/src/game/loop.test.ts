@@ -341,7 +341,8 @@ describe("equipment", () => {
     expect(getUser(userId)!.i.at(-1)?.id).toBe("axe-1");
   });
 
-  it("gathers with an equipped tool and wears it down in its slot", async () => {
+  /** A resource that needs only the axe, and wears it down. */
+  const placeOnAxeResource = () => {
     const resource = placeOn((x, y) =>
       getTileSelection(x, y)
         .resources.map((id) => resourcesById.get(id))
@@ -352,12 +353,37 @@ describe("equipment", () => {
             r.required_items[0]!.itemDurabilityReduction
         )
     );
-    const wear = resource.required_items[0]!.itemDurabilityReduction!;
-    setUser({ i: [], e: { mainHand: axe("axe-1") } });
+    return {
+      resource,
+      wear: resource.required_items[0]!.itemDurabilityReduction!,
+    };
+  };
 
+  const gather = async (resource: Resource) => {
     await run({ type: "gather_start", userId, resourceId: resource.id });
     now += resource.collectionTime * 1000 + 1;
     tick(now);
+  };
+
+  it("won't gather with a tool too worn for the job", async () => {
+    const { resource, wear } = placeOnAxeResource();
+    setUser({ i: [], e: { mainHand: axe("axe-1", wear - 1) } });
+
+    await gather(resource);
+
+    const user = getUser(userId)!;
+    expect(user.e.mainHand?.metadata?.currentDurability).toBe(wear - 1);
+    expect(user.i).toEqual([]);
+    expect(getSystemMessages(userId).map((m) => m.message)).toContain(
+      "You do not have enough durability."
+    );
+  });
+
+  it("gathers with an equipped tool and wears it down in its slot", async () => {
+    const { resource, wear } = placeOnAxeResource();
+    setUser({ i: [], e: { mainHand: axe("axe-1") } });
+
+    await gather(resource);
 
     const user = getUser(userId)!;
     expect(user.e.mainHand?.metadata?.currentDurability).toBe(10 - wear);
@@ -366,5 +392,30 @@ describe("equipment", () => {
         reward.qty
       );
     }
+  });
+
+  it("wears the equipped tool before a carried one", async () => {
+    const { resource, wear } = placeOnAxeResource();
+    setUser({ i: [axe("spare", wear)], e: { mainHand: axe("held") } });
+
+    await gather(resource);
+
+    const user = getUser(userId)!;
+    expect(user.e.mainHand?.metadata?.currentDurability).toBe(10 - wear);
+    expect(user.i.find((i) => i.id === "spare")?.metadata).toEqual({
+      currentDurability: wear,
+    });
+  });
+
+  it("wears the most worn carried tool first", async () => {
+    const { resource, wear } = placeOnAxeResource();
+    setUser({ i: [axe("fresh"), axe("worn", wear + 1)], e: {} });
+
+    await gather(resource);
+
+    const durability = (id: string) =>
+      getUser(userId)!.i.find((i) => i.id === id)?.metadata?.currentDurability;
+    expect(durability("fresh")).toBe(10);
+    expect(durability("worn")).toBe(1);
   });
 });

@@ -1,4 +1,4 @@
-import type { ResourceModel } from "../../config.js";
+import type { ResourceModel, UserInventoryItem } from "../../config.js";
 import { itemsById } from "../../config/items.js";
 import { resourcesById } from "../../config/resources.js";
 import { writer } from "../../db/writer.js";
@@ -61,6 +61,15 @@ export const markActionComplete = (user_id: string, x: number, y: number) => {
 };
 
 /**
+ * How much wear an owned item has left. Falls back to the item's starting
+ * durability, as the inventory screen does, when it hasn't been tracked yet.
+ */
+const currentDurability = (owned: UserInventoryItem) =>
+  owned.metadata?.currentDurability ??
+  itemsById.get(owned.item_id)?.durability?.current ??
+  0;
+
+/**
  * Checks the user has the items the resource needs, and if so consumes them
  * and wears down tools. Equipped items count as well as the inventory.
  */
@@ -82,26 +91,16 @@ const resourceRequirementsCheck = (
 
   // Equipped tools count too, and wear down in their slot.
   const inventory = ownedItems(user);
+  const equipped = new Set(Object.values(user.e));
 
   for (const requiredItem of resource.required_items) {
-    const [qty, durability] = inventory.reduce(
-      (acc, i) => {
-        if (i.item_id === requiredItem.item_id) {
-          if (!requiredItem.itemDurabilityReduction) {
-            return [acc[0] + i.qty, 0];
-          }
-
-          const item = itemsById.get(requiredItem.item_id);
-
-          if (!item) {
-            return acc;
-          }
-
-          return [acc[0] + i.qty, acc[1] + (item.durability?.current ?? 0)];
-        }
-        return acc;
-      },
-      [0, 0]
+    const matching = inventory.filter(
+      (i) => i.item_id === requiredItem.item_id
+    );
+    const qty = matching.reduce((sum, i) => sum + i.qty, 0);
+    const durability = matching.reduce(
+      (sum, i) => sum + currentDurability(i),
+      0
     );
 
     if (qty < requiredItem.qty) {
@@ -146,31 +145,38 @@ const resourceRequirementsCheck = (
       }
     }
 
-    //TODO: It should pick the lowest matching itemDurability
     if (requiredItem.itemDurabilityReduction) {
       let requiredDurability = requiredItem.itemDurabilityReduction;
-      for (const item of inventory) {
-        if (item.item_id !== requiredItem.item_id) {
-          continue;
+      // The tool in hand first, then the most worn, so spares stay whole
+      // and at most one carried tool is part-worn.
+      const wearOrder = inventory
+        .filter((i) => i.item_id === requiredItem.item_id)
+        .sort(
+          (a, b) =>
+            Number(equipped.has(b)) - Number(equipped.has(a)) ||
+            currentDurability(a) - currentDurability(b)
+        );
+
+      for (const item of wearOrder) {
+        if (requiredDurability === 0) {
+          break;
         }
 
-        // Item has all the durability we need left
-        if ((item.metadata?.currentDurability ?? 0) >= requiredDurability) {
-          // Ensure it's there
-          if (typeof item.metadata === "undefined") {
-            item.metadata = { currentDurability: 0 };
-          } else if (typeof item.metadata.currentDurability === "undefined") {
-            item.metadata.currentDurability = 0;
-          }
+        const remaining = currentDurability(item);
 
-          item.metadata.currentDurability! -= requiredDurability;
+        // Item has all the durability we need left
+        if (remaining >= requiredDurability) {
+          item.metadata = {
+            ...item.metadata,
+            currentDurability: remaining - requiredDurability,
+          };
           requiredDurability = 0;
 
           if (item.metadata.currentDurability === 0) {
             item.qty = 0;
           }
         } else {
-          requiredDurability -= item.metadata?.currentDurability ?? 0;
+          requiredDurability -= remaining;
           item.qty = 0;
         }
       }
