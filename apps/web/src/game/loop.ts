@@ -7,6 +7,7 @@ import { processActions } from "./systems/actions.js";
 import { processCombat } from "./systems/combat.js";
 import { regenerateHealth } from "./systems/health.js";
 import { respawnMonsters } from "./systems/monsters.js";
+import { presentUserIds } from "./systems/presence.js";
 import { handleQuestEvents } from "./systems/quests.js";
 import { cleanupResources } from "./systems/resources.js";
 import { cleanupSystemMessages } from "./systems/system-messages.js";
@@ -92,6 +93,12 @@ const scheduleQuestRotation = () => {
 };
 
 export const startLoop = () => {
+  // No streams survive a restart, so disconnect whoever the last run left
+  // behind, ahead of any reconnects.
+  for (const userId of presentUserIds()) {
+    enqueue({ type: "disconnect", userId });
+  }
+
   scheduleQuestRotation();
 
   setInterval(() => {

@@ -14,6 +14,13 @@ const upsertZoneUser = writer.prepare<[string, number, number, number]>(
 const deleteZoneUser = writer.prepare<[string], { x: number; y: number }>(
   "DELETE FROM zone_users WHERE user_id = ? RETURNING x, y"
 );
+const selectPresent = writer.prepare<[], { user_id: string }>(
+  "SELECT user_id FROM online UNION SELECT user_id FROM zone_users UNION SELECT user_id FROM combat"
+);
+
+/** Everyone the database thinks is connected, in a zone or in a fight. */
+export const presentUserIds = () =>
+  selectPresent.all().map(({ user_id }) => user_id);
 
 export const markUserOnline = (user_id: string, now: number) => {
   upsertOnline.run(user_id, now);
