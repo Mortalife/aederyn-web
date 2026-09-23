@@ -16,10 +16,11 @@ export interface ExportResult {
 }
 
 export async function exportToJson(): Promise<ExportResult> {
-  const [items, resources, tiles, npcs, quests, houseTiles] = await Promise.all([
+  const [items, resources, tiles, monsters, npcs, quests, houseTiles] = await Promise.all([
     repository.items.getAll(),
     repository.resources.getAll(),
     repository.tiles.getAll(),
+    repository.monsters.getAll(),
     repository.npcs.getAll(),
     repository.quests.getAll(),
     repository.houseTiles.getAll(),
@@ -29,6 +30,7 @@ export async function exportToJson(): Promise<ExportResult> {
     { filename: "items.json", content: JSON.stringify(items, null, 2) },
     { filename: "resources.json", content: JSON.stringify(resources, null, 2) },
     { filename: "tiles.json", content: JSON.stringify(tiles, null, 2) },
+    { filename: "monsters.json", content: JSON.stringify(monsters, null, 2) },
     { filename: "npcs.json", content: JSON.stringify(npcs, null, 2) },
     { filename: "quests.json", content: JSON.stringify(quests, null, 2) },
     { filename: "house-tiles.json", content: JSON.stringify(houseTiles, null, 2) },
@@ -42,10 +44,11 @@ export async function exportToJson(): Promise<ExportResult> {
 }
 
 export async function exportToTypeScript(): Promise<ExportResult> {
-  const [items, resources, tiles, npcs, quests, houseTiles] = await Promise.all([
+  const [items, resources, tiles, monsters, npcs, quests, houseTiles] = await Promise.all([
     repository.items.getAll(),
     repository.resources.getAll(),
     repository.tiles.getAll(),
+    repository.monsters.getAll(),
     repository.npcs.getAll(),
     repository.quests.getAll(),
     repository.houseTiles.getAll(),
@@ -63,6 +66,10 @@ export async function exportToTypeScript(): Promise<ExportResult> {
     {
       filename: "tiles.ts",
       content: generateTilesTs(tiles),
+    },
+    {
+      filename: "monsters.ts",
+      content: generateMonstersTs(monsters),
     },
     {
       filename: "npcs.ts",
@@ -109,6 +116,15 @@ function generateTilesTs(tiles: Awaited<ReturnType<typeof repository.tiles.getAl
 export const tileTypes: Tile[] = ${toTs(tiles)};
 
 export const tileTypesMap = new Map(tileTypes.map((t) => [t.id, t]));
+`;
+}
+
+function generateMonstersTs(monsters: Awaited<ReturnType<typeof repository.monsters.getAll>>): string {
+  return `import type { Monster } from "./types.js";
+
+export const monsters: Monster[] = ${toTs(monsters)};
+
+export const monstersById = new Map<string, Monster>(monsters.map(m => [m.id, m]));
 `;
 }
 

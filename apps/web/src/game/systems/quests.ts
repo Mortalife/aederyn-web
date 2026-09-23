@@ -301,6 +301,13 @@ const applyQuestEvent = (
           changed = true;
         }
         break;
+
+      case "monster_killed":
+        if (objective.type === "kill" && objective.monster_id === event.monsterId) {
+          updateObjectiveProgress(event.userId, quest.id, objective.id, current + 1, now);
+          changed = true;
+        }
+        break;
     }
   }
 

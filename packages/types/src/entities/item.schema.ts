@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AttackSchema, DefenceSchema } from "./combat.schema.js";
 
 export const ItemTypeSchema = z.enum(["resource", "tool", "weapon", "armor", "consumable", "quest", "item"]);
 export const ItemRaritySchema = z.enum(["common", "uncommon", "rare", "epic", "legendary"]);
@@ -46,6 +47,8 @@ export const ItemSchema = z.object({
   attributes: ItemAttributesSchema.optional().describe("Stat bonuses when equipped"),
   requirements: ItemRequirementsSchema.optional().describe("Requirements to use/equip"),
   effects: z.array(ItemEffectSchema).optional().describe("Special effects when used"),
+  weapon: AttackSchema.optional().describe("Attack stats, for weapons"),
+  defence: DefenceSchema.optional().describe("Defence against each attack style when equipped"),
   value: z.number().min(0).describe("Gold value based on rarity"),
   weight: z.number().min(0).describe("Weight in inventory units"),
   iconUrl: z.string().optional().describe("URL to item icon image"),

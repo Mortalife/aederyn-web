@@ -8,6 +8,7 @@ import {
   ZoneHeader,
   ZoneEquipment,
   ZoneInventory,
+  ZoneMonsters,
   ZoneNav,
   ZonePlayers,
   ZoneResources,
@@ -55,6 +56,20 @@ const questSetId = (quests: object) => {
     questSetIds.set(quests, id);
   }
   return id;
+};
+
+/** The main hand's weapon while it has durability left, as combat uses it. */
+const workingWeapon = (user: GameView["user"]) => {
+  const item = user.e.mainHand?.item;
+  const durability = item?.durability?.current ?? 0;
+  return item?.weapon && durability > 0
+    ? {
+        name: item.name,
+        speed: item.weapon.speed,
+        durability,
+        maxDurability: item.durability!.max,
+      }
+    : null;
 };
 
 export const buildScreen = (
@@ -118,6 +133,7 @@ export const buildScreen = (
           playerCount: view.players.length,
           zoneQuests: view.quests,
           npcInteractions: view.npcInteractions,
+          monsters: view.monsters,
           contextFlashes: view.contextFlashes,
         }),
     },
@@ -133,6 +149,18 @@ export const buildScreen = (
           resourceObjectives: view.resourceObjectives,
           contextFlashes: view.contextFlashes,
         }),
+    },
+    {
+      id: "monsters",
+      // Attack and flee controls depend on the viewer's equipment and action.
+      key: `${u}:${z}:${f}:h${view.hitsKey}`,
+      render: () => ZoneMonsters(view.monsters, {
+        userId: user.id,
+        weapon: workingWeapon(user),
+        health: user.h,
+        gathering: !!view.inprogress,
+        contextFlashes: view.contextFlashes,
+      }),
     },
     {
       id: "quests",
@@ -180,6 +208,7 @@ export const buildScreen = (
               header: part(parts, "zone-header"),
               nav: part(parts, "zone-nav"),
               resources: part(parts, "resources"),
+              monsters: part(parts, "monsters"),
               quests: part(parts, "quests"),
               inventory: part(parts, "inventory"),
               equipment: part(parts, "equipment"),

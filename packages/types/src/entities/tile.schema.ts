@@ -8,6 +8,7 @@ export const TileSchema = z.object({
   theme: z.string().describe("Theme category for the tile"),
   texture: z.string().optional().describe("Texture asset path"),
   resources: z.array(z.string()).describe("Resource IDs available on this tile"),
+  monsters: z.array(z.string()).optional().describe("Monster IDs that live on this tile, one spawn per entry at each map position; list an ID twice for two"),
   rarity: z.number().describe("Rarity weight for generation"),
   accessible: z.boolean().describe("Whether player can walk on this tile"),
   image: z.string().optional().describe("Image asset path"),

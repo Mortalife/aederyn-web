@@ -2,6 +2,7 @@ import { resourcesById } from "../config/resources.js";
 import { getTileSelection, isOutOfBounds } from "../world/index.js";
 import type { Command } from "./commands.js";
 import { markActionComplete, markActionInProgress } from "./systems/actions.js";
+import { combatForUser, startCombat, stopCombat } from "./systems/combat.js";
 import { saveMessage } from "./systems/chat.js";
 import {
   addUserToZone,
@@ -60,6 +61,7 @@ export const apply = (command: Command, now: number): unknown => {
     }
 
     case "disconnect": {
+      stopCombat(user.id, now);
       markUserOffline(user.id);
       removeUserFromZone(user.id);
       return;
@@ -67,6 +69,8 @@ export const apply = (command: Command, now: number): unknown => {
 
     case "move": {
       const { direction } = command;
+
+      stopCombat(user.id, now);
 
       if (user.z && direction !== "exit") {
         return;
@@ -107,6 +111,15 @@ export const apply = (command: Command, now: number): unknown => {
     }
 
     case "gather_start": {
+      if (combatForUser(user.id)) {
+        addSystemMessage(user.id, "You can't gather while fighting.", "warning", now, {
+          action_type: "resource",
+          action_id: command.resourceId,
+          location_x: user.p.x,
+          location_y: user.p.y,
+        });
+        return;
+      }
       const tile = isOutOfBounds(user.p.x, user.p.y)
         ? null
         : getTileSelection(user.p.x, user.p.y);
@@ -140,6 +153,12 @@ export const apply = (command: Command, now: number): unknown => {
       }
       return;
     }
+
+    case "attack":
+      return startCombat(user, command.spawn, now);
+
+    case "flee":
+      return stopCombat(user.id, now);
 
     case "chat":
       return saveMessage(user.id, command.message, now);

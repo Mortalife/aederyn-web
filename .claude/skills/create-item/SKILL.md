@@ -15,7 +15,8 @@ Read the `game-data` skill first for file locations, lookups, editing rules and 
 4. **Make it obtainable**, unless it's only a quest reward. Something must produce it:
    - a gathering resource (`create-resource`) whose `reward_items` include it, placed on a tile, or
    - a crafting station (`create-resource`, `type: "workbench"`) whose `reward_items` include it, placed on a tile, or
-   - a house-tile action with `result.yields` of it (`create-house-tile`).
+   - a house-tile action with `result.yields` of it (`create-house-tile`), or
+   - a monster's `drops` (`create-monster`).
 5. **Validate** with `--ids` covering the item and anything else you created.
 
 ## Field guidance
@@ -32,7 +33,9 @@ Read the `game-data` skill first for file locations, lookups, editing rules and 
 | `stackable` / `maxStackSize` | Materials: `true` / `99`. Tools, gear and unique quest items: `false` / `1` |
 | `equippable` / `equipSlot` | Tools and gear that are held or worn: `true` plus a slot (`mainHand`, `offHand`, `head`, `chest`, `legs`, `feet`, `hands`, `accessory`). Otherwise `false` and omit `equipSlot` |
 | `durability` | Tools that wear out: `{ "current": N, "max": N }`. Resources reduce it via `required_items[].itemDurabilityReduction` |
-| `attributes`, `requirements`, `effects` | Only when they mean something for this item |
+| `weapon` | Weapons only, and required for them: `type: "weapon"`, `equipSlot: "mainHand"`, plus `{ "style", "damage", "speed" }`. `style` is `melee`, `ranged` or `magic`. `damage` is a whole number per hit, 10–40: fast weapons low, slow ones high. `speed` is milliseconds between attacks, 1000–3000. Give weapons `durability`: each attack uses 1. See `docs/COMBAT.md` |
+| `defence` | Armour and shields: `{ "melee", "ranged", "magic" }`, 0–60 per piece. A full set tops out around 200. Only on equippable items. Give each weight of armour a different profile (heavy is strong against melee and weak against magic) |
+| `attributes`, `requirements`, `effects` | Only when they mean something for this item. The game doesn't read `attributes.damage` or `attributes.armor`. Use `weapon` and `defence` instead |
 
 Example material and tool from the current data:
 

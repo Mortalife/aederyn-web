@@ -22,6 +22,7 @@ export const Game = (props: {
       }"
       data-signals__if-missing="${JSON.stringify({
         _showActions: true,
+        _showMonsters: true,
         _showQuests: true,
         _showInventory: true,
         _showEquipment: true,

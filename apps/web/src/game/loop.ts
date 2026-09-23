@@ -4,6 +4,9 @@ import { drainQueue, enqueue, type QueuedCommand } from "./commands.js";
 import { renderConnections } from "./connections.js";
 import { takeEvents } from "./events.js";
 import { processActions } from "./systems/actions.js";
+import { processCombat } from "./systems/combat.js";
+import { regenerateHealth } from "./systems/health.js";
+import { respawnMonsters } from "./systems/monsters.js";
 import { handleQuestEvents } from "./systems/quests.js";
 import { cleanupResources } from "./systems/resources.js";
 import { cleanupSystemMessages } from "./systems/system-messages.js";
@@ -45,7 +48,10 @@ const runTick = writer.transaction((batch: QueuedCommand[], now: number) => {
   );
 
   guarded("cleanupResources", now, () => cleanupResources(now));
+  guarded("respawnMonsters", now, () => respawnMonsters(now));
   guarded("processActions", now, () => processActions(now));
+  guarded("processCombat", now, () => processCombat(now));
+  guarded("regenerateHealth", now, () => regenerateHealth(now));
   guarded("cleanupSystemMessages", now, () => cleanupSystemMessages());
 
   return outcomes;

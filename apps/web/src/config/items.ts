@@ -658,6 +658,35 @@ export const items: Item[] = [
     value: 4,
     weight: 0.5,
   },
+  {
+    id: "item_feather",
+    name: "Feather",
+    description:
+      "A soft white feather plucked from a chicken. Light and plentiful, and handy for fletching.",
+    type: "resource",
+    rarity: "common",
+    stackable: true,
+    maxStackSize: 99,
+    equippable: false,
+    value: 1,
+    weight: 0.01,
+  },
+  {
+    id: "item_wooden_club",
+    name: "Wooden Club",
+    description:
+      "A heavy length of log whittled down to a grip at one end. Crude, but it gets the job done.",
+    type: "weapon",
+    rarity: "common",
+    stackable: false,
+    maxStackSize: 1,
+    equippable: true,
+    equipSlot: "mainHand",
+    durability: { current: 60, max: 60 },
+    weapon: { style: "melee", damage: 10, speed: 2000 },
+    value: 12,
+    weight: 2.5,
+  },
 ];
 
 export const itemsById = new Map<string, Item>(

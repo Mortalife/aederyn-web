@@ -157,6 +157,12 @@ export const selectZoneQuests = (
               continue;
             }
             break;
+          case "kill":
+            if (tile.monsters?.includes(currentObjective.monster_id)) {
+              result.inProgressQuests.push({ ...quest, currentObjective });
+              continue;
+            }
+            break;
           case "talk":
           case "explore":
             if (currentObjective.x === x && currentObjective.y === y) {
@@ -280,6 +286,13 @@ export const selectMapIndicators = (
                 ) {
                   addObjective(tile.x, tile.y);
                 }
+              }
+            }
+            break;
+          case "kill":
+            for (const tile of worldMap) {
+              if (tile.tile?.monsters?.includes(currentObjective.monster_id)) {
+                addObjective(tile.x, tile.y);
               }
             }
             break;
@@ -579,6 +592,8 @@ export const getDefaultRequiredAmount = (objective: TileObjective): number => {
     case "collect":
     case "craft":
       return objective.amount;
+    case "kill":
+      return objective.count;
     case "talk":
       return objective.dialog_steps.length + 1; // 0 is not started, 1-length are steps - User needs to complete all dialog steps
     case "explore":

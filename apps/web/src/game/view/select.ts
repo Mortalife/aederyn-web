@@ -1,3 +1,9 @@
+import {
+  type AttackStyle,
+  type Defence,
+  type Monster,
+} from "../../config.js";
+import { monstersById } from "../../config/monsters.js";
 import type { SystemMessage } from "../../user/system.js";
 import {
   selectMapIndicators,
@@ -10,6 +16,12 @@ import {
   type Point,
   type WorldTile,
 } from "../../world/index.js";
+import {
+  COMBAT_LOG_MS,
+  type Combat,
+  type CombatHit,
+  type MonsterState,
+} from "../../world/monsters.js";
 import type { ViewInput } from "./load.js";
 
 /** How long an action's message flashes next to it. */
@@ -39,6 +51,11 @@ export const selectGame = (
     user.p.y
   );
 
+  const here = map.find((tile) => tile.here);
+  const monsters = here
+    ? selectZoneMonsters(here, input.monsterState, input.combat, input.combatHits)
+    : [];
+
   const contextFlashes = selectContextFlashes(input.messages, user.p, now);
   const recent = input.messages[0];
   const alert = recent && recent.sent_at > now - ALERT_MS ? recent : null;
@@ -50,6 +67,7 @@ export const selectGame = (
     messages: input.messages,
     inprogress: input.inprogress ?? undefined,
     zoneUsers: input.zoneUsers,
+    monsters,
     players: input.zoneUsers.filter((player) => player.id !== user.id),
     chatMessages: input.chatMessages,
     quests,
@@ -70,10 +88,13 @@ export const selectGame = (
       .map(([key, message]) => `${key}=${message.id}`)
       .join(","),
     alertKey: alert ? String(alert.id) : "",
+    /** Identifies the hits in the monsters' combat logs. */
+    hitsKey: monsters.flatMap((m) => m.hits.map((hit) => hit.id)).join(","),
     /** When a flash or alert ends, so the screen must be drawn again. */
     wakeAt: Math.min(
       ...[...contextFlashes.values()].map((m) => m.sent_at + FLASH_MS),
-      alert ? alert.sent_at + ALERT_MS : Infinity
+      alert ? alert.sent_at + ALERT_MS : Infinity,
+      ...monsters.flatMap((m) => m.hits.map((hit) => hit.at + COMBAT_LOG_MS))
     ),
   };
 };
@@ -147,3 +168,58 @@ const selectResourceObjectives = (quests: ZoneQuests, map: WorldTile[]) => {
 
   return resourceObjectives;
 };
+
+export type ZoneMonster = {
+  /** Its index in the tile's `monsters`, which identifies it on the tile. */
+  spawn: number;
+  monster: Monster;
+  hp: number;
+  /** Set while dead. */
+  respawnAt: number | null;
+  /** Someone is fighting it. */
+  engaged: boolean;
+  combat: Combat | null;
+  /** Recent hits on or by it, newest first. */
+  hits: CombatHit[];
+  /** The styles it defends least against, or none if all are equal. */
+  weakTo: AttackStyle[];
+};
+
+/** The styles with the lowest defence, or none if every style is equal. */
+export const weakestStyles = (defence: Defence): AttackStyle[] => {
+  const styles = Object.keys(defence) as AttackStyle[];
+  const lowest = Math.min(...styles.map((style) => defence[style]));
+  const weakest = styles.filter((style) => defence[style] === lowest);
+  return weakest.length === styles.length ? [] : weakest;
+};
+
+/** The monsters on a tile, with their HP and whether they're dead or engaged. */
+const selectZoneMonsters = (
+  tile: WorldTile,
+  state: MonsterState[],
+  combat: Combat[],
+  hits: CombatHit[]
+): ZoneMonster[] =>
+  (tile.tile?.monsters ?? []).flatMap((id, spawn) => {
+    const monster = monstersById.get(id);
+    if (!monster) {
+      return [];
+    }
+
+    const here = (row: { x: number; y: number; spawn: number }) =>
+      row.x === tile.x && row.y === tile.y && row.spawn === spawn;
+    const row = state.find(here);
+
+    return [
+      {
+        spawn,
+        monster,
+        hp: row ? row.hp : monster.health,
+        respawnAt: row?.respawn_at ?? null,
+        engaged: combat.some(here),
+        combat: combat.find(here) ?? null,
+        hits: hits.filter(here),
+        weakTo: weakestStyles(monster.defence),
+      },
+    ];
+  });

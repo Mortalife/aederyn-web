@@ -1,0 +1,26 @@
+[
+  {
+    "id": "monster_chicken",
+    "name": "Chicken",
+    "description": "A plump, bad-tempered chicken scratching about in the grass. It pecks back when cornered, and it's hard to hit with an arrow while it darts about.",
+    "health": 50,
+    "attack": {
+      "style": "melee",
+      "damage": 5,
+      "speed": 3000
+    },
+    "defence": {
+      "melee": 0,
+      "ranged": 20,
+      "magic": 0
+    },
+    "respawnTime": 30,
+    "drops": [
+      {
+        "item_id": "item_feather",
+        "qty": 3,
+        "chance": 1
+      }
+    ]
+  }
+]

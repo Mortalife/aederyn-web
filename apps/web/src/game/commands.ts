@@ -20,6 +20,8 @@ export type Command =
   | { type: "move"; userId: string; direction: Direction }
   | { type: "gather_start"; userId: string; resourceId: string }
   | { type: "gather_cancel"; userId: string; resourceId: string }
+  | { type: "attack"; userId: string; spawn: number }
+  | { type: "flee"; userId: string }
   | { type: "chat"; userId: string; message: string }
   | { type: "inventory_drop"; userId: string; inventoryId: string }
   | { type: "equip"; userId: string; inventoryId: string }

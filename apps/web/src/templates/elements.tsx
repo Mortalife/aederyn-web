@@ -13,7 +13,9 @@ import {
   type Resource,
   type RequiredItem,
   MAX_INVENTORY_SIZE,
+  BASE_USER,
   type RewardItem,
+  UNARMED,
 } from "../config.js";
 import type { UserAction } from "../user/action.js";
 import { restrictUserId, type ChatMessage } from "../social/chat.js";
@@ -33,7 +35,10 @@ import {
   InventoryIcon,
   EquipmentIcon,
   SocialIcon,
+  MonstersIcon,
 } from "./icons.js";
+import type { ZoneMonster } from "../game/view/select.js";
+import type { CombatHit } from "../world/monsters.js";
 
 export const KeyboardShortcut = (shortcut: string) => html`<span
   class="h-4 hidden md:flex items-center justify-center text-[0.4rem] text-gray-400 font-mono p-[0.2rem] rounded-sm border border-gray-400 mix-blend-color-dodge"
@@ -638,7 +643,7 @@ const ZoneNavButton = (
   hasNotification = false
 ) => html`
   <button
-    class="flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all duration-200 min-w-[60px] md:min-w-[80px]
+    class="flex flex-col items-center gap-1 px-3 md:px-4 py-2 rounded-lg transition-all duration-200 min-w-[52px] md:min-w-[80px]
            border border-transparent md:hover:bg-white/10 md:hover:border-white/20"
     data-class="{'bg-white/15 border-gray/20 shadow-lg': $${signalName}}"
     data-attr="{'data-active': $${signalName}}"
@@ -688,13 +693,15 @@ export const Zone = (parts: {
   header: HtmlEscapedString;
   nav: HtmlEscapedString;
   resources: HtmlEscapedString;
+  monsters: HtmlEscapedString;
   quests: HtmlEscapedString;
   inventory: HtmlEscapedString;
   equipment: HtmlEscapedString;
   players: HtmlEscapedString;
   chatMessages: HtmlEscapedString;
 }) => html`<div id="zone" class="flex flex-col gap-4 pr-1">
-  ${parts.header} ${parts.nav} ${parts.resources} ${parts.quests}
+  ${parts.header} ${parts.nav} ${parts.resources} ${parts.monsters}
+  ${parts.quests}
   ${parts.inventory} ${parts.equipment}
 
   <!-- Social Panel -->
@@ -807,6 +814,7 @@ export const ZoneNav = (props: {
   playerCount: number;
   zoneQuests: ZoneQuests;
   npcInteractions: ZoneInteraction[];
+  monsters: ZoneMonster[];
   contextFlashes: Map<string, SystemMessage>;
 }) => {
   const { zoneQuests, contextFlashes } = props;
@@ -831,6 +839,16 @@ export const ZoneNav = (props: {
       ActionsIcon,
       contextFlashes.has("resource")
     )}
+    ${props.monsters.length > 0
+      ? ZoneNavButton(
+          "Monsters",
+          "M",
+          "_showMonsters",
+          props.monsters.filter((m) => m.respawnAt === null).length,
+          MonstersIcon,
+          contextFlashes.has("combat")
+        )
+      : null}
     ${ZoneNavButton(
       "Quests",
       "Q",
@@ -912,7 +930,7 @@ export const ZoneResources = (props: {
                 ${resources.map((resource) =>
                   ResourceItem({
                     resource,
-                    inventory: props.user.i,
+                    inventory: [...props.user.i, ...Object.values(props.user.e)],
                     inprogress:
                       inprogress?.resource_id === resource.id
                         ? {
@@ -1051,6 +1069,292 @@ const EquipmentSlot = (slot: EquipSlot, equipped?: InventoryItem) => html`<div
  * there, so it lists every player, the viewer included, and the client
  * hides the viewer's own entry using the `user_id` signal.
  */
+/**
+ * The zone's monsters, with the viewer's attack and flee controls. Empty,
+ * but still present for patching, when the zone has none.
+ */
+type MonsterViewer = {
+  userId: string;
+  gathering: boolean;
+  /** The working weapon in the main hand, or null when fighting barehanded. */
+  weapon: { name: string; speed: number; durability: number; maxDurability: number } | null;
+  health: number;
+  contextFlashes: Map<string, SystemMessage>;
+};
+
+export const ZoneMonsters = (monsters: ZoneMonster[], viewer?: MonsterViewer) => {
+  if (monsters.length === 0) {
+    return html`<div id="monsters"></div>`;
+  }
+
+  const alive = monsters.filter((m) => m.respawnAt === null).length;
+
+  return html`<div
+    id="monsters"
+    class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
+    data-show="$_showMonsters"
+  >
+    ${ZoneSectionHeader(
+      "Monsters",
+      alive > 0 ? `${alive} nearby` : "Nothing to fight right now",
+      MonstersIcon
+    )}
+    <div class="grid grid-cols-1 gap-2">
+      ${monsters.map((monster) => MonsterItem(monster, viewer))}
+    </div>
+  </div>`;
+};
+
+const MonsterItem = ({ spawn, monster, hp, respawnAt, engaged, combat, hits, weakTo }: ZoneMonster, viewer?: MonsterViewer) => {
+  const dead = respawnAt !== null;
+  const fighting = !!viewer && !dead && combat?.user_id === viewer.userId;
+  const hitOnMonster = hits.find((hit) => !hit.by_monster);
+  const hitOnViewer = hits.find(
+    (hit) => hit.by_monster && hit.user_id === viewer?.userId
+  );
+  // The viewer's bar stays up while their fight is in the log, so a kill
+  // doesn't make it vanish.
+  const showViewer =
+    fighting || (!!viewer && hits.some((hit) => hit.user_id === viewer.userId));
+
+  return html`<div
+    id="monsters-${spawn}"
+    class="relative rounded-xl flex flex-col gap-3 p-4 bg-white/5 border border-white/10 transition-opacity duration-700 ${dead
+      ? "opacity-60"
+      : engaged
+      ? "ring-2 ring-red-500/50"
+      : ""}"
+  >
+    <div class="flex flex-row items-start justify-between gap-4">
+      <div class="flex flex-col gap-1">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-lg text-white">${monster.name}</span>
+          ${dead
+            ? html`<span
+                class="text-xs px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-300"
+                >Dead</span
+              >`
+            : engaged
+            ? html`<span
+                class="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400"
+                >In combat${combat
+                  ? ` with ${combat.user_id === viewer?.userId ? "you" : restrictUserId(combat.user_id)}`
+                  : ""}</span
+              >`
+            : null}
+        </div>
+        <p class="text-sm text-gray-400">${monster.description}</p>
+      </div>
+    </div>
+
+    ${ContextualFlash({ message: viewer?.contextFlashes.get(`combat:${spawn}`) })}
+
+    ${CombatantBar({
+      id: `monster-${spawn}`,
+      label: "Health",
+      hp,
+      max: monster.health,
+      colour: "bg-red-500",
+      hit: hitOnMonster ?? null,
+      nextSwing:
+        combat && !dead
+          ? { endsAt: combat.next_monster_at, duration: monster.attack.speed }
+          : null,
+    })}
+    ${dead
+      ? RespawnCountdown({
+          id: `respawn-${spawn}`,
+          startedAt: respawnAt - monster.respawnTime * 1000,
+          endsAt: respawnAt,
+        })
+      : null}
+    ${showViewer
+      ? CombatantBar({
+          id: `player-${spawn}`,
+          label: "You",
+          hp: viewer!.health,
+          max: BASE_USER.h,
+          colour: "bg-green-500",
+          hit: hitOnViewer ?? null,
+          nextSwing: fighting
+            ? {
+                endsAt: combat!.next_player_at,
+                duration: viewer!.weapon?.speed ?? UNARMED.speed,
+              }
+            : null,
+        })
+      : null}
+    ${hitOnViewer
+      ? html`<div
+          id="hurt-${hitOnViewer.id}"
+          class="pointer-events-none absolute inset-0 rounded-xl bg-red-500"
+          style="opacity: 0"
+          data-init="${animateBetween(
+            { startedAt: hitOnViewer.at, endsAt: hitOnViewer.at + 400 },
+            [{ opacity: 0.3 }, { opacity: 0 }]
+          )}"
+        ></div>`
+      : null}
+    ${hits.length > 0 ? CombatLog(hits.slice(0, 4), monster.name, viewer?.userId) : null}
+
+    <div class="flex flex-wrap gap-2 pt-2 border-t border-white/10 text-xs">
+      <span class="px-2 py-1 rounded-lg bg-white/5 border border-white/10"
+        >Attacks with
+        <span class="font-semibold capitalize">${monster.attack.style}</span></span
+      >
+      <span class="px-2 py-1 rounded-lg bg-white/5 border border-white/10"
+        >${weakTo.length > 0
+          ? html`Weak to
+              <span class="font-semibold capitalize"
+                >${weakTo.join(", ")}</span
+              >`
+          : "No weakness"}</span
+      >
+    </div>
+    ${viewer && !dead && (fighting || (!engaged && !viewer.gathering))
+      ? html`<div class="flex flex-wrap items-center gap-3">
+          ${fighting
+            ? html`<button class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm"
+                data-on:click="@post('/game/combat/flee')">Flee</button>`
+            : html`<button class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm"
+                data-on:click="@post('/game/monsters/${spawn}/attack')">Attack</button>`}
+          ${FightingWith(viewer.weapon)}
+        </div>`
+      : null}
+  </div>`;
+};
+
+/** What the viewer will hit with, warning when it's fists or nearly broken. */
+const FightingWith = (weapon: MonsterViewer["weapon"]) => {
+  if (!weapon) {
+    return html`<span class="text-xs text-amber-300"
+      >Barehanded, ${UNARMED.damage} damage a hit</span
+    >`;
+  }
+  const worn = weapon.durability <= Math.max(3, weapon.maxDurability * 0.1);
+  return html`<span class="text-xs ${worn ? "text-amber-300" : "text-gray-400"}"
+    >${weapon.name}, ${weapon.durability}/${weapon.maxDurability} durability</span
+  >`;
+};
+
+/** The latest hits on and by a monster, newest first and brightest. */
+const CombatLog = (hits: CombatHit[], monsterName: string, viewerId?: string) => {
+  const line = (hit: CombatHit) => {
+    const player = hit.user_id === viewerId ? "you" : restrictUserId(hit.user_id);
+    const Player = hit.user_id === viewerId ? "You" : player;
+    if (hit.by_monster) {
+      return hit.fatal
+        ? `${monsterName} knocked ${player} out with ${hit.damage}`
+        : `${monsterName} hit ${player} for ${hit.damage}`;
+    }
+    return hit.fatal
+      ? `${Player} finished ${monsterName} off with ${hit.damage}`
+      : `${Player} hit ${monsterName} for ${hit.damage}`;
+  };
+
+  return html`<ol class="flex flex-col gap-0.5 text-xs">
+    ${hits.map(
+      (hit, index) => html`<li
+        id="log-${hit.id}"
+        class="${index === 0 ? "text-gray-200" : "text-gray-500"} ${hit.fatal
+          ? "font-semibold"
+          : ""}"
+        data-init="${animateBetween({ startedAt: hit.at, endsAt: hit.at + 300 }, [
+          { opacity: 0, transform: "translateY(-0.25rem)" },
+          { opacity: 1, transform: "none" },
+        ])}"
+      >
+        <span class="${hit.by_monster ? "text-red-400" : "text-amber-300"}"
+          >${hit.by_monster ? "▼" : "▲"}</span
+        >
+        ${line(hit)}
+      </li>`
+    )}
+  </ol>`;
+};
+
+/**
+ * A fighter's health, with the damage of the last hit on it floating up and
+ * a thin bar filling towards their next swing. Both are keyed by time, so
+ * each hit or swing is a new element and its animation starts afresh.
+ */
+const CombatantBar = (props: {
+  id: string;
+  label: string;
+  hp: number;
+  max: number;
+  colour: string;
+  hit: { id: number; damage: number; at: number } | null;
+  nextSwing: { endsAt: number; duration: number } | null;
+}) => {
+  const percent = Math.max(0, Math.min(100, (props.hp / props.max) * 100));
+
+  return html`<div class="relative flex flex-col gap-1">
+    <div class="flex items-center justify-between text-xs text-gray-400">
+      <span>${props.label}</span>
+      <span class="font-mono">${props.hp}/${props.max}</span>
+    </div>
+    <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+      <div
+        class="h-full ${props.colour} transition-[width] duration-300"
+        style="width: ${percent}%"
+      ></div>
+    </div>
+    ${props.nextSwing
+      ? html`<div
+          class="w-full h-1 rounded-full bg-white/5 overflow-hidden"
+          title="Next attack"
+        >
+          <div
+            id="swing-${props.id}-${props.nextSwing.endsAt}"
+            class="h-full w-0 bg-amber-400/70"
+            data-init="${animateBetween(
+              {
+                startedAt: props.nextSwing.endsAt - props.nextSwing.duration,
+                endsAt: props.nextSwing.endsAt,
+              },
+              [{ width: "0%" }, { width: "100%" }]
+            )}"
+          ></div>
+        </div>`
+      : null}
+    ${props.hit
+      ? html`<span
+          id="hit-${props.hit.id}"
+          class="pointer-events-none absolute right-2 top-3 text-lg font-bold text-red-300 drop-shadow"
+          style="opacity: 0"
+          data-init="${animateBetween(
+            { startedAt: props.hit.at, endsAt: props.hit.at + 1000 },
+            [
+              { opacity: 1, transform: "translateY(0) scale(1.3)" },
+              { opacity: 1, transform: "translateY(-0.5rem) scale(1)", offset: 0.3 },
+              { opacity: 0, transform: "translateY(-1.5rem) scale(1)" },
+            ]
+          )}"
+          >-${props.hit.damage}</span
+        >`
+      : null}
+  </div>`;
+};
+
+/** Seconds left until `endsAt`, counted down on the client. */
+const RespawnCountdown = (props: ProgressTimes & { id: string }) => {
+  const seconds = Math.round((props.endsAt - props.startedAt) / 1000);
+
+  return html`<div class="text-xs text-gray-400">
+    Respawns in
+    <span
+      id="${props.id}"
+      class="progress-seconds font-mono"
+      data-init="${animateBetween(props, [
+        { "--progress-seconds": seconds },
+        { "--progress-seconds": 0 },
+      ])}"
+    ></span
+    >s
+  </div>`;
+};
+
 export const ZonePlayers = (players: OtherUser[]) => {
   // Everyone who sees this is in the zone, so is on the list.
   const others = Math.max(players.length - 1, 0);
@@ -1372,7 +1676,7 @@ export const UserInfo = (
   alert?: SystemMessage | null
 ) => html`<div
   id="user-info"
-  class="w-full flex flex-row justify-between items-center px-2"
+  class="w-full flex flex-wrap justify-between items-center gap-2 px-2"
 >
   <div class="flex items-center gap-2">
     <span class="text-lg font-bold text-white/90">Aederyn</span>
@@ -1406,6 +1710,13 @@ export const UserInfo = (
           ${totalPlayersOnline} online</span
         >`
       : null}
+  </div>
+  <div class="flex items-center gap-2 min-w-32 max-w-48 flex-1 text-xs text-red-200" aria-label="Health: ${user.h} of ${BASE_USER.h}">
+    <span aria-hidden="true">♥</span>
+    <div class="h-2 flex-1 rounded-full bg-red-950/70 overflow-hidden" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="${BASE_USER.h}" aria-valuenow="${user.h}">
+      <div class="h-full bg-red-500 transition-[width] duration-200" style="width: ${Math.max(0, Math.min(100, (user.h / BASE_USER.h) * 100))}%"></div>
+    </div>
+    <span class="font-mono whitespace-nowrap">${user.h}/${BASE_USER.h}</span>
   </div>
   ${GameMenu(user, messages, alert)}
 </div>`;
@@ -1462,6 +1773,16 @@ export const ContextualFlash = (props: { message?: SystemMessage }) => {
 type ProgressTimes = { startedAt: number; endsAt: number };
 
 /**
+ * A `data-init` expression running `keyframes` on the element from
+ * `startedAt` to `endsAt` (server clock, ms), seeked to the elapsed time
+ * using the `_serverOffset` signal from `Game`.
+ */
+const animateBetween = (times: ProgressTimes, keyframes: object) =>
+  `el.animate(${JSON.stringify(keyframes)}, { duration: ${
+    times.endsAt - times.startedAt
+  }, delay: ${times.startedAt} - Date.now() - $_serverOffset, fill: 'forwards' })`;
+
+/**
  * A bar that fills from `startedAt` to `endsAt` (server clock, ms) on its own,
  * so the server only sends it when the action starts.
  *
@@ -1474,10 +1795,7 @@ type ProgressTimes = { startedAt: number; endsAt: number };
 const ProgressBar = (props: ProgressTimes & { id: string }) => {
   const duration = props.endsAt - props.startedAt;
   const seconds = Math.round(duration / 1000);
-  const animate = (keyframes: object) =>
-    `el.animate(${JSON.stringify(keyframes)}, { duration: ${duration}, delay: ${
-      props.startedAt
-    } - Date.now() - $_serverOffset, fill: 'forwards' })`;
+  const animate = (keyframes: object) => animateBetween(props, keyframes);
 
   return html`<div id="${props.id}" class="flex flex-col gap-1">
     <div class="flex items-center justify-between text-xs text-gray-400">
@@ -1593,9 +1911,7 @@ export const ResourceItem = (props: {
           ${hasRequirements
             ? (() => {
                 const hasItemCheck = (item: RequiredItem) =>
-                  props.inventory.find(
-                    (inv) => inv.item.id === item.item.id && inv.qty >= item.qty
-                  );
+                  hasRequiredItem(item, props.inventory);
                 const available =
                   props.resource.required_items.filter(hasItemCheck);
                 const missing = props.resource.required_items.filter(
@@ -1635,13 +1951,38 @@ export const ResourceItem = (props: {
   </div>`;
 };
 
+const requiredItemShortfall = (
+  item: RequiredItem,
+  owned: InventoryItem[]
+): "missing" | "durability" | null => {
+  const matching = owned.filter((inv) => inv.item.id === item.item.id);
+  const qty = matching.reduce((sum, inv) => sum + inv.qty, 0);
+  const durability = matching.reduce(
+    (sum, inv) => sum + (inv.item.durability?.current ?? 0),
+    0
+  );
+
+  if (qty < item.qty) {
+    return "missing";
+  }
+  if (
+    item.itemDurabilityReduction &&
+    item.itemDurabilityReduction > durability
+  ) {
+    return "durability";
+  }
+  return null;
+};
+
+const hasRequiredItem = (item: RequiredItem, owned: InventoryItem[]) =>
+  requiredItemShortfall(item, owned) === null;
+
 export const ResourceRequiredItem = (
   item: RequiredItem,
   inventory: InventoryItem[]
 ) => {
-  const hasItem = inventory.find(
-    (inv) => inv.item.id === item.item.id && inv.qty >= item.qty
-  );
+  const shortfall = requiredItemShortfall(item, inventory);
+  const hasItem = shortfall === null;
   const hasDurabilityReduction =
     item.qty === 1 && !item.consumed && item.itemDurabilityReduction;
 
@@ -1660,8 +2001,10 @@ export const ResourceRequiredItem = (
     <span class="${hasItem ? "text-gray-200" : "text-red-300"}"
       >${item.item.name}</span
     >
-    ${!hasItem
+    ${shortfall === "missing"
       ? html`<span class="text-red-400" title="Missing from inventory">✗</span>`
+      : shortfall === "durability"
+      ? html`<span class="text-red-400" title="Not enough durability">✗</span>`
       : item.consumed
       ? html`<span class="text-orange-400/60" title="Will be consumed">↓</span>`
       : html`<span class="text-green-400/60" title="Required (not consumed)"

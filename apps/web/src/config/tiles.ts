@@ -31,6 +31,7 @@ export const tileTypes: Tile[] = [
       "resource_crafting_fishing_net",
       "resource_crafting_sickle",
       "resource_crafting_fertilizer",
+      "resource_crafting_wooden_club",
     ],
     rarity: 0,
     accessible: true,
@@ -45,6 +46,7 @@ export const tileTypes: Tile[] = [
     resources: ["resource_grass_01"],
     rarity: 0.3,
     accessible: true,
+    monsters: ["monster_chicken", "monster_chicken"],
   },
   {
     id: "tile_trees",

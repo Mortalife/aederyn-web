@@ -64,10 +64,22 @@ export const markActionComplete = (user_id: string, x: number, y: number) => {
  * How much wear an owned item has left. Falls back to the item's starting
  * durability, as the inventory screen does, when it hasn't been tracked yet.
  */
-const currentDurability = (owned: UserInventoryItem) =>
+export const currentDurability = (owned: UserInventoryItem) =>
   owned.metadata?.currentDurability ??
   itemsById.get(owned.item_id)?.durability?.current ??
   0;
+
+/** Wear one owned item, removing it when its durability reaches zero. */
+export const wearItem = (owned: UserInventoryItem, amount: number) => {
+  const remaining = currentDurability(owned);
+  const used = Math.min(remaining, amount);
+  if (used === remaining) {
+    owned.qty = 0;
+  } else {
+    owned.metadata = { ...owned.metadata, currentDurability: remaining - used };
+  }
+  return used;
+};
 
 /**
  * Checks the user has the items the resource needs, and if so consumes them
@@ -162,23 +174,7 @@ const resourceRequirementsCheck = (
           break;
         }
 
-        const remaining = currentDurability(item);
-
-        // Item has all the durability we need left
-        if (remaining >= requiredDurability) {
-          item.metadata = {
-            ...item.metadata,
-            currentDurability: remaining - requiredDurability,
-          };
-          requiredDurability = 0;
-
-          if (item.metadata.currentDurability === 0) {
-            item.qty = 0;
-          }
-        } else {
-          requiredDurability -= remaining;
-          item.qty = 0;
-        }
+        requiredDurability -= wearItem(item, requiredDurability);
       }
     }
   }

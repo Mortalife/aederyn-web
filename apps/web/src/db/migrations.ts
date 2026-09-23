@@ -63,6 +63,81 @@ const migrations: string[][] = [
       PRIMARY KEY (quest_id)
     )`,
   ],
+  // Combat
+  [
+    // Only monsters that differ from "alive at full HP" have a row, as with
+    // resource_usage. `hp` is current HP while alive; `respawn_at` is set
+    // while dead, and the row goes when it respawns.
+    `CREATE TABLE monster_state (
+      x INT, y INT, monster_id TEXT,
+      hp INT,
+      respawn_at INT,
+      PRIMARY KEY (x, y, monster_id)
+    )`,
+    // One fight per player, and one fighter per monster for now.
+    `CREATE TABLE combat (
+      user_id TEXT PRIMARY KEY,
+      x INT, y INT, monster_id TEXT,
+      started_at INT,
+      next_player_at INT,
+      next_monster_at INT,
+      UNIQUE (x, y, monster_id)
+    )`,
+  ],
+  [
+    `CREATE TABLE health_regen (
+      user_id TEXT PRIMARY KEY,
+      last_at INT NOT NULL,
+      at_camp INT NOT NULL
+    )`,
+  ],
+  // The last hit each side landed, so the fight can show it.
+  [
+    "ALTER TABLE combat ADD COLUMN player_hit INT",
+    "ALTER TABLE combat ADD COLUMN player_hit_at INT",
+    "ALTER TABLE combat ADD COLUMN monster_hit INT",
+    "ALTER TABLE combat ADD COLUMN monster_hit_at INT",
+  ],
+  // Replaces the last-hit columns, so hits outlive the fight that dealt them.
+  [
+    "ALTER TABLE combat DROP COLUMN player_hit",
+    "ALTER TABLE combat DROP COLUMN player_hit_at",
+    "ALTER TABLE combat DROP COLUMN monster_hit",
+    "ALTER TABLE combat DROP COLUMN monster_hit_at",
+    `CREATE TABLE combat_hits (
+      id INTEGER PRIMARY KEY,
+      x INT, y INT, monster_id TEXT,
+      user_id TEXT,
+      by_monster INT NOT NULL,
+      damage INT NOT NULL,
+      fatal INT NOT NULL,
+      at INT NOT NULL
+    )`,
+    "CREATE INDEX combat_hits_at ON combat_hits (at)",
+  ],
+  // A tile can list a monster more than once, so rows are keyed by spawn:
+  // the monster's index in the tile's list. Only transient fight state is
+  // lost by recreating these.
+  [
+    "DROP TABLE monster_state",
+    `CREATE TABLE monster_state (
+      x INT, y INT, spawn INT, monster_id TEXT,
+      hp INT,
+      respawn_at INT,
+      PRIMARY KEY (x, y, spawn)
+    )`,
+    "DROP TABLE combat",
+    `CREATE TABLE combat (
+      user_id TEXT PRIMARY KEY,
+      x INT, y INT, spawn INT, monster_id TEXT,
+      started_at INT,
+      next_player_at INT,
+      next_monster_at INT,
+      UNIQUE (x, y, spawn)
+    )`,
+    "DELETE FROM combat_hits",
+    "ALTER TABLE combat_hits ADD COLUMN spawn INT NOT NULL DEFAULT 0",
+  ],
 ];
 
 export const runMigrations = (db: Database, list: string[][] = migrations) => {

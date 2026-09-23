@@ -30,7 +30,7 @@ const trimSystemMessages = writer.prepare(`
   WHERE id NOT IN (
     SELECT id
     FROM (
-      SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY sent_at DESC) AS row_num
+      SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY sent_at DESC, id DESC) AS row_num
       FROM system_messages
     ) AS sub
     WHERE row_num <= 20

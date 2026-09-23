@@ -3,6 +3,7 @@ import {
   ItemSchema,
   ResourceModelSchema,
   TileSchema,
+  MonsterSchema,
   NPCSchema,
   QuestSchema,
   TileQuestSchema,
@@ -17,6 +18,7 @@ export interface ValidationError {
     | "missing_resource"
     | "missing_npc"
     | "missing_tile"
+    | "missing_monster"
     | "missing_quest"
     | "missing_house_tile"
     | "missing_world_ref"
@@ -56,10 +58,11 @@ export interface ValidationResult {
 }
 
 export async function runValidation(): Promise<ValidationResult> {
-  const [items, resources, tiles, npcs, quests, houseTiles, worldBible] = await Promise.all([
+  const [items, resources, tiles, monsters, npcs, quests, houseTiles, worldBible] = await Promise.all([
     repository.items.getAll(),
     repository.resources.getAll(),
     repository.tiles.getAll(),
+    repository.monsters.getAll(),
     repository.npcs.getAll(),
     repository.quests.getAll(),
     repository.houseTiles.getAll(),
@@ -73,6 +76,7 @@ export async function runValidation(): Promise<ValidationResult> {
   const itemIds = new Set(items.map((i) => i.id));
   const resourceIds = new Set(resources.map((r) => r.id));
   const tileIds = new Set(tiles.map((t) => t.id));
+  const monsterIds = new Set(monsters.map((m) => m.id));
   const npcIds = new Set(npcs.map((n) => n.entity_id));
   const questIds = new Set(quests.map((q) => q.id));
   const houseTileIds = new Set(Object.keys(houseTiles));
@@ -101,6 +105,7 @@ export async function runValidation(): Promise<ValidationResult> {
   checkSchema(items.map((i) => ({ id: i.id, name: i.name, data: i })), ItemSchema, "item");
   checkSchema(resources.map((r) => ({ id: r.id, name: r.name, data: r })), ResourceModelSchema, "resource");
   checkSchema(tiles.map((t) => ({ id: t.id, name: t.name, data: t })), TileSchema, "tile");
+  checkSchema(monsters.map((m) => ({ id: m.id, name: m.name, data: m })), MonsterSchema, "monster");
   checkSchema(npcs.map((n) => ({ id: n.entity_id, name: n.name, data: n })), NPCSchema, "npc");
   checkSchema(
     quests.map((q) => ({ id: q.id, name: q.name, data: q })),
@@ -139,6 +144,17 @@ export async function runValidation(): Promise<ValidationResult> {
     }
   }
 
+  // Combat stats: weapons attack from the main hand, and defence only counts while worn
+  for (const item of items) {
+    const invalid = (reference: string, location: string) =>
+      errors.push({ type: "invalid_schema", source: item.id, sourceName: item.name, sourceType: "item", reference, location });
+
+    if (item.type === "weapon" && !item.weapon) invalid("weapons need weapon stats", "weapon");
+    if (item.weapon && item.type !== "weapon") invalid('only items of type "weapon" can have weapon stats', "type");
+    if (item.weapon && item.equipSlot !== "mainHand") invalid('weapons must equip to "mainHand"', "equipSlot");
+    if (item.defence && !item.equippable) invalid("defence only applies to equippable items", "defence");
+  }
+
   checkSchema([{ id: "world-bible", name: worldBible.name, data: worldBible }], WorldBibleSchema, "world-bible");
 
   // Duplicate IDs within a type: lookups by ID silently return the first match
@@ -161,6 +177,7 @@ export async function runValidation(): Promise<ValidationResult> {
   checkDuplicates(items, "item");
   checkDuplicates(resources, "resource");
   checkDuplicates(tiles, "tile");
+  checkDuplicates(monsters, "monster");
   checkDuplicates(npcs.map((n) => ({ id: n.entity_id, name: n.name })), "npc");
   checkDuplicates(quests, "quest");
   checkDuplicates(worldBible.regions, "world-region");
@@ -252,6 +269,41 @@ export async function runValidation(): Promise<ValidationResult> {
     }
   }
 
+  // Check tiles for missing monster references, and monsters for missing drops
+  const placedMonsters = new Set<string>();
+  for (const tile of tiles) {
+    for (const monsterId of tile.monsters || []) {
+      if (!monsterIds.has(monsterId)) {
+        errors.push({
+          type: "missing_monster",
+          source: tile.id,
+          sourceName: tile.name,
+          sourceType: "tile",
+          reference: monsterId,
+          location: "monsters",
+        });
+      } else {
+        placedMonsters.add(monsterId);
+      }
+    }
+  }
+  for (const monster of monsters) {
+    for (const drop of monster.drops || []) {
+      if (!itemIds.has(drop.item_id)) {
+        errors.push({
+          type: "missing_item",
+          source: monster.id,
+          sourceName: monster.name,
+          sourceType: "monster",
+          reference: drop.item_id,
+          location: "drops",
+        });
+      } else {
+        referencedItems.add(drop.item_id);
+      }
+    }
+  }
+
   // Check quests for missing references
   for (const quest of quests) {
     // Check quest giver NPC
@@ -325,6 +377,7 @@ export async function runValidation(): Promise<ValidationResult> {
         type: string;
         item_id?: string;
         resource_id?: string;
+        monster_id?: string;
         entity_id?: string;
         zone_id?: string;
       };
@@ -346,6 +399,9 @@ export async function runValidation(): Promise<ValidationResult> {
       if (obj.resource_id !== undefined) {
         if (!resourceIds.has(obj.resource_id)) missing("missing_resource", obj.resource_id, "resource_id");
         else referencedResources.add(obj.resource_id);
+      }
+      if (obj.monster_id !== undefined && !monsterIds.has(obj.monster_id)) {
+        missing("missing_monster", obj.monster_id, "monster_id");
       }
       if (obj.entity_id !== undefined) {
         if (!npcIds.has(obj.entity_id)) missing("missing_npc", obj.entity_id, "entity_id");
@@ -384,6 +440,16 @@ export async function runValidation(): Promise<ValidationResult> {
         sourceType: "tile",
         reference: tile.id,
         location: "resources",
+      });
+    }
+    if (!tile.accessible && (tile.monsters || []).length > 0) {
+      errors.push({
+        type: "inaccessible_tile",
+        source: tile.id,
+        sourceName: tile.name,
+        sourceType: "tile",
+        reference: tile.id,
+        location: "monsters",
       });
     }
   }
@@ -483,6 +549,7 @@ export async function runValidation(): Promise<ValidationResult> {
       )
     ),
     ...questRewardItems,
+    ...monsters.flatMap((m) => (m.drops || []).map((d) => d.item_id)),
   ]);
   const placedResources = new Set<string>([
     ...tiles.flatMap((t) => t.resources || []),
@@ -525,6 +592,19 @@ export async function runValidation(): Promise<ValidationResult> {
           });
         }
       }
+      if (
+        objective.type === "kill" &&
+        monsterIds.has(objective.monster_id) &&
+        !placedMonsters.has(objective.monster_id)
+      ) {
+        warnings.push({
+          type: "unobtainable",
+          entity: quest.id,
+          entityName: quest.name,
+          entityType: "quest",
+          message: `${where}: monster "${objective.monster_id}" is not on any tile`,
+        });
+      }
     });
   }
 
@@ -537,7 +617,7 @@ export async function runValidation(): Promise<ValidationResult> {
         entity: item.id,
         entityName: item.name,
         entityType: "item",
-        message: "No resource, house-tile action or quest reward produces this item",
+        message: "No resource, house-tile action, monster drop or quest reward produces this item",
       });
     }
   }
@@ -586,8 +666,20 @@ export async function runValidation(): Promise<ValidationResult> {
       }))
     ),
   ];
+  // Any placed monster can be fought barehanded, so its drops are obtainable
+  const monsterProducers = monsters
+    .filter((m) => placedMonsters.has(m.id))
+    .map((m) => ({ yields: (m.drops || []).map((d) => d.item_id) }));
   for (let changed = true; changed; ) {
     changed = false;
+    for (const producer of monsterProducers) {
+      for (const id of producer.yields) {
+        if (!obtainable.has(id)) {
+          obtainable.add(id);
+          changed = true;
+        }
+      }
+    }
     for (const producer of producers) {
       if (!producer.requires.every((id) => obtainable.has(id))) continue;
       for (const id of producer.yields) {
@@ -628,13 +720,18 @@ export async function runValidation(): Promise<ValidationResult> {
     ]).filter((id): id is string => !!id)
   );
   for (const tile of tiles) {
-    if (tile.accessible && (tile.resources || []).length === 0 && !questZones.has(tile.id)) {
+    if (
+      tile.accessible &&
+      (tile.resources || []).length === 0 &&
+      (tile.monsters || []).length === 0 &&
+      !questZones.has(tile.id)
+    ) {
       warnings.push({
         type: "unused",
         entity: tile.id,
         entityName: tile.name,
         entityType: "tile",
-        message: "Accessible tile has no resources and no quest takes the player there",
+        message: "Accessible tile has no resources or monsters and no quest takes the player there",
       });
     }
   }
@@ -660,7 +757,19 @@ export async function runValidation(): Promise<ValidationResult> {
         entity: item.id,
         entityName: item.name,
         entityType: "item",
-        message: "Item is not referenced by any resource, quest, or house tile",
+        message: "Item is not referenced by any resource, monster, quest, or house tile",
+      });
+    }
+  }
+
+  for (const monster of monsters) {
+    if (!placedMonsters.has(monster.id)) {
+      warnings.push({
+        type: "orphaned",
+        entity: monster.id,
+        entityName: monster.name,
+        entityType: "monster",
+        message: "Monster is not found on any tile",
       });
     }
   }
@@ -694,6 +803,7 @@ export async function runValidation(): Promise<ValidationResult> {
     ...items.map((i) => ({ id: i.id, name: i.name, type: "item" })),
     ...resources.map((r) => ({ id: r.id, name: r.name, type: "resource" })),
     ...tiles.map((t) => ({ id: t.id, name: t.name, type: "tile" })),
+    ...monsters.map((m) => ({ id: m.id, name: m.name, type: "monster" })),
     ...npcs.map((n) => ({ id: n.entity_id, name: n.name, type: "npc" })),
     ...quests.map((q) => ({ id: q.id, name: q.name, type: "quest" })),
   ];
@@ -724,7 +834,7 @@ export async function runValidation(): Promise<ValidationResult> {
 
   // Calculate health score
   const totalIssues = errors.length + warnings.length;
-  const totalEntities = items.length + resources.length + tiles.length + npcs.length + quests.length + Object.keys(houseTiles).length;
+  const totalEntities = items.length + resources.length + tiles.length + monsters.length + npcs.length + quests.length + Object.keys(houseTiles).length;
   const healthScore = totalEntities > 0 ? Math.max(0, Math.round(100 - (totalIssues / totalEntities) * 100)) : 100;
 
   return {
@@ -812,6 +922,7 @@ export function getErrorTypeLabel(type: ValidationError["type"]): string {
     missing_resource: "Missing Resource",
     missing_npc: "Missing NPC",
     missing_tile: "Missing Tile",
+    missing_monster: "Missing Monster",
     missing_quest: "Missing Quest",
     missing_house_tile: "Missing House Tile",
     invalid_schema: "Invalid Schema",

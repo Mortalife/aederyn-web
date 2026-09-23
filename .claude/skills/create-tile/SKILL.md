@@ -7,7 +7,7 @@ description: Create or edit a world-map tile (a zone/location such as a grove, m
 
 Read the `game-data` skill first.
 
-Tiles are the world map's zones. A quest's `zone_id` fields are tile IDs, and NPCs are "located" by quest references to a tile. A tile's `resources` are what the player can gather or craft there.
+Tiles are the world map's zones. A quest's `zone_id` fields are tile IDs, and NPCs are "located" by quest references to a tile. A tile's `resources` are what the player can gather or craft there, and its `monsters` are what they can fight there.
 
 ## Steps
 
@@ -29,6 +29,7 @@ Tiles are the world map's zones. A quest's `zone_id` fields are tile IDs, and NP
 | `rarity` | **Spawn weight from 0 to 1**: common terrain 0.3, special places 0.1–0.25, very rare 0.02. Use `0` for hand-placed tiles that should never spawn randomly (quest locations, workshops, walls). The validator warns outside 0–1 |
 | `accessible` | `false` only for impassable terrain (walls) |
 | `resources` | Resource IDs available here; can be empty |
+| `monsters` | Optional. Monster IDs that live here (`create-monster`). Each map position with this tile gets one of each. Not allowed on inaccessible tiles |
 | `texture`, `image` | Only if you know the asset exists |
 
 Example: `{ "id": "tile_mystic_marsh", "name": "Mystic Marsh", "theme": "swamp", "rarity": 0.25, "accessible": true, "resources": ["resource_mud", "resource_cattails"], "color": "#…", "backgroundColor": "#…" }`. Look at a same-theme tile for real colours.

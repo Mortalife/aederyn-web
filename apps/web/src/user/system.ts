@@ -30,7 +30,7 @@ export type SystemMessage = {
 };
 
 const selectSystemMessages = reader.prepare<[string], SystemMessage>(
-  "SELECT * FROM system_messages WHERE user_id = ? ORDER BY sent_at DESC"
+  "SELECT * FROM system_messages WHERE user_id = ? ORDER BY sent_at DESC, id DESC"
 );
 
 export const getSystemMessages = (user_id: string) =>

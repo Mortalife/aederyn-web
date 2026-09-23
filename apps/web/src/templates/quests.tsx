@@ -500,11 +500,13 @@ export const QuestObjectiveProgress = (props: { objective: TileObjective }) => {
   const objective = props.objective;
   const current = Math.max(0, objective.progress?.current ?? 0);
   const total =
-    objective.type === "gather" ||
-    objective.type === "craft" ||
-    objective.type === "collect"
-      ? objective.amount
-      : 1;
+    objective.type === "kill"
+      ? objective.count
+      : objective.type === "gather" ||
+          objective.type === "craft" ||
+          objective.type === "collect"
+        ? objective.amount
+        : 1;
   const percentage = Math.min(100, (current / total) * 100);
 
   switch (objective.type) {
@@ -528,7 +530,8 @@ export const QuestObjectiveProgress = (props: { objective: TileObjective }) => {
         <span class="text-xs text-gray-400 font-mono">${current}/${total}</span>
       </div>`;
     }
-    case "collect": {
+    case "collect":
+    case "kill": {
       return html`<div class="flex items-center gap-2 ml-auto">
         <div class="w-24 h-2 rounded-full bg-white/10 overflow-hidden">
           <div

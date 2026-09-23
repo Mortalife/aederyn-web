@@ -11,6 +11,12 @@ import { getPopulatedUser } from "../../user/user.js";
 import { getZoneUsers } from "../../user/zone.js";
 import type { OtherUser } from "../../config.js";
 import { getResourceUsageInArea } from "../../world/resources.js";
+import {
+  COMBAT_LOG_MS,
+  getCombatHitsInArea,
+  getCombatInArea,
+  getMonsterStateInArea,
+} from "../../world/monsters.js";
 import { visibleArea } from "../../world/index.js";
 import { chatVersion, onlineVersion, zoneVersion } from "../versions.js";
 
@@ -78,11 +84,15 @@ export const loadView = (userId: string, now: number) => {
   }
 
   const onlineAt = getOnlineStatus(userId)?.online_at ?? now;
+  const area = visibleArea(user.p);
 
   return {
     user,
     chatMessages: loadChat(calculateMessageHistory(onlineAt)),
-    resourceUsage: getResourceUsageInArea(visibleArea(user.p)),
+    resourceUsage: getResourceUsageInArea(area),
+    monsterState: getMonsterStateInArea(area),
+    combat: getCombatInArea(area),
+    combatHits: getCombatHitsInArea(area, now - COMBAT_LOG_MS),
     /** Everyone in the player's zone, the player included. */
     zoneUsers: user.z ? loadZoneUsers(user.p.x, user.p.y) : [],
     messages: getSystemMessages(user.id),

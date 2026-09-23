@@ -16,6 +16,7 @@ All paths are relative to `apps/editor/`.
 | Item | `data/items.json` | array | `id` | `packages/types/src/entities/item.schema.ts` |
 | Resource (gather node or crafting station) | `data/resources.json` | array | `id` | `resource.schema.ts` → `ResourceModelSchema` |
 | Tile (world map zone) | `data/tiles.json` | array | `id` | `tile.schema.ts` |
+| Monster (attackable creature) | `data/monsters.json` | array | `id` | `monster.schema.ts` (combat stats in `combat.schema.ts`) |
 | NPC | `data/npcs.json` | array | `entity_id` | `npc.schema.ts` |
 | Quest | `data/quests.json` | array | `id` | `quest.schema.ts` → `QuestSchema` |
 | House tile (player homestead) | `data/house-tiles.json` | **object keyed by id** | `id` (must equal key) | `house-tile.schema.ts` |
@@ -27,6 +28,8 @@ The zod schemas are authoritative. Read the relevant one before writing an entit
 
 ```
 tile.resources[]                    → resource.id
+tile.monsters[]                     → monster.id
+monster.drops[].item_id             → item.id      (what killing it gives)
 resource.reward_items[].item_id     → item.id      (what gathering/crafting gives)
 resource.required_items[].item_id   → item.id      (tools needed, or crafting inputs)
 quest.giver / completion.entity_id  → npc.entity_id
@@ -46,7 +49,7 @@ So a new obtainable item usually needs three entities: the **item**, a **resourc
 
 ## ID conventions
 
-- `snake_case`, with a type prefix: `item_`, `resource_`, `tile_`, `npc_`, `quest_`. Crafting stations are `resource_crafting_<item>`. House tiles use bare names (`soil`, `seedling`).
+- `snake_case`, with a type prefix: `item_`, `resource_`, `tile_`, `monster_`, `npc_`, `quest_`. Crafting stations are `resource_crafting_<item>`. House tiles use bare names (`soil`, `seedling`).
 - Base the ID on the entity's name: `item_emberstone_of_valor`. Add `_02` only when that ID is already taken.
 - Don't use `quest_new__` or `npc_quest_new__` style IDs. Those came from the old generator.
 - Check that an ID is free before using it (see lookups below). The validator treats duplicates as errors.
@@ -60,6 +63,7 @@ cd apps/editor
 jq -r '.[] | "\(.id)\t\(.name)\t\(.type)\t\(.rarity)"' data/items.json | grep -i ember
 jq -r '.[] | "\(.id)\t\(.name)\t\(.type)"' data/resources.json
 jq -r '.[] | "\(.id)\t\(.name)\t\(.theme)\t\(.resources|join(","))"' data/tiles.json
+jq -r '.[] | "\(.id)\t\(.name)\t\(.attack.style)\t\([.drops[].item_id]|join(","))"' data/monsters.json
 jq -r '.[] | "\(.entity_id)\t\(.name)"' data/npcs.json
 jq -r '.[] | "\(.id)\t\(.name)\t\(.giver.entity_id)"' data/quests.json
 jq '.[] | select(.id=="item_log_01")' data/items.json            # full record

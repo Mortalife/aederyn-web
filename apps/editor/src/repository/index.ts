@@ -5,6 +5,7 @@ import type {
   ResourceModel,
   Tile,
   NPC,
+  Monster,
   Quest,
   TileQuest,
   QuestGroup,
@@ -13,7 +14,7 @@ import type {
 } from "@aederyn/types";
 import { createDefaultWorldBible } from "@aederyn/types";
 
-export type { Item, Tile, NPC, HouseTile, Quest, TileQuest, QuestGroup };
+export type { Item, Tile, NPC, Monster, HouseTile, Quest, TileQuest, QuestGroup };
 export type Resource = ResourceModel;
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -133,6 +134,37 @@ export const repository = {
       const filtered = tiles.filter((t) => t.id !== id);
       if (filtered.length === tiles.length) return false;
       await writeJsonFile("tiles.json", filtered);
+      return true;
+    },
+  },
+
+  monsters: {
+    async getAll(): Promise<Monster[]> {
+      return readJsonFile<Monster>("monsters.json");
+    },
+    async getById(id: string): Promise<Monster | undefined> {
+      const monsters = await this.getAll();
+      return monsters.find((m) => m.id === id);
+    },
+    async create(monster: Monster): Promise<Monster> {
+      const monsters = await this.getAll();
+      monsters.push(monster);
+      await writeJsonFile("monsters.json", monsters);
+      return monster;
+    },
+    async update(id: string, updates: Partial<Monster>): Promise<Monster | undefined> {
+      const monsters = await this.getAll();
+      const index = monsters.findIndex((m) => m.id === id);
+      if (index === -1) return undefined;
+      monsters[index] = { ...monsters[index], ...updates };
+      await writeJsonFile("monsters.json", monsters);
+      return monsters[index];
+    },
+    async delete(id: string): Promise<boolean> {
+      const monsters = await this.getAll();
+      const filtered = monsters.filter((m) => m.id !== id);
+      if (filtered.length === monsters.length) return false;
+      await writeJsonFile("monsters.json", filtered);
       return true;
     },
   },

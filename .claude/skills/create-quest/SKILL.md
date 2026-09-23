@@ -29,14 +29,15 @@ Write a short plan in your reply, then build it:
 | `collect` | `item_id` (an item some resource/house tile produces), `amount` | has N of an item |
 | `craft` | `resource_id` (a workbench/furnace/magic recipe placed on a tile), `amount` | crafts at a station |
 | `explore` | `zone_id` (tile), `chance` (0–1), `found_message` | searches a zone |
+| `kill` | `monster_id` (a monster placed on an accessible tile), `count` | defeats N monsters |
 
-There are no kill, deliver, escort or defend objectives. Express those beats through the supported types: deliver becomes `collect` then `talk`, defeat becomes `explore` plus dialogue. Put the drama in the descriptions and dialogue.
+There are no deliver, escort or defend objectives. Express delivery through `collect` then `talk`. Put the drama in the descriptions and dialogue.
 - **Rewards**: `item` (existing or new item) and/or `gold`. Don't use `skill` rewards: no skill IDs are defined yet.
 - **New entities**: the list of items/resources/tiles/NPCs you'll create, and where each gets produced or placed so every objective can be completed.
 
 ## 3. Build supporting entities first
 
-Create them in dependency order, following each skill: **items → resources (reward those items) → tiles (host those resources) → NPCs**. Keep a running list of every ID you create or change.
+Create them in dependency order, following each skill: **items → resources (reward those items) → monsters (drop those items) → tiles (host resources and monsters) → NPCs**. Place kill targets on accessible tiles and make sure the player can obtain a weapon that can realistically beat them (fists only do 1 damage). Keep a running list of every ID you create or change.
 
 ## 4. Write the quest
 
@@ -48,6 +49,7 @@ Read `packages/types/src/entities/quest.schema.ts`, then append to `data/quests.
 - Objective `id`s: short and unique within the quest (`talk_elder_start`, `gather_moss`). Always include `"progress": null`.
 - `talk.dialog_steps`: 2–4 steps. `entity_id` is the NPC for their lines and `null` for the player's. Include the information the player needs for the next objective.
 - `explore`: `chance` 0.3–1 and a `found_message` saying what they discover.
+- `kill`: `monster_id` and a positive integer `count`. Kills count only after the quest starts and this objective becomes current.
 - `prerequisites`: quest IDs, only if the story really follows another quest.
 - `is_tutorial`: only for onboarding quests.
 - Don't add `x`/`y` coordinates unless the tile-quest placement is known; they're optional.

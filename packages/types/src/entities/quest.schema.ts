@@ -83,12 +83,19 @@ export const CraftObjectiveSchema = BaseObjectiveSchema.extend({
   amount: z.number().min(1).describe("Amount to craft"),
 });
 
+export const KillObjectiveSchema = BaseObjectiveSchema.extend({
+  type: z.literal("kill"),
+  monster_id: z.string().describe("Monster to defeat"),
+  count: z.number().int().min(1).describe("Number of kills required"),
+});
+
 export const ObjectiveSchema = z.discriminatedUnion("type", [
   GatherObjectiveSchema,
   CollectObjectiveSchema,
   TalkObjectiveSchema,
   ExploreObjectiveSchema,
   CraftObjectiveSchema,
+  KillObjectiveSchema,
 ]);
 
 export const TileObjectiveSchema = z.discriminatedUnion("type", [
@@ -97,6 +104,7 @@ export const TileObjectiveSchema = z.discriminatedUnion("type", [
   TileTalkObjectiveSchema,
   TileExploreObjectiveSchema,
   CraftObjectiveSchema,
+  KillObjectiveSchema,
 ]);
 
 export const ItemRewardSchema = z.object({
@@ -173,6 +181,7 @@ export type TileTalkObjective = z.infer<typeof TileTalkObjectiveSchema>;
 export type ExploreObjective = z.infer<typeof ExploreObjectiveSchema>;
 export type TileExploreObjective = z.infer<typeof TileExploreObjectiveSchema>;
 export type CraftObjective = z.infer<typeof CraftObjectiveSchema>;
+export type KillObjective = z.infer<typeof KillObjectiveSchema>;
 export type Objective = z.infer<typeof ObjectiveSchema>;
 export type TileObjective = z.infer<typeof TileObjectiveSchema>;
 export type ItemReward = z.infer<typeof ItemRewardSchema>;

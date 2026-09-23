@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 /*
- * The seconds counter on progress bars (`ProgressBar` in
- * templates/elements.tsx), which animates --progress-seconds.
+ * The seconds counter on progress bars and respawn countdowns (`ProgressBar`
+ * and `RespawnCountdown` in templates/elements.tsx), which animate
+ * --progress-seconds.
  */
 @property --progress-seconds {
   syntax: "<integer>";

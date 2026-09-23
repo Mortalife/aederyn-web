@@ -1087,5 +1087,32 @@
     "collectionTime": 10,
     "type": "workbench",
     "verb": "Craft"
+  },
+  {
+    "id": "resource_crafting_wooden_club",
+    "name": "Wooden Club",
+    "limitless": true,
+    "amount": 1,
+    "reward_items": [
+      {
+        "item_id": "item_wooden_club",
+        "qty": 1
+      }
+    ],
+    "required_items": [
+      {
+        "item_id": "item_log_01",
+        "qty": 1,
+        "consumed": true
+      },
+      {
+        "item_id": "item_vine",
+        "qty": 1,
+        "consumed": true
+      }
+    ],
+    "collectionTime": 10,
+    "type": "workbench",
+    "verb": "Craft"
   }
 ]

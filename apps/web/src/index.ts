@@ -243,6 +243,22 @@ app.delete(
 );
 
 app.post(
+  "/game/monsters/:spawn/attack",
+  commandRoute(async (c, userId) => {
+    const spawn = Number(c.req.param("spawn"));
+
+    return Number.isInteger(spawn) && spawn >= 0
+      ? { type: "attack", userId, spawn }
+      : null;
+  })
+);
+
+app.post(
+  "/game/combat/flee",
+  commandRoute(async (_c, userId) => ({ type: "flee", userId }))
+);
+
+app.post(
   "/game/chat",
   commandRoute(async (c, userId) => {
     const { message } = await c.req.json<{ message?: unknown }>();
