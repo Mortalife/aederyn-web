@@ -3,7 +3,7 @@ import { reader } from "../db/reader.js";
 export type MonsterState = {
   x: number;
   y: number;
-  /** The monster's index in its tile's `monsters`. */
+  /** The monster's index in its cell's rolled `monsters`. */
   spawn: number;
   monster_id: string;
   /** Current HP while alive. */

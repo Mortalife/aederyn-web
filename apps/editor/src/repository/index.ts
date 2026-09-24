@@ -6,15 +6,15 @@ import type {
   Tile,
   NPC,
   Monster,
+  Effect,
   Quest,
-  TileQuest,
-  QuestGroup,
   HouseTile,
   WorldBible,
+  MapData,
 } from "@aederyn/types";
 import { createDefaultWorldBible } from "@aederyn/types";
 
-export type { Item, Tile, NPC, Monster, HouseTile, Quest, TileQuest, QuestGroup };
+export type { Item, Tile, NPC, Monster, Effect, HouseTile, Quest, MapData };
 export type Resource = ResourceModel;
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -169,6 +169,37 @@ export const repository = {
     },
   },
 
+  effects: {
+    async getAll(): Promise<Effect[]> {
+      return readJsonFile<Effect>("effects.json");
+    },
+    async getById(id: string): Promise<Effect | undefined> {
+      const effects = await this.getAll();
+      return effects.find((e) => e.id === id);
+    },
+    async create(effect: Effect): Promise<Effect> {
+      const effects = await this.getAll();
+      effects.push(effect);
+      await writeJsonFile("effects.json", effects);
+      return effect;
+    },
+    async update(id: string, effect: Effect): Promise<Effect | undefined> {
+      const effects = await this.getAll();
+      const index = effects.findIndex((e) => e.id === id);
+      if (index === -1) return undefined;
+      effects[index] = { ...effect, id };
+      await writeJsonFile("effects.json", effects);
+      return effects[index];
+    },
+    async delete(id: string): Promise<boolean> {
+      const effects = await this.getAll();
+      const filtered = effects.filter((e) => e.id !== id);
+      if (filtered.length === effects.length) return false;
+      await writeJsonFile("effects.json", filtered);
+      return true;
+    },
+  },
+
   npcs: {
     async getAll(): Promise<NPC[]> {
       return readJsonFile<NPC>("npcs.json");
@@ -201,24 +232,25 @@ export const repository = {
   },
 
   quests: {
-    async getAll(): Promise<QuestGroup[]> {
-      return readJsonFile<QuestGroup>("quests.json");
+    async getAll(): Promise<Quest[]> {
+      return readJsonFile<Quest>("quests.json");
     },
-    async getById(id: string): Promise<QuestGroup | undefined> {
+    async getById(id: string): Promise<Quest | undefined> {
       const quests = await this.getAll();
       return quests.find((q) => q.id === id);
     },
-    async create(quest: QuestGroup): Promise<QuestGroup> {
+    async create(quest: Quest): Promise<Quest> {
       const quests = await this.getAll();
       quests.push(quest);
       await writeJsonFile("quests.json", quests);
       return quest;
     },
-    async update(id: string, updates: Partial<QuestGroup>): Promise<QuestGroup | undefined> {
+    /** Replaces the whole quest: story and contract fields don't mix. */
+    async update(id: string, quest: Quest): Promise<Quest | undefined> {
       const quests = await this.getAll();
       const index = quests.findIndex((q) => q.id === id);
       if (index === -1) return undefined;
-      quests[index] = { ...quests[index], ...updates };
+      quests[index] = { ...quest, id };
       await writeJsonFile("quests.json", quests);
       return quests[index];
     },
@@ -274,6 +306,23 @@ export const repository = {
     },
   },
 
+  map: {
+    async get(): Promise<MapData> {
+      await ensureDataDir();
+      try {
+        const content = await fs.readFile(path.join(DATA_DIR, "map.json"), "utf-8");
+        return JSON.parse(content);
+      } catch {
+        return { bounds: { minX: 0, maxX: 39, minY: 0, maxY: 39 }, regions: [], landmarks: [] };
+      }
+    },
+    async save(map: MapData): Promise<MapData> {
+      await ensureDataDir();
+      await fs.writeFile(path.join(DATA_DIR, "map.json"), JSON.stringify(map, null, 2), "utf-8");
+      return map;
+    },
+  },
+
   worldBible: {
     async get(): Promise<WorldBible> {
       await ensureDataDir();
@@ -298,14 +347,16 @@ export const repository = {
     items: number;
     resources: number;
     tiles: number;
+    effects: number;
     npcs: number;
     quests: number;
     houseTiles: number;
   }> {
-    const [items, resources, tiles, npcs, quests, houseTiles] = await Promise.all([
+    const [items, resources, tiles, effects, npcs, quests, houseTiles] = await Promise.all([
       this.items.getAll(),
       this.resources.getAll(),
       this.tiles.getAll(),
+      this.effects.getAll(),
       this.npcs.getAll(),
       this.quests.getAll(),
       this.houseTiles.getAll(),
@@ -314,6 +365,7 @@ export const repository = {
       items: items.length,
       resources: resources.length,
       tiles: tiles.length,
+      effects: effects.length,
       npcs: npcs.length,
       quests: quests.length,
       houseTiles: Object.keys(houseTiles).length,

@@ -1,7 +1,19 @@
 import { z } from "zod";
 import { ItemSchema } from "./item.schema.js";
 
-export const ResourceTypeSchema = z.enum(["resource", "workbench", "furnace", "magic"]);
+export const ResourceTypeSchema = z.enum([
+  "resource",
+  "workbench",
+  "campfire",
+  "forge",
+  "kiln",
+  "tanning_rack",
+  "apothecary",
+  "loom",
+  "warding_table",
+  "growing_pit",
+  "keystone",
+]);
 
 export const RewardItemModelSchema = z.object({
   item_id: z.string().describe("Item ID to reward"),
@@ -35,7 +47,7 @@ export const ResourceModelSchema = z.object({
   collectionTime: z.number().describe("Time in ms to collect"),
   reward_items: z.array(RewardItemModelSchema).describe("Items rewarded on collection"),
   required_items: z.array(RequiredItemModelSchema).describe("Items required to collect"),
-  type: ResourceTypeSchema.describe("Resource category type"),
+  type: ResourceTypeSchema.describe("Station or gathering type"),
   verb: z.string().describe("Action verb (e.g., 'Mine', 'Chop')"),
 });
 

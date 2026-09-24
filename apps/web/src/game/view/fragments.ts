@@ -9,12 +9,13 @@ import {
   ZoneEquipment,
   ZoneInventory,
   ZoneMonsters,
+  ZoneNPCs,
   ZoneNav,
   ZonePlayers,
   ZoneResources,
 } from "../../templates/elements.js";
 import { Game, GameContent } from "../../templates/game.js";
-import { Quests } from "../../templates/quests.js";
+import { ContractBoard, Quests } from "../../templates/quests.js";
 import {
   chatVersion,
   onlineVersion,
@@ -90,7 +91,8 @@ export const buildScreen = (
           user,
           view.messages,
           view.totalPlayersOnline,
-          view.messages.find((m) => String(m.id) === view.alertKey)
+          view.messages.find((m) => String(m.id) === view.alertKey),
+          view.effects
         )}
       </div>`,
   };
@@ -138,6 +140,21 @@ export const buildScreen = (
         }),
     },
     {
+      id: "npcs",
+      key: `${u}:${zone}:${aq}`,
+      render: () => ZoneNPCs(view.npcs),
+    },
+    {
+      id: "board",
+      key: `${u}:${zone}:${aq}:${f}:t${view.clock}`,
+      render: () =>
+        ContractBoard({
+          contracts: view.board,
+          flashMessage: view.contextFlashes.get("quest"),
+          now: view.clock,
+        }),
+    },
+    {
       id: "resources",
       // The progress bar runs on the client, so this has no clock in its key.
       key: `${u}:${z}:${aq}:${f}`,
@@ -170,6 +187,7 @@ export const buildScreen = (
           zoneQuests: view.quests,
           npcInteractions: view.npcInteractions,
           flashMessage: view.contextFlashes.get("quest"),
+          residents: new Set(view.npcs.map(({ npc }) => npc.entity_id)),
           now: view.clock,
         }) ?? html`<div id="quests"></div>`,
     },
@@ -207,6 +225,8 @@ export const buildScreen = (
             Zone({
               header: part(parts, "zone-header"),
               nav: part(parts, "zone-nav"),
+              npcs: part(parts, "npcs"),
+              board: part(parts, "board"),
               resources: part(parts, "resources"),
               monsters: part(parts, "monsters"),
               quests: part(parts, "quests"),

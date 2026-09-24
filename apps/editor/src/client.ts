@@ -23,7 +23,7 @@ document.addEventListener("keydown", (e) => {
 interface GraphNode {
   id: string;
   label: string;
-  type: "item" | "resource" | "tile" | "npc" | "quest" | "house-tile";
+  type: "item" | "resource" | "tile" | "effect" | "npc" | "quest" | "house-tile" | "map";
 }
 
 interface GraphEdge {
@@ -42,9 +42,11 @@ const nodeColors: Record<string, string> = {
   item: "#f59e0b",
   resource: "#10b981",
   tile: "#3b82f6",
+  effect: "#eab308",
   npc: "#8b5cf6",
   quest: "#f43f5e",
   "house-tile": "#06b6d4",
+  map: "#84cc16",
 };
 
 const edgeColors: Record<string, string> = {
@@ -54,6 +56,11 @@ const edgeColors: Record<string, string> = {
   giver: "#8b5cf6",
   rewards: "#f43f5e",
   transforms_to: "#06b6d4",
+  applies: "#eab308",
+  protects: "#84cc16",
+  places: "#3b82f6",
+  home: "#a855f7",
+  excludes: "#ef4444",
 };
 
 // Web Component for Cytoscape Graph
@@ -190,11 +197,16 @@ class CytoscapeGraph extends HTMLElement {
         item: "items",
         resource: "resources",
         tile: "tiles",
+        effect: "effects",
         npc: "npcs",
         quest: "quests",
         "house-tile": "house-tiles",
       };
       
+      if (type === "map") {
+        window.location.href = "/map";
+        return;
+      }
       const path = typeToPath[type];
       if (path) {
         window.location.href = `/${path}/${id}`;
@@ -289,41 +301,49 @@ window.graphFilter = (types: string[]) => {
   graph?.filterNodes(types);
 };
 
-// Item Effects helpers
-const EFFECT_TYPES = [
-  { value: "heal", label: "Heal HP" },
-  { value: "restore_mana", label: "Restore Mana" },
-  { value: "buff_strength", label: "Buff Strength" },
-  { value: "buff_dexterity", label: "Buff Dexterity" },
-  { value: "buff_intelligence", label: "Buff Intelligence" },
-  { value: "damage_over_time", label: "Damage Over Time" },
-  { value: "poison", label: "Poison" },
-  { value: "speed_boost", label: "Speed Boost" },
-];
+// Effect list helpers (see components/EffectList.tsx)
+window.addEffectRow = (listId: string) => {
+  const list = document.getElementById(listId);
+  const options = document.getElementById(`${listId}-options`) as HTMLTemplateElement | null;
+  if (!list || !options) return;
 
-window.addItemEffect = () => {
-  const list = document.getElementById("effects-list");
-  if (!list) return;
-  
-  const index = list.children.length;
+  const name = list.dataset.name!;
+  const index = Date.now();
+  const inputClass = "px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-cyan-500";
   const div = document.createElement("div");
   div.className = "flex items-center gap-2 bg-gray-600/50 p-2 rounded";
-  div.setAttribute("data-effect-index", index.toString());
-  
-  const options = EFFECT_TYPES.map(t => 
-    `<option value="${t.value}">${t.label}</option>`
-  ).join("");
-  
+  div.setAttribute("data-effect-row", "");
   div.innerHTML = `
-    <select name="effects[${index}].type" class="flex-1 px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-cyan-500">
-      ${options}
-    </select>
-    <input type="number" name="effects[${index}].value" value="0" placeholder="Value" class="w-20 px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-cyan-500" />
-    <input type="number" name="effects[${index}].duration" value="0" placeholder="Duration" class="w-24 px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-cyan-500" />
-    <button type="button" class="px-2 py-1 text-red-400 hover:text-red-300" onclick="this.closest('[data-effect-index]').remove()">✕</button>
+    <select name="${name}[${index}].id" class="flex-1 ${inputClass}">${options.innerHTML}</select>
+    <input type="number" name="${name}[${index}].strength" value="1" min="0" step="any" title="Strength" class="w-24 ${inputClass}" />
+    ${list.dataset.duration === "1" ? `<input type="number" name="${name}[${index}].duration" value="0" min="0" title="Duration (seconds, 0 = instant)" class="w-24 ${inputClass}" />` : ""}
+    <button type="button" class="px-2 py-1 text-red-400 hover:text-red-300" onclick="this.closest('[data-effect-row]').remove()">✕</button>
   `;
-  
   list.appendChild(div);
+};
+
+// Map editor rows (see templates/map-editor.tsx). `__I__` in a template
+// becomes a fresh index, and `__KEY__` each of `vars`.
+const refreshMapPreview = (form: HTMLFormElement | null) =>
+  form?.dispatchEvent(new Event("input", { bubbles: true }));
+
+window.addMapRow = (templateId: string, listId: string, vars: Record<string, string> = {}) => {
+  const template = document.getElementById(templateId) as HTMLTemplateElement | null;
+  const list = document.getElementById(listId);
+  if (!template || !list) return;
+
+  let html = template.innerHTML.replaceAll("__I__", String(Date.now()));
+  for (const [key, value] of Object.entries(vars)) {
+    html = html.replaceAll(`__${key}__`, value);
+  }
+  list.insertAdjacentHTML("beforeend", html);
+  refreshMapPreview(list.closest("form"));
+};
+
+window.removeMapRow = (button: HTMLElement) => {
+  const form = button.closest("form");
+  button.closest("[data-row]")?.remove();
+  refreshMapPreview(form);
 };
 
 // NPC Relationship helpers
@@ -360,140 +380,15 @@ window.addRelationshipFromSelect = (selectEl: HTMLSelectElement, relType: string
   selectEl.value = "";
 };
 
-// Quest Objective helpers
-window.addObjective = (objectiveType: string = "gather") => {
-  const list = document.getElementById("objectives-list");
-  if (!list) return;
-  
-  const index = list.children.length;
-  const div = document.createElement("div");
-  div.className = "bg-gray-700 rounded-lg p-4 border border-gray-600";
-  div.setAttribute("data-objective-index", index.toString());
-  
-  div.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-3">
-        <select name="objectives[${index}].type" class="bg-gray-600 rounded px-3 py-1 text-white" onchange="window.updateObjectiveFields(${index}, this.value)">
-          <option value="gather">Gather Resource</option>
-          <option value="collect">Collect Item</option>
-          <option value="talk">Talk to NPC</option>
-          <option value="explore">Explore Location</option>
-          <option value="craft">Craft at Station</option>
-        </select>
-      </div>
-      <button type="button" onclick="this.closest('[data-objective-index]').remove()" class="text-red-400 hover:text-red-300">Remove</button>
-    </div>
-    <div class="grid grid-cols-2 gap-4 mb-4">
-      <div>
-        <label class="text-xs text-gray-400">Objective ID</label>
-        <input type="text" name="objectives[${index}].id" placeholder="obj_${index + 1}" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-      </div>
-      <div>
-        <label class="text-xs text-gray-400">Description</label>
-        <input type="text" name="objectives[${index}].description" placeholder="Auto-generated if empty" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-      </div>
-    </div>
-    <div id="objective-fields-${index}" class="objective-type-fields">
-      ${window.getObjectiveFieldsHtml(index, objectiveType)}
-    </div>
-  `;
-  
-  list.appendChild(div);
-};
-
-window.updateObjectiveFields = (index: number, type: string) => {
-  const container = document.getElementById(`objective-fields-${index}`);
-  if (container) {
-    container.innerHTML = window.getObjectiveFieldsHtml(index, type);
-  }
-};
-
-window.getObjectiveFieldsHtml = (index: number, type: string): string => {
-  const resourceSelect = document.getElementById("resources-data")?.getAttribute("data-resources") || "[]";
-  const itemSelect = document.getElementById("items-data")?.getAttribute("data-items") || "[]";
-  const npcSelect = document.getElementById("npcs-data")?.getAttribute("data-npcs") || "[]";
-  
-  switch (type) {
-    case "gather":
-    case "craft":
-      return `
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="text-xs text-gray-400">${type === "craft" ? "Crafting Station" : "Resource"}</label>
-            <input type="text" name="objectives[${index}].resource_id" placeholder="resource_id" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-          </div>
-          <div>
-            <label class="text-xs text-gray-400">Amount</label>
-            <input type="number" name="objectives[${index}].amount" value="1" min="1" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-          </div>
-        </div>
-      `;
-    case "collect":
-      return `
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="text-xs text-gray-400">Item</label>
-            <input type="text" name="objectives[${index}].item_id" placeholder="item_id" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-          </div>
-          <div>
-            <label class="text-xs text-gray-400">Amount</label>
-            <input type="number" name="objectives[${index}].amount" value="1" min="1" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-          </div>
-        </div>
-      `;
-    case "talk":
-      return `
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label class="text-xs text-gray-400">NPC Entity ID</label>
-            <input type="text" name="objectives[${index}].entity_id" placeholder="npc_id" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-          </div>
-          <div>
-            <label class="text-xs text-gray-400">Zone ID</label>
-            <input type="text" name="objectives[${index}].zone_id" placeholder="zone_id" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-          </div>
-        </div>
-        <div class="bg-gray-800 rounded p-3">
-          <label class="text-xs text-gray-400 mb-2 block">Dialog Steps</label>
-          <div id="dialog-steps-${index}" class="space-y-2 mb-2"></div>
-          <button type="button" onclick="window.addDialogStep(${index})" class="w-full py-1 border border-dashed border-gray-500 rounded text-gray-400 text-sm hover:border-cyan-500 hover:text-cyan-400">+ Add Dialog Step</button>
-        </div>
-      `;
-    case "explore":
-      return `
-        <div class="grid grid-cols-3 gap-4">
-          <div>
-            <label class="text-xs text-gray-400">Zone ID</label>
-            <input type="text" name="objectives[${index}].zone_id" placeholder="zone_id" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-          </div>
-          <div>
-            <label class="text-xs text-gray-400">Discovery Chance (%)</label>
-            <input type="number" name="objectives[${index}].chance" value="100" min="1" max="100" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-          </div>
-          <div class="col-span-3">
-            <label class="text-xs text-gray-400">Found Message</label>
-            <input type="text" name="objectives[${index}].found_message" placeholder="Message when discovered" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-          </div>
-        </div>
-      `;
-    default:
-      return "";
-  }
-};
-
-window.addDialogStep = (objectiveIndex: number) => {
-  const list = document.getElementById(`dialog-steps-${objectiveIndex}`);
-  if (!list) return;
-  
-  const stepIndex = list.children.length;
-  const div = document.createElement("div");
-  div.className = "flex gap-2 items-start";
-  div.innerHTML = `
-    <input type="text" name="objectives[${objectiveIndex}].dialog_steps[${stepIndex}].entity_id" placeholder="Entity ID (empty = player)" class="w-32 px-2 py-1 bg-gray-600 rounded text-white text-sm" />
-    <textarea name="objectives[${objectiveIndex}].dialog_steps[${stepIndex}].dialog" rows="2" class="flex-1 px-2 py-1 bg-gray-600 rounded text-white text-sm" placeholder="Dialog text..."></textarea>
-    <button type="button" onclick="this.parentElement.remove()" class="text-red-400 text-sm">✕</button>
-  `;
-  list.appendChild(div);
+// Quest kind: show the story or contract fields
+window.updateQuestKind = (kind: string) => {
+  document.querySelectorAll<HTMLElement>("[data-quest-kind]").forEach((el) => {
+    const shown = el.dataset.questKind === kind;
+    el.style.display = shown ? "" : "none";
+    el.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select, textarea").forEach((input) => {
+      input.disabled = !shown;
+    });
+  });
 };
 
 // Quest Reward helpers
@@ -586,12 +481,12 @@ window.updateRewardFields = (selectEl: HTMLSelectElement, index: number) => {
   container.innerHTML = fieldsHtml;
 };
 
-// Prerequisites helper
-window.addPrerequisite = (selectEl: HTMLSelectElement) => {
+// Quest chips: prerequisites, or a story quest's exclusions
+window.addPrerequisite = (selectEl: HTMLSelectElement, field = "prerequisites") => {
   const questId = selectEl.value;
   if (!questId) return;
   
-  const list = document.getElementById("prerequisites-list");
+  const list = document.getElementById(`${field}-list`);
   if (!list) return;
   
   // Check if already added
@@ -607,7 +502,7 @@ window.addPrerequisite = (selectEl: HTMLSelectElement) => {
   const span = document.createElement("span");
   span.className = "inline-flex items-center gap-1 px-3 py-1 bg-rose-500/20 text-rose-400 rounded-full text-sm";
   span.innerHTML = `
-    <input type="hidden" name="prerequisites[${index}]" value="${questId}" />
+    <input type="hidden" name="${field}[${index}]" value="${questId}" />
     ${questName}
     <button type="button" onclick="this.parentElement.remove()" class="ml-1 hover:text-rose-300">✕</button>
   `;
@@ -635,16 +530,15 @@ window.updateDurabilityVisibility = (selectEl: HTMLSelectElement) => {
 // Extend Window interface
 declare global {
   interface Window {
-    addItemEffect: () => void;
+    addEffectRow: (listId: string) => void;
+    addMapRow: (templateId: string, listId: string, vars?: Record<string, string>) => void;
+    removeMapRow: (button: HTMLElement) => void;
     addRelationshipEntry: (relType: string, defaultValue?: string) => void;
     addRelationshipFromSelect: (selectEl: HTMLSelectElement, relType: string) => void;
-    addObjective: (objectiveType?: string) => void;
-    updateObjectiveFields: (index: number, type: string) => void;
-    getObjectiveFieldsHtml: (index: number, type: string) => string;
-    addDialogStep: (objectiveIndex: number) => void;
+    updateQuestKind: (kind: string) => void;
     addReward: (rewardType?: string) => void;
     updateRewardFields: (selectEl: HTMLSelectElement, index: number) => void;
-    addPrerequisite: (selectEl: HTMLSelectElement) => void;
+    addPrerequisite: (selectEl: HTMLSelectElement, field?: string) => void;
     updateDurabilityVisibility: (selectEl: HTMLSelectElement) => void;
   }
 }

@@ -1,6 +1,6 @@
-// The app rotates quests itself every hour (see game/loop.ts). This script is
-// for forcing a rotation by hand, e.g. after adding quests: `pnpm cron --force`.
-import { rotateQuestsOutsideLoop } from "./game/systems/quest-rotation.js";
+// The app rotates contracts itself (see game/loop.ts). This script is for
+// forcing a rotation by hand, e.g. after editing contracts: `pnpm cron --force`.
+import { rotateContractsOutsideLoop } from "./game/systems/contract-rotation.js";
 
-console.log("Rotating active quests");
-rotateQuestsOutsideLoop({ force: process.argv.includes("--force") });
+console.log("Rotating contracts");
+rotateContractsOutsideLoop({ force: process.argv.includes("--force") });

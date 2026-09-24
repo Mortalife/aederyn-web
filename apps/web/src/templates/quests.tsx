@@ -1,6 +1,7 @@
 import { html } from "hono/html";
-import type { TileObjective, TileQuest } from "../config.js";
+import type { PlacedObjective, PlacedQuest } from "../world/quests.js";
 import type {
+  BoardContract,
   ZoneInteraction,
   ZoneQuests,
 } from "../user/quest-progress-manager.js";
@@ -65,14 +66,31 @@ const getQuestTypeStyle = (type: keyof ZoneQuests) => {
   }
 };
 
+/**
+ * The quests panel. Contracts on offer are listed by the contract board, and
+ * story quests from the people who live here by the People panel, so only
+ * the rest of what's available here is listed.
+ */
 export const Quests = (props: {
   zoneQuests: ZoneQuests;
   npcInteractions?: ZoneInteraction[];
   flashMessage?: SystemMessage;
+  /** NPCs whose offers the People panel shows. */
+  residents?: Set<string>;
   /** For "time left"; rounded so the render only changes when the text does. */
   now: number;
 }) => {
   if (!props.zoneQuests) return null;
+
+  const zoneQuests: ZoneQuests = {
+    ...props.zoneQuests,
+    availableQuests: props.zoneQuests.availableQuests.filter(
+      (q) =>
+        q.kind === "story" &&
+        !(q.giver.entity_id && props.residents?.has(q.giver.entity_id))
+    ),
+  };
+  props = { ...props, zoneQuests };
 
   const totalQuests =
     props.zoneQuests.availableQuests.length +
@@ -141,7 +159,7 @@ export const Quests = (props: {
         `
       : null}
     ${Object.entries(props.zoneQuests).map(
-      ([type, quests]: [string, TileQuest[]]) => {
+      ([type, quests]: [string, PlacedQuest[]]) => {
         if (!quests.length) return null;
         if (type === "discoverableQuests") return null;
 
@@ -279,6 +297,105 @@ export const QuestNPC = (props: { interaction: ZoneInteraction }) => {
   `;
 };
 
+const npcName = (entityId: string) => npcsById.get(entityId)?.name ?? "Unknown";
+
+const regionName = (region: string) => region.replace(/-/g, " ");
+
+/** Where the player should go for an objective they aren't at. */
+const objectiveWhere = (objective: PlacedObjective): string | null => {
+  switch (objective.type) {
+    case "talk":
+      return `Find ${npcName(objective.entity_id)} at (${objective.x}, ${objective.y})`;
+    case "explore":
+      return `Next objective at (${objective.x}, ${objective.y})`;
+    case "gather":
+    case "kill":
+      return objective.region
+        ? `Anywhere in the ${regionName(objective.region)}`
+        : null;
+    default:
+      return null;
+  }
+};
+
+const QuestBadge = (quest: PlacedQuest, now: number) =>
+  quest.kind === "contract"
+    ? html`<span
+        class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-gray-400"
+      >
+        Contract · ${formatDistance(quest.ends_at, now)} left
+      </span>`
+    : quest.is_tutorial
+    ? html`<span
+        class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+        >Tutorial</span
+      >`
+    : html`<span
+        class="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30"
+        >Story</span
+      >`;
+
+/** The contracts posted on the board here, with what the player has done about each. */
+export const ContractBoard = (props: {
+  contracts: BoardContract[] | null;
+  flashMessage?: SystemMessage;
+  now: number;
+}) => {
+  if (!props.contracts) {
+    return html`<div id="board"></div>`;
+  }
+
+  return html`<div
+    id="board"
+    class="flex flex-col gap-4 p-4 rounded-xl bg-amber-900/10 border border-amber-500/20"
+    data-show="$_showQuests"
+  >
+    <div class="flex items-center gap-3 pb-2 border-b border-white/10">
+      <div class="p-2 rounded-lg bg-white/5">${QuestsIcon}</div>
+      <div>
+        <h2 class="text-xl font-bold">Contract board</h2>
+        <p class="text-sm text-gray-400">
+          ${props.contracts.length > 0
+            ? "Jobs for anyone who wants them. New postings every two hours."
+            : "Nothing posted right now. Check back after the next rotation."}
+        </p>
+      </div>
+    </div>
+    ${ContextualFlash({ message: props.flashMessage })}
+    <div class="grid grid-cols-1 gap-2">
+      ${props.contracts.map(
+        ({ quest, status }) => html`<div
+          id="contract-${quest.id}"
+          class="flex flex-col md:flex-row items-start justify-between gap-3 p-4 rounded-lg bg-white/5 border border-white/10 ${status ===
+          "done"
+            ? "opacity-60"
+            : ""}"
+        >
+          <div class="flex flex-col gap-1 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="font-bold">${quest.name}</span>
+              ${QuestBadge(quest, props.now)}
+            </div>
+            <p class="text-sm text-gray-300">${quest.description}</p>
+          </div>
+          ${status === "available"
+            ? html`<button
+                class="btn btn-sm btn-primary"
+                data-on:click="@post('/game/quest/${quest.id}')"
+              >
+                Take contract
+              </button>`
+            : html`<span class="text-xs text-gray-400 italic"
+                >${status === "done"
+                  ? "Done. Posted again in a later rotation."
+                  : "Taken: see your quests."}</span
+              >`}
+        </div>`
+      )}
+    </div>
+  </div>`;
+};
+
 export const QuestHeader = (props: { type: keyof ZoneQuests }) => {
   switch (props.type) {
     case "availableQuests":
@@ -293,7 +410,7 @@ export const QuestHeader = (props: { type: keyof ZoneQuests }) => {
 };
 
 export const QuestItem = (props: {
-  quest: TileQuest;
+  quest: PlacedQuest;
   type: "available" | "in_progress" | "completed" | "elsewhere";
   style?: { icon: string; color: string; bg: string; border: string };
   now: number;
@@ -304,17 +421,10 @@ export const QuestItem = (props: {
     color: "text-gray-400",
   };
 
-  // Get location for elsewhere quests
-  const getObjectiveLocation = () => {
-    const obj = props.quest.currentObjective;
-    if (!obj) return null;
-    if ("x" in obj && "y" in obj) {
-      return { x: obj.x, y: obj.y };
-    }
-    return null;
-  };
   const elsewhereLocation =
-    props.type === "elsewhere" ? getObjectiveLocation() : null;
+    props.type === "elsewhere" && props.quest.currentObjective
+      ? objectiveWhere(props.quest.currentObjective)
+      : null;
 
   return html`<div
     id="quest-${props.quest.id}"
@@ -325,17 +435,13 @@ export const QuestItem = (props: {
       <div class="flex flex-col gap-1 flex-1">
         <div class="flex items-center gap-2">
           <span class="font-bold text-lg">${props.quest.name}</span>
-          ${props.quest.is_tutorial
-            ? html`<span
-                class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                >Tutorial</span
-              >`
-            : html`<span
-                class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-gray-400"
-              >
-                ${formatDistance(props.quest.ends_at, props.now)} left
-              </span>`}
+          ${QuestBadge(props.quest, props.now)}
         </div>
+        ${props.type === "available" && props.quest.giver.entity_id
+          ? html`<span class="text-xs text-purple-300"
+              >From ${npcName(props.quest.giver.entity_id)}</span
+            >`
+          : null}
         <p class="text-sm text-gray-300">${props.quest.description}</p>
       </div>
 
@@ -389,7 +495,7 @@ export const QuestItem = (props: {
             />
           </svg>
           <span class="text-sm text-gray-300 font-medium">
-            Next objective at (${elsewhereLocation.x}, ${elsewhereLocation.y})
+            ${elsewhereLocation}
           </span>
         </div>`
       : null}
@@ -420,15 +526,18 @@ export const QuestItem = (props: {
             />
           </svg>
           <span class="text-sm text-yellow-400 font-medium">
-            Return to (${props.quest.completion.x}, ${props.quest.completion.y})
-            to claim your reward!
+            ${props.quest.completion.entity_id
+              ? `Return to ${npcName(props.quest.completion.entity_id)}`
+              : "Return to the contract board"}
+            at (${props.quest.completion.x}, ${props.quest.completion.y}) to
+            claim your reward!
           </span>
         </div>`
       : null}
   </div>`;
 };
 
-export const QuestObjectivesCompleted = (quest: TileQuest) => {
+export const QuestObjectivesCompleted = (quest: PlacedQuest) => {
   const indexof = quest.objectives.findIndex(
     (objective) => objective.id === quest.currentObjective?.id
   );
@@ -496,7 +605,7 @@ export const QuestObjectivesCompleted = (quest: TileQuest) => {
   `;
 };
 
-export const QuestObjectiveProgress = (props: { objective: TileObjective }) => {
+export const QuestObjectiveProgress = (props: { objective: PlacedObjective }) => {
   const objective = props.objective;
   const current = Math.max(0, objective.progress?.current ?? 0);
   const total =

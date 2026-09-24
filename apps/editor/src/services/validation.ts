@@ -4,11 +4,19 @@ import {
   ResourceModelSchema,
   TileSchema,
   MonsterSchema,
+  EffectSchema,
   NPCSchema,
   QuestSchema,
-  TileQuestSchema,
+  questNpcReferences,
   HouseTileSchema,
   WorldBibleSchema,
+  MapDataSchema,
+  inBounds,
+  landmarkAt,
+  regionAt,
+  tileIdAt,
+  poolIds,
+  poolThings,
 } from "@aederyn/types";
 import { repository } from "../repository/index.js";
 
@@ -19,8 +27,11 @@ export interface ValidationError {
     | "missing_npc"
     | "missing_tile"
     | "missing_monster"
+    | "missing_effect"
     | "missing_quest"
     | "missing_house_tile"
+    | "missing_landmark"
+    | "missing_region"
     | "missing_world_ref"
     | "inaccessible_tile"
     | "invalid_schema"
@@ -58,15 +69,17 @@ export interface ValidationResult {
 }
 
 export async function runValidation(): Promise<ValidationResult> {
-  const [items, resources, tiles, monsters, npcs, quests, houseTiles, worldBible] = await Promise.all([
+  const [items, resources, tiles, monsters, effects, npcs, quests, houseTiles, worldBible, map] = await Promise.all([
     repository.items.getAll(),
     repository.resources.getAll(),
     repository.tiles.getAll(),
     repository.monsters.getAll(),
+    repository.effects.getAll(),
     repository.npcs.getAll(),
     repository.quests.getAll(),
     repository.houseTiles.getAll(),
     repository.worldBible.get(),
+    repository.map.get(),
   ]);
 
   const errors: ValidationError[] = [];
@@ -77,6 +90,7 @@ export async function runValidation(): Promise<ValidationResult> {
   const resourceIds = new Set(resources.map((r) => r.id));
   const tileIds = new Set(tiles.map((t) => t.id));
   const monsterIds = new Set(monsters.map((m) => m.id));
+  const effectsById = new Map(effects.map((e) => [e.id, e]));
   const npcIds = new Set(npcs.map((n) => n.entity_id));
   const questIds = new Set(quests.map((q) => q.id));
   const houseTileIds = new Set(Object.keys(houseTiles));
@@ -106,10 +120,11 @@ export async function runValidation(): Promise<ValidationResult> {
   checkSchema(resources.map((r) => ({ id: r.id, name: r.name, data: r })), ResourceModelSchema, "resource");
   checkSchema(tiles.map((t) => ({ id: t.id, name: t.name, data: t })), TileSchema, "tile");
   checkSchema(monsters.map((m) => ({ id: m.id, name: m.name, data: m })), MonsterSchema, "monster");
+  checkSchema(effects.map((e) => ({ id: e.id, name: e.name, data: e })), EffectSchema, "effect");
   checkSchema(npcs.map((n) => ({ id: n.entity_id, name: n.name, data: n })), NPCSchema, "npc");
   checkSchema(
     quests.map((q) => ({ id: q.id, name: q.name, data: q })),
-    QuestSchema.or(TileQuestSchema),
+    QuestSchema,
     "quest"
   );
   checkSchema(
@@ -155,6 +170,59 @@ export async function runValidation(): Promise<ValidationResult> {
     if (item.defence && !item.equippable) invalid("defence only applies to equippable items", "defence");
   }
 
+  // Effects: every reference must exist, and each list must make sense for the effect's kind
+  const usedEffects = new Set<string>();
+  const effectRef = (
+    source: { id: string; name: string },
+    sourceType: string,
+    effectId: string,
+    location: string
+  ) => {
+    const effect = effectsById.get(effectId);
+    if (!effect) {
+      errors.push({ type: "missing_effect", source: source.id, sourceName: source.name, sourceType, reference: effectId, location });
+    } else {
+      usedEffects.add(effectId);
+    }
+    return effect;
+  };
+  for (const tile of tiles) {
+    poolThings(tile.effects).forEach((e) => effectRef(tile, "tile", e.id, "effects"));
+  }
+  for (const region of map.regions) {
+    region.effects.forEach((e, idx) =>
+      effectRef({ id: region.id, name: `Region ${region.id}` }, "map", e.id, `regions.${region.id}.effects[${idx}]`)
+    );
+  }
+  for (const item of items) {
+    const invalid = (reference: string, location: string) =>
+      errors.push({ type: "invalid_schema", source: item.id, sourceName: item.name, sourceType: "item", reference, location });
+    (item.effects || []).forEach((e, idx) => {
+      const effect = effectRef(item, "item", e.id, `effects[${idx}]`);
+      if (effect && e.duration === 0 && effect.kind !== "health") {
+        invalid(`only health effects can be instant (duration 0); "${effect.id}" is ${effect.kind}`, `effects[${idx}].duration`);
+      }
+    });
+    (item.wornEffects || []).forEach((e, idx) => effectRef(item, "item", e.id, `wornEffects[${idx}]`));
+    if ((item.wornEffects || []).length > 0 && !item.equippable) {
+      invalid("worn effects only apply to equippable items", "wornEffects");
+    }
+  }
+  for (const effect of effects) {
+    if (effect.kind !== "protects") continue;
+    const invalid = (reference: string, location: string) =>
+      errors.push({ type: "invalid_schema", source: effect.id, sourceName: effect.name, sourceType: "effect", reference, location });
+    const target = effectsById.get(effect.target);
+    if (!target) {
+      errors.push({ type: "missing_effect", source: effect.id, sourceName: effect.name, sourceType: "effect", reference: effect.target, location: "target" });
+    } else if (target.kind === "protects") {
+      invalid("a protects effect can't target another protects effect", "target");
+    }
+    if (effect.mode !== "none") {
+      invalid('protects effects are protection themselves, so their mode must be "none"', "mode");
+    }
+  }
+
   checkSchema([{ id: "world-bible", name: worldBible.name, data: worldBible }], WorldBibleSchema, "world-bible");
 
   // Duplicate IDs within a type: lookups by ID silently return the first match
@@ -178,6 +246,7 @@ export async function runValidation(): Promise<ValidationResult> {
   checkDuplicates(resources, "resource");
   checkDuplicates(tiles, "tile");
   checkDuplicates(monsters, "monster");
+  checkDuplicates(effects, "effect");
   checkDuplicates(npcs.map((n) => ({ id: n.entity_id, name: n.name })), "npc");
   checkDuplicates(quests, "quest");
   checkDuplicates(worldBible.regions, "world-region");
@@ -209,6 +278,82 @@ export async function runValidation(): Promise<ValidationResult> {
       if (!worldIds.has(id)) missingWorldRef(event, "world-history", id, "relatedEntities");
     }
   }
+
+  // The map: bounds, regions, landmarks, and NPC homes on landmarks
+  checkSchema([{ id: "map", name: "Map", data: map }], MapDataSchema, "map");
+  const mapError = (source: string, reference: string, location: string, type: ValidationError["type"] = "invalid_schema") =>
+    errors.push({ type, source, sourceName: source === "map" ? "Map" : source, sourceType: "map", reference, location });
+  const tilesById = new Map(tiles.map((t) => [t.id, t]));
+  const bounds = map.bounds;
+  const boundsLabel = bounds ? `${bounds.minX}..${bounds.maxX}, ${bounds.minY}..${bounds.maxY}` : "";
+  const inMap = (x: number, y: number) => !bounds || inBounds(bounds, x, y);
+  checkDuplicates((map.regions || []).map((r) => ({ id: r.id, name: `Region ${r.id}` })), "map");
+  checkDuplicates((map.landmarks || []).map((l) => ({ id: l.id, name: `Landmark ${l.id}` })), "map");
+  if ((map.regions || []).length === 0) {
+    mapError("map", "the map needs at least one region to fill its cells", "regions");
+  }
+  for (const region of map.regions || []) {
+    (region.anchors || []).forEach((anchor, idx) => {
+      if (!inMap(anchor.x, anchor.y)) {
+        mapError(region.id, `anchor ${anchor.x},${anchor.y} is outside the bounds (${boundsLabel})`, `anchors[${idx}]`);
+      }
+    });
+    (region.tiles || []).forEach((t, idx) => {
+      const tile = tilesById.get(t.id);
+      if (!tile) mapError(region.id, t.id, `tiles[${idx}]`, "missing_tile");
+      if (!(t.weight > 0)) mapError(region.id, `weight ${t.weight} must be greater than 0`, `tiles[${idx}].weight`);
+    });
+  }
+  // Regions join the bible's lore to the map's structure by ID, both ways
+  const bibleRegionIds = new Set(worldBible.regions.map((r) => r.id));
+  const mapRegionIds = new Set((map.regions || []).map((r) => r.id));
+  for (const region of map.regions || []) {
+    if (!bibleRegionIds.has(region.id)) {
+      errors.push({ type: "missing_world_ref", source: region.id, sourceName: `Region ${region.id}`, sourceType: "map", reference: region.id, location: "world bible regions" });
+    }
+  }
+  for (const region of worldBible.regions) {
+    if (!mapRegionIds.has(region.id)) {
+      errors.push({ type: "missing_region", source: region.id, sourceName: region.name, sourceType: "world-region", reference: region.id, location: "map regions" });
+    }
+  }
+  const landmarkIds = new Set((map.landmarks || []).map((l) => l.id));
+  const landmarkCells = new Map<string, string>();
+  for (const landmark of map.landmarks || []) {
+    const tile = tilesById.get(landmark.tile);
+    if (!tile) mapError(landmark.id, landmark.tile, "tile", "missing_tile");
+    if (!inMap(landmark.x, landmark.y)) {
+      mapError(landmark.id, `${landmark.x},${landmark.y} is outside the bounds (${boundsLabel})`, "x,y");
+    }
+    const cell = `${landmark.x},${landmark.y}`;
+    const other = landmarkCells.get(cell);
+    if (other) mapError(landmark.id, `shares ${cell} with ${other}`, "x,y");
+    landmarkCells.set(cell, landmark.id);
+    if (landmark.spawn && tile && !tile.accessible) {
+      mapError(landmark.id, landmark.tile, "tile", "inaccessible_tile");
+    }
+  }
+  const spawns = (map.landmarks || []).filter((l) => l.spawn);
+  if (spawns.length !== 1) {
+    mapError(
+      "map",
+      `exactly one landmark must be the spawn; found ${spawns.length}${spawns.length ? ` (${spawns.map((l) => l.id).join(", ")})` : ""}`,
+      "landmarks"
+    );
+  }
+  const bibleFactionIds = new Set(worldBible.factions.map((f) => f.id));
+  for (const npc of npcs) {
+    if (npc.home && !landmarkIds.has(npc.home)) {
+      errors.push({ type: "missing_landmark", source: npc.entity_id, sourceName: npc.name, sourceType: "npc", reference: npc.home, location: "home" });
+    }
+    if (npc.faction && !bibleFactionIds.has(npc.faction)) {
+      missingWorldRef({ id: npc.entity_id, name: npc.name }, "npc", npc.faction, "faction");
+    }
+  }
+  const tilesOnMap = new Set<string>([
+    ...(map.regions || []).flatMap((r) => (r.tiles || []).map((t) => t.id)),
+    ...(map.landmarks || []).map((l) => l.tile),
+  ]);
 
   // Track which entities are referenced
   const referencedItems = new Set<string>();
@@ -253,7 +398,7 @@ export async function runValidation(): Promise<ValidationResult> {
 
   // Check tiles for missing resource references
   for (const tile of tiles) {
-    for (const resourceId of tile.resources || []) {
+    for (const resourceId of poolIds(tile.resources)) {
       if (!resourceIds.has(resourceId)) {
         errors.push({
           type: "missing_resource",
@@ -272,7 +417,7 @@ export async function runValidation(): Promise<ValidationResult> {
   // Check tiles for missing monster references, and monsters for missing drops
   const placedMonsters = new Set<string>();
   for (const tile of tiles) {
-    for (const monsterId of tile.monsters || []) {
+    for (const monsterId of poolIds(tile.monsters)) {
       if (!monsterIds.has(monsterId)) {
         errors.push({
           type: "missing_monster",
@@ -304,55 +449,55 @@ export async function runValidation(): Promise<ValidationResult> {
     }
   }
 
-  // Check quests for missing references
+  // Check quests for missing references. NPCs are met at their home unless a
+  // reference names a landmark, and region-scoped objectives need a region.
+  const npcsById = new Map(npcs.map((n) => [n.entity_id, n]));
+  const regionsById = new Map((map.regions || []).map((r) => [r.id, r]));
+  const landmarksById = new Map((map.landmarks || []).map((l) => [l.id, l]));
+  const questLandmarks: Array<{ quest: (typeof quests)[number]; landmark: string; location: string }> = [];
+  // Which tiles actually show on each region's non-landmark cells
+  const regionCellTiles = new Map<string, Set<string>>();
+  if (map.bounds) {
+    for (let y = map.bounds.minY; y <= map.bounds.maxY; y++) {
+      for (let x = map.bounds.minX; x <= map.bounds.maxX; x++) {
+        if (landmarkAt(map, x, y)) continue;
+        const region = regionAt(map, x, y);
+        const tile = tileIdAt(map, x, y);
+        if (!region || !tile) continue;
+        if (!regionCellTiles.has(region.id)) regionCellTiles.set(region.id, new Set());
+        regionCellTiles.get(region.id)!.add(tile);
+      }
+    }
+  }
   for (const quest of quests) {
-    // Check quest giver NPC
-    if (quest.giver?.entity_id && !npcIds.has(quest.giver.entity_id)) {
-      errors.push({
-        type: "missing_npc",
-        source: quest.id,
-        sourceName: quest.name,
-        sourceType: "quest",
-        reference: quest.giver.entity_id,
-        location: "giver.entity_id",
-      });
-    } else if (quest.giver?.entity_id) {
-      referencedNpcs.add(quest.giver.entity_id);
-    }
-    if (quest.giver?.zone_id && !tileIds.has(quest.giver.zone_id)) {
-      errors.push({
-        type: "missing_tile",
-        source: quest.id,
-        sourceName: quest.name,
-        sourceType: "quest",
-        reference: quest.giver.zone_id,
-        location: "giver.zone_id",
-      });
-    }
+    const questError = (type: ValidationError["type"], reference: string, location: string) =>
+      errors.push({ type, source: quest.id, sourceName: quest.name, sourceType: "quest", reference, location });
+    const checkLandmark = (id: string | undefined, location: string) => {
+      if (id === undefined) return;
+      if (!landmarkIds.has(id)) questError("missing_landmark", id, location);
+      else questLandmarks.push({ quest, landmark: id, location });
+    };
 
-    // Check completion NPC and zone
-    if (quest.completion?.entity_id && !npcIds.has(quest.completion.entity_id)) {
-      errors.push({
-        type: "missing_npc",
-        source: quest.id,
-        sourceName: quest.name,
-        sourceType: "quest",
-        reference: quest.completion.entity_id,
-        location: "completion.entity_id",
-      });
-    } else if (quest.completion?.entity_id) {
-      referencedNpcs.add(quest.completion.entity_id);
+    for (const { ref, location } of questNpcReferences(quest)) {
+      const npc = npcsById.get(ref.entity_id);
+      if (!npc) {
+        questError("missing_npc", ref.entity_id, `${location}.entity_id`);
+        continue;
+      }
+      referencedNpcs.add(ref.entity_id);
+      if (ref.landmark !== undefined) {
+        checkLandmark(ref.landmark, `${location}.landmark`);
+      } else if (!npc.home) {
+        questError(
+          "missing_landmark",
+          `${ref.entity_id} has no home: give them one, or name a landmark here`,
+          `${location}.landmark`
+        );
+      } else {
+        questLandmarks.push({ quest, landmark: npc.home, location: `${location} (home)` });
+      }
     }
-    if (quest.completion?.zone_id && !tileIds.has(quest.completion.zone_id)) {
-      errors.push({
-        type: "missing_tile",
-        source: quest.id,
-        sourceName: quest.name,
-        sourceType: "quest",
-        reference: quest.completion.zone_id,
-        location: "completion.zone_id",
-      });
-    }
+    if (quest.kind === "contract") checkLandmark(quest.board, "board");
 
     // Check quest rewards
     for (const reward of quest.rewards || []) {
@@ -378,8 +523,9 @@ export async function runValidation(): Promise<ValidationResult> {
         item_id?: string;
         resource_id?: string;
         monster_id?: string;
-        entity_id?: string;
-        zone_id?: string;
+        landmark?: string;
+        region?: string;
+        tile?: string;
       };
       const location = `objectives[${idx}] (${obj.type})`;
       const missing = (type: ValidationError["type"], reference: string, field: string) =>
@@ -403,12 +549,15 @@ export async function runValidation(): Promise<ValidationResult> {
       if (obj.monster_id !== undefined && !monsterIds.has(obj.monster_id)) {
         missing("missing_monster", obj.monster_id, "monster_id");
       }
-      if (obj.entity_id !== undefined) {
-        if (!npcIds.has(obj.entity_id)) missing("missing_npc", obj.entity_id, "entity_id");
-        else referencedNpcs.add(obj.entity_id);
+      if (obj.type === "explore") checkLandmark(obj.landmark, `${location}.landmark`);
+      if (obj.region !== undefined && !regionsById.has(obj.region)) {
+        missing("missing_region", obj.region, "region");
       }
-      if (obj.zone_id !== undefined && !tileIds.has(obj.zone_id)) {
-        missing("missing_tile", obj.zone_id, "zone_id");
+      if (obj.tile !== undefined) {
+        if (!tileIds.has(obj.tile)) missing("missing_tile", obj.tile, "tile");
+        else if (obj.region && regionsById.has(obj.region) && !regionCellTiles.get(obj.region)?.has(obj.tile)) {
+          missing("missing_tile", `${obj.tile} (no cell of region ${obj.region} shows it)`, "tile");
+        }
       }
     });
 
@@ -425,6 +574,30 @@ export async function runValidation(): Promise<ValidationResult> {
         });
       } else {
         referencedQuests.add(prereq);
+      }
+    }
+
+    // Exclusions must name other story quests, and be mutual
+    for (const excluded of quest.kind === "story" ? quest.excludes || [] : []) {
+      const other = quests.find((q) => q.id === excluded);
+      const problem = !other
+        ? excluded
+        : other.kind !== "story" || other.id === quest.id
+          ? `${excluded} (not another story quest)`
+          : !(other.excludes || []).includes(quest.id)
+            ? `${excluded} (doesn't exclude ${quest.id} back)`
+            : null;
+      if (problem) {
+        errors.push({
+          type: "missing_quest",
+          source: quest.id,
+          sourceName: quest.name,
+          sourceType: "quest",
+          reference: problem,
+          location: "excludes",
+        });
+      } else {
+        referencedQuests.add(excluded);
       }
     }
   }
@@ -453,28 +626,17 @@ export async function runValidation(): Promise<ValidationResult> {
       });
     }
   }
-  for (const quest of quests) {
-    const zones: Array<[string | undefined, string]> = [
-      [quest.giver?.zone_id, "giver.zone_id"],
-      [quest.completion?.zone_id, "completion.zone_id"],
-      ...(quest.objectives || []).map(
-        (o, idx): [string | undefined, string] => [
-          (o as { zone_id?: string }).zone_id,
-          `objectives[${idx}] (${o.type}).zone_id`,
-        ]
-      ),
-    ];
-    for (const [zoneId, location] of zones) {
-      if (zoneId && inaccessibleTileIds.has(zoneId)) {
-        errors.push({
-          type: "inaccessible_tile",
-          source: quest.id,
-          sourceName: quest.name,
-          sourceType: "quest",
-          reference: zoneId,
-          location,
-        });
-      }
+  for (const { quest, landmark, location } of questLandmarks) {
+    const tileId = landmarksById.get(landmark)?.tile;
+    if (tileId && inaccessibleTileIds.has(tileId)) {
+      errors.push({
+        type: "inaccessible_tile",
+        source: quest.id,
+        sourceName: quest.name,
+        sourceType: "quest",
+        reference: `${landmark} (${tileId})`,
+        location,
+      });
     }
   }
 
@@ -552,7 +714,7 @@ export async function runValidation(): Promise<ValidationResult> {
     ...monsters.flatMap((m) => (m.drops || []).map((d) => d.item_id)),
   ]);
   const placedResources = new Set<string>([
-    ...tiles.flatMap((t) => t.resources || []),
+    ...tiles.flatMap((t) => poolIds(t.resources)),
     ...Object.values(houseTiles).flatMap((h) => h.availableResources || []),
   ]);
   for (const quest of quests) {
@@ -580,6 +742,22 @@ export async function runValidation(): Promise<ValidationResult> {
           message: `${where}: resource "${objective.resource_id}" is not on any tile or house tile`,
         });
       }
+      if ((objective.type === "gather" || objective.type === "kill") && objective.region && regionsById.has(objective.region)) {
+        const target = objective.type === "gather" ? objective.resource_id : objective.monster_id;
+        const hosted = [...(regionCellTiles.get(objective.region) ?? [])].some((tileId) => {
+          const tile = tilesById.get(tileId);
+          return !!tile && poolIds(objective.type === "gather" ? tile.resources : tile.monsters).includes(target);
+        });
+        if (!hosted) {
+          warnings.push({
+            type: "unobtainable",
+            entity: quest.id,
+            entityName: quest.name,
+            entityType: "quest",
+            message: `${where}: no tile in region "${objective.region}" has "${target}"`,
+          });
+        }
+      }
       if (objective.type === "craft") {
         const station = resources.find((r) => r.id === objective.resource_id);
         if (station && station.type === "resource") {
@@ -588,7 +766,7 @@ export async function runValidation(): Promise<ValidationResult> {
             entity: quest.id,
             entityName: quest.name,
             entityType: "quest",
-            message: `${where}: "${objective.resource_id}" is a gathering resource, not a crafting station (workbench/furnace/magic)`,
+            message: `${where}: "${objective.resource_id}" is a gathering resource, not a crafting station`,
           });
         }
       }
@@ -711,14 +889,14 @@ export async function runValidation(): Promise<ValidationResult> {
     });
   }
 
-  // Walkable tiles with nothing on them and no quest that sends the player there
-  const questZones = new Set<string>(
-    quests.flatMap((q) => [
-      q.giver?.zone_id,
-      q.completion?.zone_id,
-      ...(q.objectives || []).map((o) => (o as { zone_id?: string }).zone_id),
-    ]).filter((id): id is string => !!id)
-  );
+  // Walkable tiles with nothing on them, nobody living there, and no quest that sends the player there
+  const questZones = new Set<string>([
+    ...questLandmarks.flatMap(({ landmark }) => landmarksById.get(landmark)?.tile ?? []),
+    ...npcs.flatMap((n) => (n.home ? landmarksById.get(n.home)?.tile ?? [] : [])),
+    ...quests.flatMap((q) =>
+      (q.objectives || []).flatMap((o) => (o.type === "explore" && o.tile ? [o.tile] : []))
+    ),
+  ]);
   for (const tile of tiles) {
     if (
       tile.accessible &&
@@ -731,24 +909,22 @@ export async function runValidation(): Promise<ValidationResult> {
         entity: tile.id,
         entityName: tile.name,
         entityType: "tile",
-        message: "Accessible tile has no resources or monsters and no quest takes the player there",
+        message: "Accessible tile has no resources, monsters or residents, and no quest takes the player there",
       });
     }
   }
 
-  // Tile rarity is a spawn weight in [0, 1]
   for (const tile of tiles) {
-    if (tile.rarity < 0 || tile.rarity > 1) {
+    if (tile.accessible && !tilesOnMap.has(tile.id)) {
       warnings.push({
-        type: "balance",
+        type: "orphaned",
         entity: tile.id,
         entityName: tile.name,
         entityType: "tile",
-        message: `rarity ${tile.rarity} is outside the 0-1 spawn-weight range used by other tiles`,
+        message: "Tile is not in any map region or landmark, so it never appears",
       });
     }
   }
-
   // Step 34: Orphaned Entity Detection
   for (const item of items) {
     if (!referencedItems.has(item.id)) {
@@ -758,6 +934,39 @@ export async function runValidation(): Promise<ValidationResult> {
         entityName: item.name,
         entityType: "item",
         message: "Item is not referenced by any resource, monster, quest, or house tile",
+      });
+    }
+  }
+
+  const protectedEffects = new Set(
+    effects.flatMap((e) => (e.kind === "protects" && usedEffects.has(e.id) ? [e.target] : []))
+  );
+  for (const effect of effects) {
+    if (!usedEffects.has(effect.id)) {
+      warnings.push({
+        type: "orphaned",
+        entity: effect.id,
+        entityName: effect.name,
+        entityType: "effect",
+        message: "Effect is not on any tile or item",
+      });
+    }
+    if (effect.kind === "blocks" && effect.mode === "mitigation") {
+      warnings.push({
+        type: "balance",
+        entity: effect.id,
+        entityName: effect.name,
+        entityType: "effect",
+        message: "Mitigation never reaches zero, so protection can't lift a blocks effect; use binary",
+      });
+    }
+    if (effect.mode !== "none" && effect.kind !== "protects" && usedEffects.has(effect.id) && !protectedEffects.has(effect.id)) {
+      warnings.push({
+        type: "unobtainable",
+        entity: effect.id,
+        entityName: effect.name,
+        entityType: "effect",
+        message: "Nothing on a tile or item protects against this effect",
       });
     }
   }
@@ -787,13 +996,13 @@ export async function runValidation(): Promise<ValidationResult> {
   }
 
   for (const npc of npcs) {
-    if (!referencedNpcs.has(npc.entity_id)) {
+    if (!referencedNpcs.has(npc.entity_id) && !npc.home) {
       warnings.push({
         type: "orphaned",
         entity: npc.entity_id,
         entityName: npc.name,
         entityType: "npc",
-        message: "NPC is not a quest giver for any quest",
+        message: "NPC has no home and is not a quest giver for any quest",
       });
     }
   }
@@ -804,6 +1013,7 @@ export async function runValidation(): Promise<ValidationResult> {
     ...resources.map((r) => ({ id: r.id, name: r.name, type: "resource" })),
     ...tiles.map((t) => ({ id: t.id, name: t.name, type: "tile" })),
     ...monsters.map((m) => ({ id: m.id, name: m.name, type: "monster" })),
+    ...effects.map((e) => ({ id: e.id, name: e.name, type: "effect" })),
     ...npcs.map((n) => ({ id: n.entity_id, name: n.name, type: "npc" })),
     ...quests.map((q) => ({ id: q.id, name: q.name, type: "quest" })),
   ];
@@ -923,8 +1133,11 @@ export function getErrorTypeLabel(type: ValidationError["type"]): string {
     missing_npc: "Missing NPC",
     missing_tile: "Missing Tile",
     missing_monster: "Missing Monster",
+    missing_effect: "Missing Effect",
     missing_quest: "Missing Quest",
     missing_house_tile: "Missing House Tile",
+    missing_landmark: "Missing Landmark",
+    missing_region: "Missing Region",
     invalid_schema: "Invalid Schema",
     duplicate_id: "Duplicate ID",
     missing_world_ref: "Missing World Bible Reference",
@@ -938,6 +1151,7 @@ export function getEntityEditUrl(type: string, id: string): string {
     item: "items",
     resource: "resources",
     tile: "tiles",
+    effect: "effects",
     npc: "npcs",
     quest: "quests",
     "house-tile": "house-tiles",
@@ -949,5 +1163,6 @@ export function getEntityEditUrl(type: string, id: string): string {
     "world-system": "world/systems",
   };
   if (type === "world-bible") return "/world";
+  if (type === "map") return "/map";
   return `/${typeToPath[type] || type}/${id}`;
 }

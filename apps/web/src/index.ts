@@ -283,6 +283,15 @@ app.delete(
 );
 
 app.post(
+  "/game/inventory/:inventory_id/use",
+  commandRoute(async (c, userId) => ({
+    type: "use",
+    userId,
+    inventoryId: c.req.param("inventory_id"),
+  }))
+);
+
+app.post(
   "/game/equipment/:inventory_id",
   commandRoute(async (c, userId) => ({
     type: "equip",

@@ -1,16 +1,25 @@
 import {
-  MAP_HEIGHT,
-  MAP_WIDTH,
-  START_POSITION,
-  tileTypes,
+  cellKey,
+  inBounds,
+  landmarkAt,
+  regionAt,
+  rollPool,
+  seededUnit,
+  pickWeighted,
+} from "@aederyn/types";
+import {
+  MAP_BOUNDS,
   VISIBILITY,
+  worldMap,
+  type EffectStrength,
+  type MapRegion,
   type RequiredItem,
   type Resource,
   type ResourceModel,
   type RewardItem,
+  type Tile,
 } from "../config.js";
 import type { ResourceUsage } from "./resources.js";
-import { selectRandom } from "../lib/random.js";
 import { resourcesById } from "../config/resources.js";
 import { itemsById } from "../config/items.js";
 import { tileTypesMap } from "../config/tiles.js";
@@ -20,94 +29,84 @@ export type Point = {
   y: number;
 };
 
-export const calculateDistance = (point1: Point, point2: Point): number => {
-  const dx = point2.x - point1.x;
-  const dy = point2.y - point1.y;
-  return Math.sqrt(dx * dx + dy * dy);
+/**
+ * A map cell: its tile with the pools rolled for this position. `monsters`
+ * lists one ID per spawn, so a spawn's index identifies it on the cell.
+ */
+export type Cell = Omit<Tile, "resources" | "monsters" | "effects"> & {
+  resources: string[];
+  monsters: string[];
+  effects: EffectStrength[];
+  region: MapRegion | null;
+  landmark: string | null;
 };
 
-const miscTiles = {
-  // "22,30": "tile_castle_wall",
-  // "23,29": "tile_castle_wall",
-  // "24,29": "tile_castle_wall",
-  // "25,30": "tile_castle_wall",
-  // "25,31": "tile_castle_wall",
-  // "25,32": "tile_castle_wall",
-  // "24,32": "tile_castle_wall",
-  // "23,33": "tile_castle_wall",
-  // "22,32": "tile_castle_wall",
-  "12,11": "tile_basic_workshop",
-};
-
-// Rarer tiles first. Sorted once: tile selection only depends on config.
-const tilesByRarity = [...tileTypes].sort((a, b) => a.rarity - b.rarity);
-
-const selectTile = (x: number, y: number) => {
-  const coords = `${x},${y}`;
-
-  if (miscTiles[coords as keyof typeof miscTiles]) {
-    const tile = tileTypesMap.get(miscTiles[coords as keyof typeof miscTiles]);
-
-    if (!tile) {
-      throw new Error(
-        `Castle tile ${miscTiles[coords as keyof typeof miscTiles]} not found`
-      );
-    }
-
-    return tile;
-  }
-
-  const center = START_POSITION;
-  if (center.x === x && center.y === y) {
-    const camp = tileTypesMap.get("tile_campsite");
-
-    if (!camp) {
-      throw new Error("Campsite not found");
-    }
-
-    return camp;
-  }
-
-  const distance = calculateDistance(center, { x, y });
-
-  // Calculate a rarity factor based on the distance from the center
-  const rarityFactor =
-    1 - Math.min(1, distance / Math.max(MAP_WIDTH, MAP_HEIGHT));
-
-  // Calculate the index to split the sorted tiles
-  const splitIndex = Math.floor(tilesByRarity.length * rarityFactor);
-
-  // Select tiles based on the rarity factor
-  const selectedTiles =
-    rarityFactor === 0 ? tilesByRarity : tilesByRarity.slice(0, splitIndex + 1);
-
-  const tile = selectRandom(coords, selectedTiles);
-
+const tileConfig = (id: string) => {
+  const tile = tileTypesMap.get(id);
   if (!tile) {
-    throw new Error("No tile found");
+    throw new Error(`Tile ${id} not found`);
   }
-
   return tile;
 };
 
-const tileSelections = new Map<string, ReturnType<typeof selectTile>>();
+/** The tile a cell shows: its landmark's, otherwise one of its region's. */
+const selectTileAt = (x: number, y: number) => {
+  const landmark = landmarkAt(worldMap, x, y);
+  const region = regionAt(worldMap, x, y);
 
-/** The tile config at a position. Deterministic, so it's memoized. */
+  if (landmark) {
+    return { tile: tileConfig(landmark.tile), region, landmark: landmark.id };
+  }
+
+  const picked = region && pickWeighted(region.tiles, seededUnit(`tile:${x},${y}`));
+  if (!picked) {
+    throw new Error(`No region fills ${x},${y}`);
+  }
+  return { tile: tileConfig(picked.id), region, landmark: null };
+};
+
+export const rollCell = (x: number, y: number): Cell => {
+  const { tile, region, landmark } = selectTileAt(x, y);
+  const seed = cellKey(x, y);
+
+  return {
+    ...tile,
+    resources: rollPool(tile.resources, `${seed}:resources`).map((r) => r.id),
+    monsters: rollPool(tile.monsters, `${seed}:monsters`).flatMap((m) =>
+      Array<string>(m.count ?? 1).fill(m.id)
+    ),
+    effects: rollPool(tile.effects, `${seed}:effects`),
+    region,
+    landmark,
+  };
+};
+
+const tileSelections = new Map<string, Cell>();
+
+/** The cell at a position. Deterministic, so it's memoized. */
 export const getTileSelection = (x: number, y: number) => {
-  const key = `${x},${y}`;
+  const key = cellKey(x, y);
   let tile = tileSelections.get(key);
 
   if (!tile) {
-    tile = selectTile(x, y);
+    tile = rollCell(x, y);
     tileSelections.set(key, tile);
   }
 
   return tile;
 };
 
-export const isOutOfBounds = (x: number, y: number) => {
-  return x < 0 || x > MAP_WIDTH || y < 0 || y > MAP_HEIGHT;
-};
+export const isOutOfBounds = (x: number, y: number) =>
+  !inBounds(MAP_BOUNDS, x, y);
+
+/** Every in-bounds cell, row by row. */
+export function* allCells() {
+  for (let y = MAP_BOUNDS.minY; y <= MAP_BOUNDS.maxY; y++) {
+    for (let x = MAP_BOUNDS.minX; x <= MAP_BOUNDS.maxX; x++) {
+      yield { x, y, tile: getTileSelection(x, y) };
+    }
+  }
+}
 
 const resolveResource = (resourceModel: ResourceModel): Resource | null => {
   let isValid = true;

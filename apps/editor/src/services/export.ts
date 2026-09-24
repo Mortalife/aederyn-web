@@ -16,14 +16,16 @@ export interface ExportResult {
 }
 
 export async function exportToJson(): Promise<ExportResult> {
-  const [items, resources, tiles, monsters, npcs, quests, houseTiles] = await Promise.all([
+  const [items, resources, tiles, monsters, effects, npcs, quests, houseTiles, map] = await Promise.all([
     repository.items.getAll(),
     repository.resources.getAll(),
     repository.tiles.getAll(),
     repository.monsters.getAll(),
+    repository.effects.getAll(),
     repository.npcs.getAll(),
     repository.quests.getAll(),
     repository.houseTiles.getAll(),
+    repository.map.get(),
   ]);
 
   const files = [
@@ -31,9 +33,11 @@ export async function exportToJson(): Promise<ExportResult> {
     { filename: "resources.json", content: JSON.stringify(resources, null, 2) },
     { filename: "tiles.json", content: JSON.stringify(tiles, null, 2) },
     { filename: "monsters.json", content: JSON.stringify(monsters, null, 2) },
+    { filename: "effects.json", content: JSON.stringify(effects, null, 2) },
     { filename: "npcs.json", content: JSON.stringify(npcs, null, 2) },
     { filename: "quests.json", content: JSON.stringify(quests, null, 2) },
     { filename: "house-tiles.json", content: JSON.stringify(houseTiles, null, 2) },
+    { filename: "map.json", content: JSON.stringify(map, null, 2) },
   ].map((f) => ({ ...f, size: new TextEncoder().encode(f.content).length }));
 
   return {
@@ -44,14 +48,16 @@ export async function exportToJson(): Promise<ExportResult> {
 }
 
 export async function exportToTypeScript(): Promise<ExportResult> {
-  const [items, resources, tiles, monsters, npcs, quests, houseTiles] = await Promise.all([
+  const [items, resources, tiles, monsters, effects, npcs, quests, houseTiles, map] = await Promise.all([
     repository.items.getAll(),
     repository.resources.getAll(),
     repository.tiles.getAll(),
     repository.monsters.getAll(),
+    repository.effects.getAll(),
     repository.npcs.getAll(),
     repository.quests.getAll(),
     repository.houseTiles.getAll(),
+    repository.map.get(),
   ]);
 
   const files = [
@@ -72,6 +78,10 @@ export async function exportToTypeScript(): Promise<ExportResult> {
       content: generateMonstersTs(monsters),
     },
     {
+      filename: "effects.ts",
+      content: generateEffectsTs(effects),
+    },
+    {
       filename: "npcs.ts",
       content: generateNpcsTs(npcs),
     },
@@ -82,6 +92,10 @@ export async function exportToTypeScript(): Promise<ExportResult> {
     {
       filename: "house-tiles.ts",
       content: generateHouseTilesTs(houseTiles),
+    },
+    {
+      filename: "map.ts",
+      content: generateMapTs(map),
     },
   ].map((f) => ({ ...f, size: new TextEncoder().encode(f.content).length }));
 
@@ -128,6 +142,15 @@ export const monstersById = new Map<string, Monster>(monsters.map(m => [m.id, m]
 `;
 }
 
+function generateEffectsTs(effects: Awaited<ReturnType<typeof repository.effects.getAll>>): string {
+  return `import type { Effect } from "./types.js";
+
+export const effects: Effect[] = ${toTs(effects)};
+
+export const effectsById = new Map<string, Effect>(effects.map(e => [e.id, e]));
+`;
+}
+
 function generateNpcsTs(npcs: Awaited<ReturnType<typeof repository.npcs.getAll>>): string {
   return `import type { NPC } from "./types.js";
 
@@ -152,6 +175,13 @@ function generateHouseTilesTs(houseTiles: Awaited<ReturnType<typeof repository.h
 export const houseTiles: Record<string, HouseTile> = ${toTs(houseTiles)};
 
 export const houseTilesById = new Map<string, HouseTile>(Object.entries(houseTiles));
+`;
+}
+
+function generateMapTs(map: Awaited<ReturnType<typeof repository.map.get>>): string {
+  return `import type { MapData } from "./types.js";
+
+export const worldMap: MapData = ${toTs(map)};
 `;
 }
 

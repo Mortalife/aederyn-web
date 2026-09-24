@@ -27,7 +27,7 @@ export const TilesList: FC<TilesListProps> = ({ tiles }) => {
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Name</th>
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">ID</th>
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Theme</th>
-              <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Rarity</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Monsters</th>
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Resources</th>
               <th class="px-4 py-3 text-right text-sm font-medium text-gray-300">Actions</th>
             </tr>
@@ -53,7 +53,7 @@ export const TilesList: FC<TilesListProps> = ({ tiles }) => {
                   <td class="px-4 py-3 text-white font-medium">{tile.name}</td>
                   <td class="px-4 py-3 text-gray-400 font-mono text-sm">{tile.id}</td>
                   <td class="px-4 py-3 text-gray-300">{tile.theme}</td>
-                  <td class="px-4 py-3 text-gray-300">{(tile.rarity * 100).toFixed(0)}%</td>
+                  <td class="px-4 py-3 text-gray-300">{(tile.monsters || []).length}</td>
                   <td class="px-4 py-3 text-gray-300">{tile.resources.length}</td>
                   <td class="px-4 py-3 text-right">
                     <a

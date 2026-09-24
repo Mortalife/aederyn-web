@@ -12,14 +12,14 @@ export const QuestTypeSchema = z.enum([
   "dialog",
 ]);
 
-export const NpcReferenceSchema = z.object({
-  entity_id: z.string().describe("NPC entity identifier"),
-  zone_id: z.string().describe("Zone where NPC is located"),
-});
+export const QuestKindSchema = z.enum(["story", "contract"]);
 
-export const TileNpcReferenceSchema = NpcReferenceSchema.extend({
-  x: z.number().describe("X coordinate on tile map"),
-  y: z.number().describe("Y coordinate on tile map"),
+export const NpcReferenceSchema = z.object({
+  entity_id: z.string().describe("NPC entity identifier; met at their home landmark"),
+  landmark: z
+    .string()
+    .optional()
+    .describe("Landmark where the NPC is met instead of their home, e.g. when they travel during a story"),
 });
 
 export const ProgressSchema = z.object({
@@ -45,6 +45,7 @@ export const GatherObjectiveSchema = BaseObjectiveSchema.extend({
   type: z.literal("gather"),
   resource_id: z.string().describe("Resource node to gather from"),
   amount: z.number().min(1).describe("Amount to gather"),
+  region: z.string().optional().describe("Only gathering in this map region counts"),
 });
 
 export const CollectObjectiveSchema = BaseObjectiveSchema.extend({
@@ -56,25 +57,20 @@ export const CollectObjectiveSchema = BaseObjectiveSchema.extend({
 export const TalkObjectiveSchema = BaseObjectiveSchema.extend({
   type: z.literal("talk"),
   entity_id: z.string().describe("NPC to talk to"),
-  zone_id: z.string().describe("Zone where NPC is located"),
+  landmark: z.string().optional().describe("Landmark where the NPC is met instead of their home"),
   dialog_steps: z.array(DialogStepSchema).describe("Conversation dialog steps"),
-});
-
-export const TileTalkObjectiveSchema = TalkObjectiveSchema.extend({
-  x: z.number().describe("X coordinate"),
-  y: z.number().describe("Y coordinate"),
 });
 
 export const ExploreObjectiveSchema = BaseObjectiveSchema.extend({
   type: z.literal("explore"),
-  zone_id: z.string().describe("Zone to explore"),
+  landmark: z.string().optional().describe("Landmark to reach"),
+  region: z
+    .string()
+    .optional()
+    .describe("Contracts only: a map region; each rotation picks one of its cells to reach"),
+  tile: z.string().optional().describe("With region: only pick cells showing this tile"),
   chance: z.number().min(0).max(1).describe("Discovery chance (0-1)"),
   found_message: z.string().nullable().describe("Message when discovered"),
-});
-
-export const TileExploreObjectiveSchema = ExploreObjectiveSchema.extend({
-  x: z.number().describe("X coordinate"),
-  y: z.number().describe("Y coordinate"),
 });
 
 export const CraftObjectiveSchema = BaseObjectiveSchema.extend({
@@ -87,6 +83,7 @@ export const KillObjectiveSchema = BaseObjectiveSchema.extend({
   type: z.literal("kill"),
   monster_id: z.string().describe("Monster to defeat"),
   count: z.number().int().min(1).describe("Number of kills required"),
+  region: z.string().optional().describe("Only kills in this map region count"),
 });
 
 export const ObjectiveSchema = z.discriminatedUnion("type", [
@@ -94,15 +91,6 @@ export const ObjectiveSchema = z.discriminatedUnion("type", [
   CollectObjectiveSchema,
   TalkObjectiveSchema,
   ExploreObjectiveSchema,
-  CraftObjectiveSchema,
-  KillObjectiveSchema,
-]);
-
-export const TileObjectiveSchema = z.discriminatedUnion("type", [
-  GatherObjectiveSchema,
-  CollectObjectiveSchema,
-  TileTalkObjectiveSchema,
-  TileExploreObjectiveSchema,
   CraftObjectiveSchema,
   KillObjectiveSchema,
 ]);
@@ -130,85 +118,89 @@ export const RequirementRewardSchema = z.discriminatedUnion("type", [
   SkillRewardSchema,
 ]);
 
-export const CompletionSchema = z.object({
-  entity_id: z.string().describe("NPC to return to"),
-  zone_id: z.string().describe("Zone where NPC is located"),
+export const CompletionSchema = NpcReferenceSchema.extend({
   message: z.string().describe("Completion dialog message"),
   return_message: z.string().describe("Message on subsequent visits"),
 });
 
-export const TileCompletionSchema = CompletionSchema.extend({
-  x: z.number().describe("X coordinate"),
-  y: z.number().describe("Y coordinate"),
+export const ContractCompletionSchema = z.object({
+  message: z.string().describe("Shown when the contract is handed in at the board"),
 });
 
-export const QuestSchema = z.object({
+const QuestBaseSchema = z.object({
   id: z.string().describe("Unique quest identifier slug"),
   type: QuestTypeSchema.describe("Quest category type"),
   name: z.string().describe("Quest display title"),
-  giver: z.union([NpcReferenceSchema, TileNpcReferenceSchema]).describe("Quest giver NPC reference"),
   description: z.string().describe("Quest description for player journal"),
-  objectives: z.array(z.union([ObjectiveSchema, TileObjectiveSchema])).describe("Quest objectives to complete"),
-  completion: z.union([CompletionSchema, TileCompletionSchema]).describe("Quest completion details"),
+  objectives: z.array(ObjectiveSchema).describe("Quest objectives to complete, in order"),
   rewards: z.array(RequirementRewardSchema).describe("Rewards given on completion"),
-  prerequisites: z.array(z.string()).optional().describe("Quest IDs that must be completed first"),
+  prerequisites: z.array(z.string()).optional().describe("Quest IDs the player must have completed first"),
   is_tutorial: z.boolean().optional().describe("Whether this is a tutorial quest"),
 });
 
-export const TileQuestSchema = QuestSchema.omit({ giver: true, objectives: true, completion: true }).extend({
-  giver: TileNpcReferenceSchema,
-  objectives: z.array(TileObjectiveSchema),
-  currentObjective: TileObjectiveSchema.optional(),
-  completion: TileCompletionSchema,
-  starts_at: z.number().describe("Quest availability start timestamp"),
-  ends_at: z.number().describe("Quest availability end timestamp"),
+export const StoryQuestSchema = QuestBaseSchema.extend({
+  kind: z.literal("story"),
+  giver: NpcReferenceSchema.describe("Quest giver, met at their home unless overridden"),
+  completion: CompletionSchema.describe("Who the quest is handed in to"),
+  excludes: z
+    .array(z.string())
+    .optional()
+    .describe("Story quests that rule this one out: it isn't offered while the player has any of them taken or completed"),
 });
 
-export const CreateQuestDTOSchema = QuestSchema.partial({ id: true });
-export const UpdateQuestDTOSchema = QuestSchema.omit({ id: true }).partial();
+export const ContractSchema = QuestBaseSchema.extend({
+  kind: z.literal("contract"),
+  board: z.string().describe("Landmark ID of the contract board that posts it; taken and handed in there"),
+  completion: ContractCompletionSchema,
+});
+
+export const QuestSchema = z
+  .discriminatedUnion("kind", [StoryQuestSchema, ContractSchema])
+  .superRefine((quest, ctx) => {
+    quest.objectives.forEach((objective, index) => {
+      if (objective.type !== "explore") return;
+      const path = ["objectives", index];
+      if (!!objective.landmark === !!objective.region) {
+        ctx.addIssue({ code: "custom", path, message: "explore needs exactly one of landmark or region" });
+      }
+      if (objective.region && quest.kind !== "contract") {
+        ctx.addIssue({ code: "custom", path: [...path, "region"], message: "only contracts can explore a random cell of a region" });
+      }
+      if (objective.tile && !objective.region) {
+        ctx.addIssue({ code: "custom", path: [...path, "tile"], message: "tile only narrows a region" });
+      }
+    });
+  });
 
 // Infer types from schemas
 export type QuestType = z.infer<typeof QuestTypeSchema>;
+export type QuestKind = z.infer<typeof QuestKindSchema>;
 export type NpcReference = z.infer<typeof NpcReferenceSchema>;
-export type TileNpcReference = z.infer<typeof TileNpcReferenceSchema>;
 export type Progress = z.infer<typeof ProgressSchema>;
 export type DialogStep = z.infer<typeof DialogStepSchema>;
 export type BaseObjective = z.infer<typeof BaseObjectiveSchema>;
 export type GatherObjective = z.infer<typeof GatherObjectiveSchema>;
 export type CollectObjective = z.infer<typeof CollectObjectiveSchema>;
 export type TalkObjective = z.infer<typeof TalkObjectiveSchema>;
-export type TileTalkObjective = z.infer<typeof TileTalkObjectiveSchema>;
 export type ExploreObjective = z.infer<typeof ExploreObjectiveSchema>;
-export type TileExploreObjective = z.infer<typeof TileExploreObjectiveSchema>;
 export type CraftObjective = z.infer<typeof CraftObjectiveSchema>;
 export type KillObjective = z.infer<typeof KillObjectiveSchema>;
 export type Objective = z.infer<typeof ObjectiveSchema>;
-export type TileObjective = z.infer<typeof TileObjectiveSchema>;
 export type ItemReward = z.infer<typeof ItemRewardSchema>;
 export type GoldReward = z.infer<typeof GoldRewardSchema>;
 export type SkillReward = z.infer<typeof SkillRewardSchema>;
 export type RequirementReward = z.infer<typeof RequirementRewardSchema>;
 export type Completion = z.infer<typeof CompletionSchema>;
-export type TileCompletion = z.infer<typeof TileCompletionSchema>;
+export type ContractCompletion = z.infer<typeof ContractCompletionSchema>;
+export type StoryQuest = z.infer<typeof StoryQuestSchema>;
+export type Contract = z.infer<typeof ContractSchema>;
 export type Quest = z.infer<typeof QuestSchema>;
-export type TileQuest = z.infer<typeof TileQuestSchema>;
-export type QuestGroup = Quest | TileQuest;
-export type CreateQuestDTO = z.infer<typeof CreateQuestDTOSchema>;
-export type UpdateQuestDTO = z.infer<typeof UpdateQuestDTOSchema>;
 
-// Type guard functions
-export function isTileQuest(quest: QuestGroup): quest is TileQuest {
-  return "starts_at" in quest && "ends_at" in quest;
-}
-
-export function isTileTalkObjective(
-  objective: Objective | TileObjective
-): objective is TileTalkObjective {
-  return objective.type === "talk" && "x" in objective && "y" in objective;
-}
-
-export function isTileExploreObjective(
-  objective: Objective | TileObjective
-): objective is TileExploreObjective {
-  return objective.type === "explore" && "x" in objective && "y" in objective;
-}
+/** Every NPC reference in a quest (giver, talk objectives, completion). */
+export const questNpcReferences = (quest: Quest): Array<{ ref: NpcReference; location: string }> => [
+  ...(quest.kind === "story" ? [{ ref: quest.giver, location: "giver" }] : []),
+  ...quest.objectives.flatMap((objective, index) =>
+    objective.type === "talk" ? [{ ref: objective, location: `objectives[${index}] (talk)` }] : []
+  ),
+  ...(quest.kind === "story" ? [{ ref: quest.completion, location: "completion" }] : []),
+];

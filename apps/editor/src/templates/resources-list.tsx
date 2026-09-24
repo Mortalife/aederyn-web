@@ -44,8 +44,8 @@ export const ResourcesList: FC<ResourcesListProps> = ({ resources }) => {
                   <td class="px-4 py-3 text-white font-medium">{resource.name}</td>
                   <td class="px-4 py-3 text-gray-400 font-mono text-sm">{resource.id}</td>
                   <td class="px-4 py-3">
-                    <span class={`px-2 py-1 rounded text-xs font-medium ${getResourceTypeColor(resource.type)}`}>
-                      {resource.type}
+                    <span class={`px-2 py-1 rounded text-xs font-medium capitalize ${getResourceTypeColor(resource.type)}`}>
+                      {resource.type.replaceAll("_", " ")}
                     </span>
                   </td>
                   <td class="px-4 py-3 text-gray-300">{resource.collectionTime}s</td>
@@ -87,8 +87,15 @@ function getResourceTypeColor(type: string): string {
   const colors: Record<string, string> = {
     resource: "bg-emerald-500/20 text-emerald-400",
     workbench: "bg-blue-500/20 text-blue-400",
-    furnace: "bg-orange-500/20 text-orange-400",
-    magic: "bg-purple-500/20 text-purple-400",
+    campfire: "bg-orange-500/20 text-orange-400",
+    forge: "bg-amber-500/20 text-amber-400",
+    kiln: "bg-red-500/20 text-red-400",
+    tanning_rack: "bg-yellow-500/20 text-yellow-400",
+    apothecary: "bg-green-500/20 text-green-400",
+    loom: "bg-cyan-500/20 text-cyan-400",
+    warding_table: "bg-purple-500/20 text-purple-400",
+    growing_pit: "bg-lime-500/20 text-lime-400",
+    keystone: "bg-violet-500/20 text-violet-400",
   };
   return colors[type] || colors.resource;
 }

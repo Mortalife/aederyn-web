@@ -138,6 +138,81 @@ const migrations: string[][] = [
     "DELETE FROM combat_hits",
     "ALTER TABLE combat_hits ADD COLUMN spawn INT NOT NULL DEFAULT 0",
   ],
+  // Effects. Regeneration is keyed on the HP-per-ms rate the effects give,
+  // not on being at camp. Consumable effects run until `expires_at`; using
+  // the same item again replaces its row.
+  [
+    "ALTER TABLE health_regen DROP COLUMN at_camp",
+    "ALTER TABLE health_regen ADD COLUMN rate REAL NOT NULL DEFAULT 0",
+    `CREATE TABLE active_effects (
+      user_id TEXT NOT NULL,
+      item_id TEXT NOT NULL,
+      effect_id TEXT NOT NULL,
+      strength REAL NOT NULL,
+      started_at INT NOT NULL,
+      expires_at INT NOT NULL,
+      PRIMARY KEY (user_id, item_id, effect_id)
+    )`,
+    "CREATE INDEX active_effects_expires_at ON active_effects (expires_at)",
+  ],
+  // Story quests live in config and contracts in their own table, so
+  // progress no longer references a quests row. Old quest rows had
+  // randomly placed givers, so they and their progress are dropped.
+  [
+    "DROP TABLE objective_progress",
+    "DROP TABLE quest_progress",
+    "DROP TABLE quests",
+    `CREATE TABLE quest_progress (
+      user_id TEXT NOT NULL,
+      quest_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      started_at INTEGER,
+      completed_at INTEGER,
+      PRIMARY KEY (user_id, quest_id)
+    )`,
+    `CREATE TABLE objective_progress (
+      user_id TEXT NOT NULL,
+      quest_id TEXT NOT NULL,
+      objective_id TEXT NOT NULL,
+      current INTEGER NOT NULL DEFAULT 0,
+      required INTEGER NOT NULL,
+      completed BOOLEAN NOT NULL DEFAULT 0,
+      updated_at INTEGER,
+      completed_at INTEGER,
+      PRIMARY KEY (user_id, quest_id, objective_id),
+      FOREIGN KEY (user_id, quest_id)
+        REFERENCES quest_progress(user_id, quest_id)
+        ON DELETE CASCADE
+    )`,
+    "CREATE INDEX idx_quest_progress_user ON quest_progress(user_id)",
+    "CREATE INDEX idx_objective_progress_user ON objective_progress(user_id)",
+    // One row per contract: its latest posting, placed for that rotation.
+    `CREATE TABLE contracts (
+      quest_id TEXT PRIMARY KEY,
+      starts_at INT NOT NULL,
+      ends_at INT NOT NULL,
+      data TEXT NOT NULL
+    )`,
+  ],
+  // The world reboot replaced all content, so every player and every piece
+  // of world state from before it is cleared.
+  [
+    "DELETE FROM users",
+    "DELETE FROM resource_usage",
+    "DELETE FROM messages",
+    "DELETE FROM online",
+    "DELETE FROM inprogress",
+    "DELETE FROM zone_users",
+    "DELETE FROM system_messages",
+    "DELETE FROM objective_progress",
+    "DELETE FROM quest_progress",
+    "DELETE FROM contracts",
+    "DELETE FROM monster_state",
+    "DELETE FROM combat",
+    "DELETE FROM combat_hits",
+    "DELETE FROM health_regen",
+    "DELETE FROM active_effects",
+  ],
 ];
 
 export const runMigrations = (db: Database, list: string[][] = migrations) => {

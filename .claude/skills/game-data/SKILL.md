@@ -1,6 +1,6 @@
 ---
 name: game-data
-description: Shared rules for creating or editing Aederyn game content (items, resources, tiles, NPCs, house tiles, quests, world bible) by editing the JSON files in apps/editor/data. Covers where data lives, how entities reference each other, ID conventions, looking up existing entities for reuse, world-bible lore, and the validator you must pass before finishing. Load this before any create-* or world-bible skill, or when asked to check or fix game data.
+description: Shared rules for creating or editing Aederyn game content (items, resources, tiles, monsters, effects, NPCs, the map, house tiles, quests, world bible) by editing the JSON files in apps/editor/data. Covers where data lives, how entities reference each other, ID conventions, looking up existing entities for reuse, world-bible lore, and the validator you must pass before finishing. Load this before any create-* or world-bible skill, or when asked to check or fix game data.
 ---
 
 # Aederyn game data
@@ -15,8 +15,10 @@ All paths are relative to `apps/editor/`.
 |---|---|---|---|---|
 | Item | `data/items.json` | array | `id` | `packages/types/src/entities/item.schema.ts` |
 | Resource (gather node or crafting station) | `data/resources.json` | array | `id` | `resource.schema.ts` → `ResourceModelSchema` |
-| Tile (world map zone) | `data/tiles.json` | array | `id` | `tile.schema.ts` |
+| Tile (world map zone) | `data/tiles.json` | array | `id` | `tile.schema.ts` (pools in `pool.schema.ts`) |
+| Map (bounds, regions, landmarks; edit via the `edit-map` skill) | `data/map.json` | object | region `id`, landmark `id` | `map.schema.ts` → `MapDataSchema` |
 | Monster (attackable creature) | `data/monsters.json` | array | `id` | `monster.schema.ts` (combat stats in `combat.schema.ts`) |
+| Effect (hazard, buff or protection) | `data/effects.json` | array | `id` | `effect.schema.ts` |
 | NPC | `data/npcs.json` | array | `entity_id` | `npc.schema.ts` |
 | Quest | `data/quests.json` | array | `id` | `quest.schema.ts` → `QuestSchema` |
 | House tile (player homestead) | `data/house-tiles.json` | **object keyed by id** | `id` (must equal key) | `house-tile.schema.ts` |
@@ -27,30 +29,52 @@ The zod schemas are authoritative. Read the relevant one before writing an entit
 ## How entities connect
 
 ```
-tile.resources[]                    → resource.id
-tile.monsters[]                     → monster.id
+tile.resources[] (pool)             → resource.id
+tile.monsters[] (pool)              → monster.id
+tile.effects[] (pool)               → effect.id    (active while standing on the cell)
+map.regions[].tiles[].id            → tile.id      (fills the region's cells, by weight)
+map.regions[].effects[].id          → effect.id    (active on every cell of the region)
+map.landmarks[].tile                → tile.id      (pinned at one cell)
+npc.home                            → map.landmarks[].id
+npc.faction                         → world bible faction id
+item.effects[].id                   → effect.id    (applied on use, which consumes one)
+item.wornEffects[].id               → effect.id    (active while equipped)
+effect.target (kind "protects")     → effect.id    (what it protects against)
 monster.drops[].item_id             → item.id      (what killing it gives)
 resource.reward_items[].item_id     → item.id      (what gathering/crafting gives)
 resource.required_items[].item_id   → item.id      (tools needed, or crafting inputs)
-quest.giver / completion.entity_id  → npc.entity_id
-quest.giver / completion.zone_id    → tile.id      ("zone" means a world tile)
+quest (story) giver / completion.entity_id → npc.entity_id  (met at the NPC's home)
+quest giver / completion / talk .landmark  → map.landmarks[].id  (optional: meet the NPC there instead)
+quest (contract) board              → map.landmarks[].id  (where it's taken and handed in)
 quest objective gather.resource_id  → resource.id  (type "resource", placed on a tile)
 quest objective craft.resource_id   → resource.id  (type "workbench" | "furnace" | "magic")
 quest objective collect.item_id     → item.id      (must be produced by some resource/house tile)
-quest objective talk.entity_id      → npc.entity_id, talk/explore.zone_id → tile.id
+quest objective talk.entity_id      → npc.entity_id
+quest objective explore.landmark    → map.landmarks[].id
+quest objective explore/gather/kill .region → map.regions[].id; explore.tile → tile.id in that region
 quest rewards[].item_id             → item.id
 quest.prerequisites[]               → quest.id
+quest (story) excludes[]            → quest.id     (another story quest, which must exclude it back)
 house tile action result.resultingTileId / prerequisites.adjacentTiles → house tile id
 house tile action requirements.requirements[] / result.yields[] (type item) → item.id
 house tile availableResources[]     → resource.id
 ```
 
-So a new obtainable item usually needs three entities: the **item**, a **resource** that yields it, and a **tile** (existing or new) that hosts the resource. A crafted item needs a crafting-station resource (`type: "workbench"`) whose `required_items` are the ingredients, and that station needs to be on a tile (usually `tile_basic_workshop`).
+So a new obtainable item usually needs three entities: the **item**, a **resource** that yields it, and a **tile** (existing or new) that hosts the resource. A tile only appears in the game if the map places it: in a region's `tiles` or as a landmark.
+
+### Tile pools
+
+A tile's `resources`, `monsters` and `effects` are **pools**, rolled separately for every map cell showing the tile, so cells of one tile type differ. Each entry is one of:
+
+- the thing itself: `{ "id": "resource_x" }`, `{ "id": "monster_x", "count": 2 }`, `{ "id": "effect_x", "strength": 1 }`;
+- `{ "oneOf": [ …things… ] }`, which picks exactly one option per cell (e.g. one ore type per mine cell).
+
+Either can carry `"chance"` in (0, 1]: the probability the entry is present on a cell. Without it the entry is always there. Rolls are deterministic per cell (seeded by the coordinates and the entry's index), so a cell always has the same contents. A monster's `count` is how many spawn; never list a monster twice. A spawn is identified by its position in the cell's rolled list, so reordering a tile's monster pool reshuffles live spawns. A crafted item needs a crafting-station resource (`type: "workbench"`) whose `required_items` are the ingredients, and that station needs to be on a tile (the station tile for that craft, e.g. `tile_workbench` or `tile_campfire` at camp).
 
 ## ID conventions
 
-- `snake_case`, with a type prefix: `item_`, `resource_`, `tile_`, `monster_`, `npc_`, `quest_`. Crafting stations are `resource_crafting_<item>`. House tiles use bare names (`soil`, `seedling`).
-- Base the ID on the entity's name: `item_emberstone_of_valor`. Add `_02` only when that ID is already taken.
+- `snake_case`, with a type prefix: `item_`, `resource_`, `tile_`, `monster_`, `effect_`, `npc_`, `quest_`, `landmark_`. Map region IDs are lowercase-hyphen slugs like world bible IDs. Crafting stations are `resource_crafting_<item>`. House tiles use bare names (`soil`, `seedling`).
+- Base the ID on the entity's name: `item_flint_axe`. Add `_02` only when that ID is already taken.
 - Don't use `quest_new__` or `npc_quest_new__` style IDs. Those came from the old generator.
 - Check that an ID is free before using it (see lookups below). The validator treats duplicates as errors.
 
@@ -62,13 +86,16 @@ Reuse beats duplication. Before creating anything, search for an existing entity
 cd apps/editor
 jq -r '.[] | "\(.id)\t\(.name)\t\(.type)\t\(.rarity)"' data/items.json | grep -i ember
 jq -r '.[] | "\(.id)\t\(.name)\t\(.type)"' data/resources.json
-jq -r '.[] | "\(.id)\t\(.name)\t\(.theme)\t\(.resources|join(","))"' data/tiles.json
+jq -r '.[] | "\(.id)\t\(.name)\t\(.theme)\t\([.resources[] | .id // (.oneOf | map(.id) | join("|"))] | join(","))"' data/tiles.json
+jq -r '.regions[] | "\(.id)\ttier \(.tier)\t\([.tiles[] | "\(.id):\(.weight)"] | join(","))"' data/map.json
+jq -r '.landmarks[] | "\(.id)\t\(.x),\(.y)\t\(.tile)\t\(.spawn // "")"' data/map.json
 jq -r '.[] | "\(.id)\t\(.name)\t\(.attack.style)\t\([.drops[].item_id]|join(","))"' data/monsters.json
+jq -r '.[] | "\(.id)\t\(.name)\t\(.kind)\t\(.mode)\t\(.target // "")"' data/effects.json
 jq -r '.[] | "\(.entity_id)\t\(.name)"' data/npcs.json
-jq -r '.[] | "\(.id)\t\(.name)\t\(.giver.entity_id)"' data/quests.json
-jq '.[] | select(.id=="item_log_01")' data/items.json            # full record
-grep -l '"item_log_01"' data/*.json                              # what references it
-jq -r '.[] | select(.reward_items[]?.item_id=="item_log_01") | .id' data/resources.json   # what produces it
+jq -r '.[] | "\(.id)\t\(.kind)\t\(.name)\t\(.giver.entity_id // .board)"' data/quests.json
+jq '.[] | select(.id=="item_flint_axe")' data/items.json            # full record
+grep -l '"item_flint_axe"' data/*.json                              # what references it
+jq -r '.[] | select(.reward_items[]?.item_id=="item_flint_axe") | .id' data/resources.json   # what produces it
 ```
 
 ## Lore
@@ -77,7 +104,7 @@ Content should fit the world bible. Read only the parts you need:
 
 ```bash
 jq '.setting, [.themes[] | {id, name}]' data/world-bible.json
-jq '.regions[] | select(.id=="verdant-thicket")' data/world-bible.json
+jq '.regions[] | select(.id=="landing")' data/world-bible.json
 jq '.factions[] | {id, name, alignment, description}' data/world-bible.json
 jq '.naming' data/world-bible.json
 ```
@@ -97,7 +124,7 @@ Follow `naming.characterPatterns`, `placePatterns` and `itemPatterns` for names.
 pnpm --filter editor validate --ids <every id you created or changed, comma-separated> --warnings
 ```
 
-- It exits 1 if any listed entity has an error: schema violations, dangling references, duplicate IDs, or resources/quest zones on a tile with `accessible: false` (players can't enter those). Fix every error and run it again until it passes.
+- It exits 1 if any listed entity has an error: schema violations, dangling references, duplicate IDs, resources or quest landmarks on a tile with `accessible: false` (players can't enter those), or a quest NPC with no home and no landmark on the reference. Fix every error and run it again until it passes.
 - Treat warnings for your entities as design problems to fix unless there's a reason. The most important are `unobtainable` (a quest, resource or item needs something the player can't get) and `circular_dependency` (a recipe needs an item that only comes from recipes that already need it). `orphaned` is fine for an item that's only a quest reward. `unused` flags items with no effects, no equip slot and no recipe/quest that consumes them, and accessible tiles with nothing on them; fine for trophy/lore items.
 - Pre-existing errors in other entities are summarised but don't fail the run. Don't fix them unless asked; mention them instead.
 - Add `--json` if you want structured output.

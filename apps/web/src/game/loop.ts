@@ -5,12 +5,14 @@ import { renderConnections } from "./connections.js";
 import { takeEvents } from "./events.js";
 import { processActions } from "./systems/actions.js";
 import { processCombat } from "./systems/combat.js";
+import { expireEffects } from "./systems/effects.js";
 import { regenerateHealth } from "./systems/health.js";
 import { respawnMonsters } from "./systems/monsters.js";
 import { presentUserIds } from "./systems/presence.js";
 import { handleQuestEvents } from "./systems/quests.js";
 import { cleanupResources } from "./systems/resources.js";
 import { cleanupSystemMessages } from "./systems/system-messages.js";
+import { contractWindow } from "../world/quests.js";
 
 export const TICK_MS = 200;
 
@@ -52,6 +54,7 @@ const runTick = writer.transaction((batch: QueuedCommand[], now: number) => {
   guarded("respawnMonsters", now, () => respawnMonsters(now));
   guarded("processActions", now, () => processActions(now));
   guarded("processCombat", now, () => processCombat(now));
+  guarded("expireEffects", now, () => expireEffects(now));
   guarded("regenerateHealth", now, () => regenerateHealth(now));
   guarded("cleanupSystemMessages", now, () => cleanupSystemMessages());
 
@@ -82,14 +85,13 @@ export const tick = (now = Date.now()) => {
   renderConnections(now);
 };
 
-// Quest rotation: once now (a no-op if this hour already rotated), then just
-// after each hour boundary.
-const scheduleQuestRotation = () => {
-  enqueue({ type: "rotate_quests" });
+// Contract rotation: once now (a no-op if this window already rotated), then
+// just after each window boundary.
+const scheduleContractRotation = () => {
+  enqueue({ type: "rotate_contracts" });
 
   const now = Date.now();
-  const nextHour = Math.ceil((now + 1) / 3_600_000) * 3_600_000;
-  setTimeout(scheduleQuestRotation, nextHour - now + 1000);
+  setTimeout(scheduleContractRotation, contractWindow(now).ends_at - now + 1000);
 };
 
 export const startLoop = () => {
@@ -99,7 +101,7 @@ export const startLoop = () => {
     enqueue({ type: "disconnect", userId });
   }
 
-  scheduleQuestRotation();
+  scheduleContractRotation();
 
   setInterval(() => {
     const start = performance.now();

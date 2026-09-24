@@ -29,9 +29,11 @@ export const UsedBySection: FC<UsedBySectionProps> = ({ references, entityName }
     item: "Items",
     resource: "Resources",
     tile: "Tiles",
+    effect: "Effects",
     npc: "NPCs",
     quest: "Quests",
     "house-tile": "House Tiles",
+    map: "Map",
   };
 
   return (

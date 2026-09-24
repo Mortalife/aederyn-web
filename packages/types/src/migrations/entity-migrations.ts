@@ -3,7 +3,7 @@ import type { Item } from "../entities/item.schema.js";
 import type { ResourceModel } from "../entities/resource.schema.js";
 import type { Tile } from "../entities/tile.schema.js";
 import type { NPC } from "../entities/npc.schema.js";
-import type { TileQuest } from "../entities/quest.schema.js";
+import type { Quest } from "../entities/quest.schema.js";
 import type { HouseTile } from "../entities/house-tile.schema.js";
 
 // Example migration: Item v1 -> v2 (adding iconUrl field)
@@ -109,7 +109,7 @@ export const npcV1ToV2: Migration<NPC, NPC> = {
   },
 };
 
-export const questV1ToV2: Migration<TileQuest, TileQuest> = {
+export const questV1ToV2: Migration<Quest, Quest> = {
   entityType: "quest",
   fromVersion: 1,
   toVersion: 2,
@@ -123,7 +123,7 @@ export const questV1ToV2: Migration<TileQuest, TileQuest> = {
     return data;
   },
   
-  validate(data): data is TileQuest {
+  validate(data): data is Quest {
     return (
       typeof data === "object" &&
       data !== null &&

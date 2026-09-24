@@ -24,6 +24,7 @@ export type Command =
   | { type: "flee"; userId: string }
   | { type: "chat"; userId: string; message: string }
   | { type: "inventory_drop"; userId: string; inventoryId: string }
+  | { type: "use"; userId: string; inventoryId: string }
   | { type: "equip"; userId: string; inventoryId: string }
   | { type: "unequip"; userId: string; slot: EquipSlot }
   | { type: "system_messages_clear"; userId: string }
@@ -37,7 +38,7 @@ export type Command =
     }
   | { type: "quest_complete"; userId: string; questId: string }
   | { type: "quest_cancel"; userId: string; questId: string }
-  | { type: "rotate_quests"; force?: boolean };
+  | { type: "rotate_contracts"; force?: boolean };
 
 /** What `submit` resolves with, per command. Unlisted commands give void. */
 export type CommandResults = {

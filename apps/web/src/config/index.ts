@@ -1,3 +1,4 @@
+import { poolIds } from "@aederyn/types";
 import { items } from "./items.js";
 import { resources, resourcesById } from "./resources.js";
 import { tileTypes } from "./tiles.js";
@@ -5,19 +6,19 @@ import type { ResourceModel } from "./types.js";
 
 const itemsWithoutSources = items.filter(
   (i) =>
-    !resources.some((r) => r.reward_items.some((ri) => ri.item_id === i.id))
+    !resources.some((r) => r.reward_items.some((ri) => ri.item_id === i.id)),
 );
 
 console.log(
   "Items without sources:",
   itemsWithoutSources.map((i) => i.id),
-  `${itemsWithoutSources.length}/${items.length}`
+  `${itemsWithoutSources.length}/${items.length}`,
 );
 
 const itemsWithoutUses = items.filter((i) => {
   const hasEffects = i.effects && i.effects.length > 0;
   const usedInRecipes = resources.some((r) =>
-    r.required_items.some((ri) => ri.item_id === i.id)
+    r.required_items.some((ri) => ri.item_id === i.id),
   );
 
   return !hasEffects && !usedInRecipes;
@@ -26,7 +27,7 @@ const itemsWithoutUses = items.filter((i) => {
 console.log(
   "Items without uses:",
   itemsWithoutUses.map((i) => i.id),
-  `${itemsWithoutUses.length}/${items.length}`
+  `${itemsWithoutUses.length}/${items.length}`,
 );
 
 function checkCircularDependencies(resources: ResourceModel[]): boolean {
@@ -44,7 +45,7 @@ function checkCircularDependencies(resources: ResourceModel[]): boolean {
 
       // Check if this item is a reward of any resource
       const resourceThatRewardsThisItem = resources.find((r) =>
-        r.reward_items.some((ri) => ri.item_id === itemId)
+        r.reward_items.some((ri) => ri.item_id === itemId),
       );
 
       if (resourceThatRewardsThisItem) {
@@ -52,7 +53,7 @@ function checkCircularDependencies(resources: ResourceModel[]): boolean {
           console.log(
             `Circular dependency found: ${Array.from(path).join(" -> ")} -> ${
               resourceThatRewardsThisItem.id
-            }`
+            }`,
           );
           return true; // Circular dependency found
         }
@@ -85,19 +86,19 @@ const hasCircular = checkCircularDependencies(resources);
 console.log(`Circular dependency found: ${hasCircular}`);
 
 const resourcesWithoutTiles = resources.filter(
-  (r) => !tileTypes.some((t) => t.resources.includes(r.id))
+  (r) => !tileTypes.some((t) => poolIds(t.resources).includes(r.id)),
 );
 console.log(
   "Resources without tiles:",
   resourcesWithoutTiles.map((r) => r.id),
-  `${resourcesWithoutTiles.length}/${resources.length}`
+  `${resourcesWithoutTiles.length}/${resources.length}`,
 );
 
 const tilesWithoutUses = tileTypes.filter(
-  (t) => t.resources.length === 0 && t.accessible
+  (t) => t.resources.length === 0 && t.accessible,
 );
 console.log(
   "Tiles without uses (empty & accessible):",
   tilesWithoutUses.map((t) => t.id),
-  `${tilesWithoutUses.length}/${tileTypes.length}`
+  `${tilesWithoutUses.length}/${tileTypes.length}`,
 );

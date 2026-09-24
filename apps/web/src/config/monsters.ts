@@ -2,15 +2,310 @@ import type { Monster } from "./types.js";
 
 export const monsters: Monster[] = [
   {
+    id: "monster_rabbit",
+    name: "Rabbit",
+    description:
+      "A brown rabbit grown fat on the Landing's grass and the company's flax. It kicks if you grab it, and that's about all. Anyone can catch one barehanded.",
+    health: 12,
+    attack: { style: "melee", damage: 1, speed: 3000 },
+    defence: { melee: 0, ranged: 0, magic: 0 },
+    respawnTime: 30,
+    drops: [
+      { item_id: "item_raw_rabbit", qty: 1, chance: 1 },
+      { item_id: "item_rabbit_hide", qty: 1, chance: 0.6 },
+    ],
+  },
+  {
     id: "monster_chicken",
     name: "Chicken",
     description:
-      "A plump, bad-tempered chicken scratching about in the grass. It pecks back when cornered, and it's hard to hit with an arrow while it darts about.",
+      "A rangy hen from a flock that went wild when the farms emptied. It pecks hard and darts about too quickly to hit with a sling. A club works better.",
     health: 50,
-    attack: { style: "melee", damage: 5, speed: 3000 },
-    defence: { melee: 0, ranged: 20, magic: 0 },
-    respawnTime: 30,
+    attack: { style: "melee", damage: 4, speed: 2000 },
+    defence: { melee: 0, ranged: 100, magic: 0 },
+    respawnTime: 45,
+    drops: [
+      { item_id: "item_feather", qty: 2, chance: 1 },
+      { item_id: "item_raw_chicken", qty: 1, chance: 1 },
+    ],
+  },
+  {
+    id: "monster_adder",
+    name: "Adder",
+    description:
+      "A zigzag-backed snake basking in the long grass and on warm wall stones. It strikes fast and often, and it's low and hard to club, but a sling stone knocks it flat.",
+    health: 40,
+    attack: { style: "melee", damage: 10, speed: 1200 },
+    defence: { melee: 30, ranged: 0, magic: 0 },
+    respawnTime: 60,
+    drops: [{ item_id: "item_adder_skin", qty: 1, chance: 1 }],
+  },
+  {
+    id: "monster_wolf",
+    name: "Wolf",
+    description:
+      "A lean grey wolf from a pack that has had the Southwood to itself for a hundred years. It weaves as it closes, so a club rarely lands clean, but it comes straight at you and an arrow stops it.",
+    health: 90,
+    attack: { style: "melee", damage: 12, speed: 1800 },
+    defence: { melee: 60, ranged: 0, magic: 20 },
+    respawnTime: 90,
+    drops: [
+      { item_id: "item_wolf_pelt", qty: 1, chance: 1 },
+      { item_id: "item_bone", qty: 1, chance: 1 },
+      { item_id: "item_sinew", qty: 1, chance: 0.75 },
+    ],
+  },
+  {
+    id: "monster_boar",
+    name: "Boar",
+    description:
+      "A bristle-backed boar rooting for acorns under the oaks. Its hide and shoulder turn a club or spear, and it charges like a cart downhill. Shoot it before it's close.",
+    health: 140,
+    attack: { style: "melee", damage: 15, speed: 3000 },
+    defence: { melee: 100, ranged: 20, magic: 0 },
+    respawnTime: 120,
+    drops: [
+      { item_id: "item_raw_boar", qty: 1, chance: 1 },
+      { item_id: "item_boar_hide", qty: 1, chance: 1 },
+      { item_id: "item_bone", qty: 1, chance: 0.8 },
+      { item_id: "item_sinew", qty: 1, chance: 0.5 },
+    ],
+  },
+  {
+    id: "monster_crow_swarm",
+    name: "Crow Swarm",
+    description:
+      "A mob of crows that dives from every side and pulls away before you can turn. Too many and too quick to pick off with arrows, but they scatter from anything you swing.",
+    health: 60,
+    attack: { style: "ranged", damage: 6, speed: 1400 },
+    defence: { melee: 0, ranged: 120, magic: 0 },
+    respawnTime: 60,
     drops: [{ item_id: "item_feather", qty: 3, chance: 1 }],
+  },
+  {
+    id: "monster_cave_bat",
+    name: "Cave Bat",
+    description:
+      "A bat with a wingspan like a cloak that roosts in the cliffs and the old galleries and goes for anything carrying a flame. It jinks too fast to shoot, but it comes close enough to cut.",
+    health: 70,
+    attack: { style: "melee", damage: 9, speed: 1200 },
+    defence: { melee: 20, ranged: 150, magic: 20 },
+    respawnTime: 60,
+    drops: [{ item_id: "item_bat_wing", qty: 1, chance: 1 }],
+  },
+  {
+    id: "monster_rock_crab",
+    name: "Rock Crab",
+    description:
+      "A crab the size of a shield that lives in the damp under the scree, its shell ridged and grey as the stone. Blades ring off it and arrows skid away. It can be worn down, slowly, but it seems made to be beaten some other way.",
+    health: 160,
+    attack: { style: "melee", damage: 10, speed: 3000 },
+    defence: { melee: 150, ranged: 150, magic: 0 },
+    respawnTime: 180,
+    drops: [{ item_id: "item_crab_shell", qty: 1, chance: 1 }],
+  },
+  {
+    id: "monster_mine_stalker",
+    name: "Mine Stalker",
+    description:
+      "A pale, long-bodied thing like a marten grown big in the dark. It hangs in old shafts and drops loose rock on whatever passes under, and it's gone before you can draw a bow. Get close and it has little to stop a blade.",
+    health: 120,
+    attack: { style: "ranged", damage: 14, speed: 2000 },
+    defence: { melee: 40, ranged: 60, magic: 40 },
+    respawnTime: 120,
+    drops: [
+      { item_id: "item_stalker_hide", qty: 1, chance: 1 },
+      { item_id: "item_bone", qty: 1, chance: 0.6 },
+    ],
+  },
+  {
+    id: "monster_pike",
+    name: "Pike",
+    description:
+      "A pike as long as your leg that lies in the weed and takes anything that wades too close, ducklings to ankles. In the water a blade barely reaches it, but it holds still in the shallows long enough to shoot.",
+    health: 120,
+    attack: { style: "melee", damage: 16, speed: 2400 },
+    defence: { melee: 80, ranged: 20, magic: 40 },
+    respawnTime: 120,
+    drops: [
+      { item_id: "item_raw_pike", qty: 1, chance: 1 },
+      { item_id: "item_fish_gut", qty: 2, chance: 1 },
+      { item_id: "item_bone", qty: 1, chance: 0.4 },
+    ],
+  },
+  {
+    id: "monster_mossback_toad",
+    name: "Mossback Toad",
+    description:
+      "A toad the size of a sheepdog with moss growing in the warts of its back. It sits in the fen and spits stinging slime from further off than you'd think, and its slick hide turns blade and arrow about the same. It has no defence at all against a warding line.",
+    health: 90,
+    attack: { style: "ranged", damage: 10, speed: 2000 },
+    defence: { melee: 60, ranged: 60, magic: 10 },
+    respawnTime: 90,
+    drops: [{ item_id: "item_mossback_skin", qty: 1, chance: 1 }],
+  },
+  {
+    id: "monster_colonised_heron",
+    name: "Colonised Heron",
+    description:
+      "A grey heron that stands in the carr with pale growths laid in rows along its neck and wings. It moves wrong, in jerks, and doesn't blink. It stabs from a distance and its matted plumage turns arrows, but it doesn't dodge a blade.",
+    health: 130,
+    attack: { style: "ranged", damage: 14, speed: 2400 },
+    defence: { melee: 10, ranged: 140, magic: 60 },
+    respawnTime: 240,
+    drops: [
+      { item_id: "item_pale_growth", qty: 1, chance: 1 },
+      { item_id: "item_feather", qty: 2, chance: 1 },
+    ],
+  },
+  {
+    id: "monster_mossback_wolf",
+    name: "Mossback Wolf",
+    description:
+      "A wolf gone heavy and slow-eyed, its back grown over with a thick mat of moss and fine white threads that turns a blade and blunts a warding. It still hunts like a wolf, but it runs straight at you, and a crossbow bolt goes through the moss.",
+    health: 180,
+    attack: { style: "melee", damage: 12, speed: 1500 },
+    defence: { melee: 100, ranged: 30, magic: 60 },
+    respawnTime: 150,
+    drops: [
+      { item_id: "item_wolf_pelt", qty: 1, chance: 1 },
+      { item_id: "item_bone", qty: 1, chance: 1 },
+      { item_id: "item_pale_growth", qty: 1, chance: 0.5 },
+    ],
+  },
+  {
+    id: "monster_host_wanderer",
+    name: "Host Wanderer",
+    description:
+      "Someone who walked into the long grass a hundred and twenty years ago and never walked out: a smock gone to rags, wooden clogs, and a veil of pale growth laid over the face. It stands still until you come close, then turns, slowly, and swings with the whole weight of a body that no longer feels anything. Arrows go into it and change nothing, but warding presses it back.",
+    health: 240,
+    attack: { style: "melee", damage: 30, speed: 4000 },
+    defence: { melee: 80, ranged: 150, magic: 0 },
+    respawnTime: 300,
+    drops: [{ item_id: "item_grey_threads", qty: 1, chance: 1 }],
+  },
+  {
+    id: "monster_feral_hounds",
+    name: "Feral Hound Pack",
+    description:
+      "Four or five rangy dogs bred down from the valley's farm dogs, running the lanes together. They come at you from every side at once and are too many to shoot, but they scatter from a blade.",
+    health: 150,
+    attack: { style: "melee", damage: 10, speed: 1000 },
+    defence: { melee: 20, ranged: 120, magic: 60 },
+    respawnTime: 120,
+    drops: [
+      { item_id: "item_hound_pelt", qty: 1, chance: 1 },
+      { item_id: "item_bone", qty: 1, chance: 0.8 },
+      { item_id: "item_sinew", qty: 1, chance: 0.5 },
+    ],
+  },
+  {
+    id: "monster_host",
+    name: "Host",
+    description:
+      "One of the first turned, grown so far into the network that there's more growth than person: a shape of grey threads and horn-hard crust with the rags of a smock still caught in it. It swings hard and often. Its crust turns arrows and even warding, but a chitin edge cuts into it.",
+    health: 240,
+    attack: { style: "melee", damage: 32, speed: 2800 },
+    defence: { melee: 40, ranged: 160, magic: 110 },
+    respawnTime: 240,
+    drops: [
+      { item_id: "item_grey_threads", qty: 1, chance: 1 },
+      { item_id: "item_chitin", qty: 1, chance: 0.5 },
+    ],
+  },
+  {
+    id: "monster_host_cluster",
+    name: "Host-Cluster",
+    description:
+      "Three or four hosts grown together into one mound of pale growth, rooted where they stood. It can't swing at you. It bursts instead, a cloud of spores that goes through mail and burns the lungs. Its crust shrugs off blades and arrows, but it shrinks from warding.",
+    health: 200,
+    attack: { style: "magic", damage: 25, speed: 2800 },
+    defence: { melee: 120, ranged: 150, magic: 20 },
+    respawnTime: 240,
+    drops: [
+      { item_id: "item_grey_threads", qty: 2, chance: 1 },
+      { item_id: "item_spore_resin", qty: 1, chance: 0.5 },
+    ],
+  },
+  {
+    id: "monster_colonised_elk",
+    name: "Colonised Elk",
+    description:
+      "A bull elk plated along the neck and flanks with chitin, antlers crusted white, moving with the patience of the grown. It takes a lot of killing and kicks like a cart-horse. Blades and warding slide off its plates, but an arrow finds the gaps.",
+    health: 240,
+    attack: { style: "melee", damage: 32, speed: 3500 },
+    defence: { melee: 130, ranged: 40, magic: 110 },
+    respawnTime: 300,
+    drops: [
+      { item_id: "item_threaded_spine", qty: 1, chance: 1 },
+      { item_id: "item_elk_hide", qty: 1, chance: 1 },
+      { item_id: "item_bone", qty: 2, chance: 1 },
+    ],
+  },
+  {
+    id: "monster_spore_moths",
+    name: "Spore-Moth Swarm",
+    description:
+      "A cloud of pale moths as big as your hand, dusted with spores, that settles on anything warm. Each wingbeat sheds a burst of spores that gets through armour. Too many to swat and too light to ward, but arrows scatter them.",
+    health: 220,
+    attack: { style: "magic", damage: 19, speed: 2400 },
+    defence: { melee: 140, ranged: 20, magic: 120 },
+    respawnTime: 180,
+    drops: [{ item_id: "item_moth_down", qty: 2, chance: 1 }],
+  },
+  {
+    id: "monster_grown_thresher",
+    name: "Grown Thresher",
+    description:
+      "Something the Heart grew for itself in the shape of a man, taller than any, with both arms run long into jointed flails of heartshell. It walks slow and swings like a threshing floor. Shell turns blades and bursts alike, but it's too slow to close on a bow.",
+    health: 256,
+    attack: { style: "melee", damage: 34, speed: 3400 },
+    defence: { melee: 170, ranged: 60, magic: 150 },
+    respawnTime: 300,
+    drops: [
+      { item_id: "item_heartshell", qty: 2, chance: 1 },
+      { item_id: "item_grown_sinew", qty: 1, chance: 0.25 },
+    ],
+  },
+  {
+    id: "monster_grown_slinger",
+    name: "Grown Slinger",
+    description:
+      "A crouched, long-armed thing grown out of the mat, which whips barbs of shell from a sinew arm faster than you can count. It's soft under the arm and keeps its distance: arrows and bursts go wide, but it can't throw at what's already on it.",
+    health: 270,
+    attack: { style: "ranged", damage: 30, speed: 2800 },
+    defence: { melee: 60, ranged: 180, magic: 150 },
+    respawnTime: 300,
+    drops: [
+      { item_id: "item_grown_sinew", qty: 1, chance: 1 },
+      { item_id: "item_heartshell", qty: 1, chance: 0.5 },
+    ],
+  },
+  {
+    id: "monster_grown_singer",
+    name: "Grown Singer",
+    description:
+      "A tall, hollow column of threads, open at the top like a throat, that hums the Heart's note until the air presses on you. Blades and arrows go through it without finding much, but a burst of its own spores sets it ringing apart.",
+    health: 270,
+    attack: { style: "magic", damage: 32, speed: 3000 },
+    defence: { melee: 160, ranged: 160, magic: 40 },
+    respawnTime: 300,
+    drops: [{ item_id: "item_humming_thread", qty: 2, chance: 1 }],
+  },
+  {
+    id: "monster_heart_warden",
+    name: "The Heart-Warden",
+    description:
+      "A Warden in the order's old grey mail and a bronze respirator, a Keeper's knot on the shoulder, still standing watch at the Keepers' Camp and grown through at every joint. It never took the respirator off. When you come close it lifts a hand and presses the way a warder presses, slow and heavy, and the air shuts like a door. Mail and lines turn everything a little; nothing turns it much.",
+    health: 520,
+    attack: { style: "magic", damage: 44, speed: 8000 },
+    defence: { melee: 130, ranged: 110, magic: 90 },
+    respawnTime: 900,
+    drops: [
+      { item_id: "item_cracked_wardens_respirator", qty: 1, chance: 1 },
+      { item_id: "item_warden_steel", qty: 2, chance: 1 },
+      { item_id: "item_heartshell", qty: 3, chance: 1 },
+    ],
   },
 ];
 

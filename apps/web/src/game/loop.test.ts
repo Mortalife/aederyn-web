@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import "../test/config/index.js";
 
 // The connections open at import time, so point them at a scratch database
 // before importing anything that touches them.
@@ -19,7 +20,7 @@ const { questProgressManager } = await import(
 );
 const { getTileSelection } = await import("../world/index.js");
 const { resourcesById } = await import("../config/resources.js");
-const { MAP_HEIGHT, MAP_WIDTH, MAX_INVENTORY_SIZE } = await import(
+const { MAP_BOUNDS, MAX_INVENTORY_SIZE } = await import(
   "../config.js"
 );
 type GameUserModel = import("../config.js").GameUserModel;
@@ -67,8 +68,8 @@ const setUser = (changes: Partial<GameUserModel>) => {
  * There's no teleport command, so this writes the position directly.
  */
 const placeOn = (find: (x: number, y: number) => Resource | undefined) => {
-  for (let x = 0; x < MAP_WIDTH; x++) {
-    for (let y = 0; y < MAP_HEIGHT; y++) {
+  for (let x = MAP_BOUNDS.minX; x <= MAP_BOUNDS.maxX; x++) {
+    for (let y = MAP_BOUNDS.minY; y <= MAP_BOUNDS.maxY; y++) {
       const resource = find(x, y);
       if (resource && getTileSelection(x, y).accessible) {
         setUser({ p: { x, y }, z: true });
@@ -101,6 +102,15 @@ describe("game loop", () => {
 
     await run({ type: "move", userId, direction: "down" });
     await run({ type: "move", userId, direction: "up" });
+
+    expect(getUser(userId)!.p).toEqual(before);
+  });
+
+  it("won't move onto an inaccessible cell", async () => {
+    const before = getUser(userId)!.p;
+    expect(getTileSelection(before.x - 1, before.y).accessible).toBe(false);
+
+    await run({ type: "move", userId, direction: "left" });
 
     expect(getUser(userId)!.p).toEqual(before);
   });
@@ -157,26 +167,25 @@ describe("game loop", () => {
     expect(getSystemMessages(userId)).toEqual([]);
   });
 
-  it("rotates quests and starts one available where the player stands", async () => {
-    await run({ type: "rotate_quests", force: true });
-    const quests = questProgressManager.getActiveQuests(now);
-    expect(quests.length).toBeGreaterThan(0);
+  it("rotates contracts and offers one at its board", async () => {
+    await run({ type: "rotate_contracts", force: true });
+    const contract = questProgressManager
+      .getActiveQuests(now)
+      .find((q) => q.kind === "contract");
+    expect(contract).toBeDefined();
 
-    const quest = quests[0]!;
     await run({ type: "quest_start", userId, questId: "nope" });
     expect(getSystemMessages(userId)[0]?.message).toBe(
       "No such quest"
     );
 
-    // Walk the player to the giver so the quest is available.
-    // (Direct teleport isn't a command, so check via the zone query instead.)
     const zone = questProgressManager.getZoneQuestsForUser(
       userId,
-      quest.giver.x,
-      quest.giver.y,
+      contract!.giver.x,
+      contract!.giver.y,
       now
     );
-    expect(zone.availableQuests.map((q) => q.id)).toContain(quest.id);
+    expect(zone.availableQuests.map((q) => q.id)).toContain(contract!.id);
   });
 
   it("keeps a move and a completing action from the same tick", async () => {
@@ -216,21 +225,16 @@ describe("game loop", () => {
   it("moves quest objectives along through events in the same tick", async () => {
     const resource = await placeOnResource();
     const { p } = getUser(userId)!;
-    // Completion rewards come from config, so borrow a real quest's id.
-    const questId = questConfig.find((q) => !q.is_tutorial)!.id;
+    // Completion rewards come from config, so borrow a real contract's id.
+    const questId = questConfig.find((q) => q.kind === "contract")!.id;
     const quest = {
       id: questId,
+      kind: "contract",
       type: "exploration",
       name: "Events",
       description: "",
-      giver: { entity_id: "npc", zone_id: "zone", ...p },
-      completion: {
-        entity_id: "npc",
-        zone_id: "zone",
-        message: "",
-        return_message: "",
-        ...p,
-      },
+      giver: { entity_id: null, ...p },
+      completion: { entity_id: null, message: "", return_message: null, ...p },
       objectives: [
         {
           id: "gather",
@@ -244,7 +248,6 @@ describe("game loop", () => {
           id: "explore",
           type: "explore",
           description: "Look around",
-          zone_id: "zone",
           chance: 1,
           found_message: null,
           progress: null,
@@ -257,10 +260,9 @@ describe("game loop", () => {
     };
     writer
       .prepare(
-        `INSERT OR REPLACE INTO quests (quest_id, version, startX, startY, endX, endY, starts_at, ends_at, data)
-        VALUES (?, 2, ?, ?, ?, ?, ?, ?, ?)`
+        "INSERT OR REPLACE INTO contracts (quest_id, starts_at, ends_at, data) VALUES (?, ?, ?, ?)"
       )
-      .run(questId, p.x, p.y, p.x, p.y, quest.starts_at, quest.ends_at, JSON.stringify(quest));
+      .run(questId, quest.starts_at, quest.ends_at, JSON.stringify(quest));
     // Written behind the loop's back, so invalidate the parsed quests.
     bumpQuests();
 
@@ -438,8 +440,8 @@ describe("monsters", () => {
 
   beforeAll(() => {
     zone = (() => {
-      for (let x = 0; x < MAP_WIDTH; x++) {
-        for (let y = 0; y < MAP_HEIGHT; y++) {
+      for (let x = MAP_BOUNDS.minX; x <= MAP_BOUNDS.maxX; x++) {
+        for (let y = MAP_BOUNDS.minY; y <= MAP_BOUNDS.maxY; y++) {
           const tile = getTileSelection(x, y);
           if (tile.accessible && tile.monsters?.includes(chicken.id)) {
             return { x, y };
@@ -470,6 +472,19 @@ describe("monsters", () => {
     expect(rendered).toContain(chicken.name);
     expect(rendered).toContain(`${chicken.health}/${chicken.health}`);
     expect(rendered).not.toContain("Respawns in");
+  });
+
+  it("ignores state left by a different monster at the same spawn", () => {
+    writer
+      .prepare(
+        "INSERT INTO monster_state (x, y, spawn, monster_id, hp, respawn_at) VALUES (?, ?, 0, 'monster_gone', 1, NULL)"
+      )
+      .run(zone.x, zone.y);
+    try {
+      expect(zoneMonsters()[0]).toMatchObject({ spawn: 0, hp: chicken.health, respawnAt: null });
+    } finally {
+      writer.prepare("DELETE FROM monster_state WHERE monster_id = 'monster_gone'").run();
+    }
   });
 
   it("respawns a killed monster once its respawn time has passed", () => {
@@ -608,8 +623,8 @@ describe("combat", () => {
   const attack = (id = fighter, spawn = 0) => run({ type: "attack", userId: id, spawn });
 
   beforeAll(() => {
-    for (let x = 0; x < MAP_WIDTH; x++) {
-      for (let y = 0; y < MAP_HEIGHT; y++) {
+    for (let x = MAP_BOUNDS.minX; x <= MAP_BOUNDS.maxX; x++) {
+      for (let y = MAP_BOUNDS.minY; y <= MAP_BOUNDS.maxY; y++) {
         if (getTileSelection(x, y).accessible && getTileSelection(x, y).monsters?.includes(chicken.id)) {
           zone = { x, y };
           return;
@@ -685,10 +700,9 @@ describe("combat", () => {
       type: "combat",
       name: "Chicken hunt",
       description: "",
-      giver: { entity_id: "npc", zone_id: "zone", ...zone },
-      completion: {
-        entity_id: "npc", zone_id: "zone", message: "", return_message: "", ...zone,
-      },
+      kind: "contract",
+      giver: { entity_id: null, ...zone },
+      completion: { entity_id: null, message: "", return_message: null, ...zone },
       objectives: [{
         id: "kill_chickens", type: "kill", description: "Defeat two chickens",
         monster_id: chicken.id, count: 2, progress: null,
@@ -698,9 +712,8 @@ describe("combat", () => {
       ends_at: now + 3_600_000,
     };
     writer.prepare(
-      `INSERT INTO quests (quest_id, version, startX, startY, endX, endY, starts_at, ends_at, data)
-       VALUES (?, 2, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(questId, zone.x, zone.y, zone.x, zone.y, quest.starts_at, quest.ends_at, JSON.stringify(quest));
+      "INSERT INTO contracts (quest_id, starts_at, ends_at, data) VALUES (?, ?, ?, ?)"
+    ).run(questId, quest.starts_at, quest.ends_at, JSON.stringify(quest));
     bumpQuests();
 
     try {
@@ -716,7 +729,7 @@ describe("combat", () => {
       expect(progress()).toMatchObject({ current: 2, completed: 1 });
       expect(questProgressManager.getQuestStatus(fighter, questId)?.status).toBe("completable");
     } finally {
-      writer.prepare("DELETE FROM quests WHERE quest_id = ?").run(questId);
+      writer.prepare("DELETE FROM contracts WHERE quest_id = ?").run(questId);
       bumpQuests();
     }
   });

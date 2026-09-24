@@ -11,12 +11,14 @@ const navItems: NavItem[] = [
   { href: "/items", icon: "📦", label: "Items", color: "text-item" },
   { href: "/resources", icon: "🪨", label: "Resources", color: "text-resource" },
   { href: "/tiles", icon: "🗺️", label: "Tiles", color: "text-tile" },
+  { href: "/effects", icon: "✨", label: "Effects", color: "text-effect" },
   { href: "/house-tiles", icon: "🏠", label: "House", color: "text-house" },
   { href: "/npcs", icon: "👤", label: "NPCs", color: "text-npc" },
   { href: "/quests", icon: "📜", label: "Quests", color: "text-quest" },
 ];
 
 const toolItems: NavItem[] = [
+  { href: "/map", icon: "🧭", label: "Map" },
   { href: "/world", icon: "🌍", label: "World" },
   { href: "/graph", icon: "🔗", label: "Graph" },
   { href: "/validate", icon: "✅", label: "Validate" },

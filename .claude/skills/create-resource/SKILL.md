@@ -1,6 +1,6 @@
 ---
 name: create-resource
-description: Create or edit a resource in apps/editor/data/resources.json. Resources are both gathering nodes (trees, ore, flowers) and crafting stations/recipes (workbench, furnace, magic). Use when an item needs a source, when adding a crafting recipe, or when a quest needs something to gather or craft.
+description: Create or edit a resource in apps/editor/data/resources.json. Resources are gathering nodes or recipes performed at a station. Use when an item needs a source, when adding a crafting recipe, or when a quest needs something to gather or craft.
 ---
 
 # Create a resource
@@ -10,9 +10,9 @@ Read the `game-data` skill first.
 A resource is anything the player interacts with to receive items:
 
 - **Gathering node** (`type: "resource"`): the player spends `collectionTime` and gets `reward_items`, optionally needing a tool in `required_items` (`consumed: false`).
-- **Crafting station/recipe** (`type: "workbench" | "furnace" | "magic"`): one resource per recipe. The ingredients go in `required_items` with `consumed: true`, and the crafted item in `reward_items`. Quest `craft` objectives point at these.
+- **Station recipe** (`type` names the physical station, such as `workbench`, `campfire`, `forge`, or `kiln`): one resource per recipe. The ingredients go in `required_items` with `consumed: true`, and the crafted item in `reward_items`. Quest `craft` objectives point at these. Use `verb` for the action at that station, such as `Cook`, `Smelt`, or `Forge`.
 
-A resource is only reachable if it's listed in some tile's `resources` (or a house tile's `availableResources`). Add it to one: `create-tile` for a new tile, or edit the existing tile's `resources` array.
+A resource is only reachable if it's in some tile's `resources` pool (or a house tile's `availableResources`), and that tile is on the map. Add it to one: `create-tile` for a new tile, or add `{ "id": "resource_x" }` (optionally with `chance`, or inside a `oneOf`) to an existing tile's `resources`.
 
 ## Steps
 
@@ -20,7 +20,7 @@ A resource is only reachable if it's listed in some tile's `resources` (or a hou
 2. Read `packages/types/src/entities/resource.schema.ts` (`ResourceModelSchema`; the data file stores the *Model* shape, with `item_id` references rather than full items).
 3. Make sure every item in `reward_items` and `required_items` exists; if not, use `create-item` first.
 4. Append the resource to `data/resources.json`.
-5. Place it on a tile. Crafting stations usually go on `tile_basic_workshop`. Gathering nodes go on a tile whose theme fits.
+5. Place it on a tile with the station named by its `type` (a pinned landmark), e.g. `tile_workbench` or `tile_campfire` at camp. Gathering nodes go on a tile whose theme fits.
 6. Validate with `--ids` covering the resource, the tile you edited, and any new items.
 
 ## Field guidance

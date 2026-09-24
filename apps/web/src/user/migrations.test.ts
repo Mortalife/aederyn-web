@@ -5,7 +5,7 @@ import {
   getUserVersion,
   getCurrentVersion,
 } from "./migrations.js";
-import { USER_VERSION, type GameUserModel } from "../config.js";
+import { BASE_USER, START_POSITION, USER_VERSION, type GameUserModel } from "../config.js";
 
 const createTestUser = (overrides: Partial<GameUserModel> = {}): GameUserModel => ({
   id: "test-user",
@@ -102,20 +102,20 @@ describe("migrations", () => {
       expect(migrateUser(user).e).toEqual({});
     });
 
-    it("preserves existing user data during migration", () => {
+    it("resets a save from before the world reboot to a fresh player, keeping the id", () => {
       const user = createTestUser({
         id: "preserve-test",
+        v: 2,
         p: { x: 15, y: 20 },
         h: 50,
+        $: 40,
+        i: [{ id: "old", item_id: "item_from_the_old_world", qty: 1 }],
       });
-      // @ts-expect-error - testing legacy user without version
-      delete user.v;
 
       const result = migrateUser(user);
 
-      expect(result.id).toBe("preserve-test");
-      expect(result.p).toEqual({ x: 15, y: 20 });
-      expect(result.h).toBe(50);
+      expect(result).toEqual({ ...BASE_USER, id: "preserve-test", v: USER_VERSION });
+      expect(result.p).toEqual(START_POSITION);
     });
 
     it("does not mutate original user object", () => {

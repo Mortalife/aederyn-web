@@ -87,8 +87,15 @@ export const ResourceForm: FC<ResourceFormProps> = ({ resource, isNew = true, it
             >
               <option value="resource" selected={r.type === "resource"}>Resource</option>
               <option value="workbench" selected={r.type === "workbench"}>Workbench</option>
-              <option value="furnace" selected={r.type === "furnace"}>Furnace</option>
-              <option value="magic" selected={r.type === "magic"}>Magic</option>
+              <option value="campfire" selected={r.type === "campfire"}>Campfire</option>
+              <option value="forge" selected={r.type === "forge"}>Forge</option>
+              <option value="kiln" selected={r.type === "kiln"}>Kiln</option>
+              <option value="tanning_rack" selected={r.type === "tanning_rack"}>Tanning Rack</option>
+              <option value="apothecary" selected={r.type === "apothecary"}>Apothecary</option>
+              <option value="loom" selected={r.type === "loom"}>Loom</option>
+              <option value="warding_table" selected={r.type === "warding_table"}>Warding Table</option>
+              <option value="growing_pit" selected={r.type === "growing_pit"}>Growing Pit</option>
+              <option value="keystone" selected={r.type === "keystone"}>Keystone</option>
             </select>
           </div>
 

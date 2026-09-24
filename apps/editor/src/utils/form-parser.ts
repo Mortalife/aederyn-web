@@ -1,6 +1,50 @@
-import type { ItemDurability, ItemAttributes, ItemRequirements, ItemEffect, TileObjective, Objective, RequirementReward, TileCompletion, Completion, DialogStep } from "@aederyn/types";
+import type { ItemDurability, ItemAttributes, ItemRequirements, ItemEffect, EffectStrength, RequirementReward, Quest, QuestType } from "@aederyn/types";
+
+import {
+  QuestSchema,
+  ResourcePoolEntrySchema,
+  MonsterPoolEntrySchema,
+  EffectPoolEntrySchema,
+  type ResourcePoolEntry,
+  type MonsterPoolEntry,
+  type EffectPoolEntry,
+} from "@aederyn/types";
+import { z } from "zod";
 
 type FormBody = Record<string, string | File | (string | File)[]>;
+
+const parsePool = <T extends z.ZodTypeAny>(body: FormBody, field: string, entry: T): z.infer<T>[] => {
+  const raw = typeof body[field] === "string" ? (body[field] as string).trim() : "";
+  if (!raw) return [];
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch (e) {
+    throw new Error(`${field}: not valid JSON (${(e as Error).message})`);
+  }
+  const result = z.array(entry).safeParse(json);
+  if (!result.success) {
+    throw new Error(
+      `${field}: ${result.error.issues.map((i) => `${i.path.join(".")} ${i.message}`).join("; ")}`
+    );
+  }
+  return result.data;
+};
+
+/** A tile form's pool textareas, as JSON arrays of pool entries. Throws on invalid input. */
+export function parseTilePools(body: FormBody): {
+  resources: ResourcePoolEntry[];
+  monsters?: MonsterPoolEntry[];
+  effects?: EffectPoolEntry[];
+} {
+  const monsters = parsePool(body, "monsters", MonsterPoolEntrySchema);
+  const effects = parsePool(body, "effects", EffectPoolEntrySchema);
+  return {
+    resources: parsePool(body, "resources", ResourcePoolEntrySchema),
+    monsters: monsters.length ? monsters : undefined,
+    effects: effects.length ? effects : undefined,
+  };
+}
 
 export interface RewardItemEntry {
   item_id: string;
@@ -127,28 +171,31 @@ export function parseItemRequirements(body: FormBody): ItemRequirements | undefi
   return Object.keys(reqs).length > 0 ? reqs : undefined;
 }
 
-export function parseItemEffects(body: FormBody): ItemEffect[] {
-  const effects: ItemEffect[] = [];
-  let index = 0;
-  
-  while (true) {
-    const type = body[`effects[${index}].type`];
-    const value = body[`effects[${index}].value`];
-    const duration = body[`effects[${index}].duration`];
-    
-    if (!type) break;
-    
-    if (typeof type === 'string' && type.trim()) {
-      effects.push({
-        type,
-        value: parseInt(value as string) || 0,
-        duration: parseInt(duration as string) || 0,
-      });
-    }
-    index++;
-  }
-  
-  return effects;
+/** Rows posted as `name[i].id`, `name[i].strength` (and `.duration`), in index order. */
+function parseEffectRows(body: FormBody, fieldName: string) {
+  const pattern = new RegExp(`^${fieldName}\\[(\\d+)\\]\\.id$`);
+  return Object.keys(body)
+    .map((key) => key.match(pattern)?.[1])
+    .filter((index): index is string => index !== undefined)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((index) => ({
+      id: body[`${fieldName}[${index}].id`],
+      strength: parseFloat(body[`${fieldName}[${index}].strength`] as string) || 0,
+      duration: parseFloat(body[`${fieldName}[${index}].duration`] as string) || 0,
+    }))
+    .filter((row): row is { id: string; strength: number; duration: number } =>
+      typeof row.id === "string" && row.id.trim() !== ""
+    );
+}
+
+export function parseEffectStrengths(body: FormBody, fieldName: string): EffectStrength[] | undefined {
+  const rows = parseEffectRows(body, fieldName).map(({ id, strength }) => ({ id, strength }));
+  return rows.length > 0 ? rows : undefined;
+}
+
+export function parseItemEffects(body: FormBody): ItemEffect[] | undefined {
+  const rows = parseEffectRows(body, "effects");
+  return rows.length > 0 ? rows : undefined;
 }
 
 export function parseRelationships(body: FormBody): Record<string, string[]> {
@@ -175,104 +222,6 @@ export function parseRelationships(body: FormBody): Record<string, string[]> {
   }
   
   return relationships;
-}
-
-export function parseObjectives(body: FormBody, isTileQuest = true): (Objective | TileObjective)[] {
-  const objectives: (Objective | TileObjective)[] = [];
-  let index = 0;
-  
-  while (true) {
-    const type = body[`objectives[${index}].type`];
-    if (!type) break;
-    
-    const id = (body[`objectives[${index}].id`] as string) || `obj_${index + 1}`;
-    const description = (body[`objectives[${index}].description`] as string) || '';
-    const baseObj = { id, description, progress: null };
-    
-    switch (type) {
-      case 'gather':
-        objectives.push({
-          ...baseObj,
-          type: 'gather',
-          resource_id: body[`objectives[${index}].resource_id`] as string || '',
-          amount: parseInt(body[`objectives[${index}].amount`] as string) || 1,
-        });
-        break;
-      case 'collect':
-        objectives.push({
-          ...baseObj,
-          type: 'collect',
-          item_id: body[`objectives[${index}].item_id`] as string || '',
-          amount: parseInt(body[`objectives[${index}].amount`] as string) || 1,
-        });
-        break;
-      case 'talk': {
-        const dialogSteps: DialogStep[] = [];
-        let stepIndex = 0;
-        while (true) {
-          const dialog = body[`objectives[${index}].dialog_steps[${stepIndex}].dialog`];
-          if (!dialog) break;
-          dialogSteps.push({
-            entity_id: (body[`objectives[${index}].dialog_steps[${stepIndex}].entity_id`] as string) || null,
-            dialog: dialog as string,
-          });
-          stepIndex++;
-        }
-        if (isTileQuest) {
-          objectives.push({
-            ...baseObj,
-            type: 'talk',
-            entity_id: body[`objectives[${index}].entity_id`] as string || '',
-            zone_id: body[`objectives[${index}].zone_id`] as string || '',
-            dialog_steps: dialogSteps,
-            x: 0,
-            y: 0,
-          });
-        } else {
-          objectives.push({
-            ...baseObj,
-            type: 'talk',
-            entity_id: body[`objectives[${index}].entity_id`] as string || '',
-            zone_id: body[`objectives[${index}].zone_id`] as string || '',
-            dialog_steps: dialogSteps,
-          });
-        }
-        break;
-      }
-      case 'explore':
-        if (isTileQuest) {
-          objectives.push({
-            ...baseObj,
-            type: 'explore',
-            zone_id: body[`objectives[${index}].zone_id`] as string || '',
-            chance: parseInt(body[`objectives[${index}].chance`] as string) || 100,
-            found_message: (body[`objectives[${index}].found_message`] as string) || null,
-            x: 0,
-            y: 0,
-          });
-        } else {
-          objectives.push({
-            ...baseObj,
-            type: 'explore',
-            zone_id: body[`objectives[${index}].zone_id`] as string || '',
-            chance: parseInt(body[`objectives[${index}].chance`] as string) || 100,
-            found_message: (body[`objectives[${index}].found_message`] as string) || null,
-          });
-        }
-        break;
-      case 'craft':
-        objectives.push({
-          ...baseObj,
-          type: 'craft',
-          resource_id: body[`objectives[${index}].resource_id`] as string || '',
-          amount: parseInt(body[`objectives[${index}].amount`] as string) || 1,
-        });
-        break;
-    }
-    index++;
-  }
-  
-  return objectives;
 }
 
 export function parseRewards(body: FormBody): RequirementReward[] {
@@ -313,21 +262,60 @@ export function parseRewards(body: FormBody): RequirementReward[] {
   return rewards;
 }
 
-export function parseCompletion(body: FormBody, isTileQuest = true): Completion | TileCompletion {
-  const base = {
-    entity_id: body.completion_entity_id as string || '',
-    zone_id: body.completion_zone_id as string || '',
-    message: body.completion_message as string || '',
-    return_message: body.completion_return_message as string || '',
-  };
-  
-  if (isTileQuest) {
-    return {
-      ...base,
-      x: parseInt(body.completion_x as string) || 0,
-      y: parseInt(body.completion_y as string) || 0,
-    };
+const text = (body: FormBody, field: string) =>
+  typeof body[field] === "string" ? (body[field] as string).trim() : "";
+
+/**
+ * A quest form: story quests have a giver and a turn-in NPC (each met at
+ * their home unless a landmark is given), contracts a board. Objectives are
+ * a JSON array. Throws with the schema's complaints if the result is invalid.
+ */
+export function parseQuestForm(body: FormBody, id: string): Quest {
+  let objectives: unknown;
+  try {
+    objectives = JSON.parse(text(body, "objectives") || "[]");
+  } catch (e) {
+    throw new Error(`objectives: not valid JSON (${(e as Error).message})`);
   }
-  
-  return base;
+
+  const landmark = (field: string) => text(body, field) || undefined;
+  const base = {
+    id,
+    type: body.type as QuestType,
+    name: text(body, "name"),
+    description: text(body, "description"),
+    objectives,
+    rewards: parseRewards(body),
+    prerequisites: parseStringArray(body, "prerequisites"),
+    is_tutorial: body.is_tutorial === "on" || undefined,
+  };
+  if (base.prerequisites.length === 0) delete (base as Partial<typeof base>).prerequisites;
+
+  const excludes = parseStringArray(body, "excludes");
+  const quest =
+    body.kind === "contract"
+      ? {
+          ...base,
+          kind: "contract",
+          board: text(body, "board"),
+          completion: { message: text(body, "completion_message") },
+        }
+      : {
+          ...base,
+          kind: "story",
+          giver: { entity_id: text(body, "giver_entity_id"), landmark: landmark("giver_landmark") },
+          completion: {
+            entity_id: text(body, "completion_entity_id") || text(body, "giver_entity_id"),
+            landmark: landmark("completion_landmark"),
+            message: text(body, "completion_message"),
+            return_message: text(body, "completion_return_message"),
+          },
+          ...(excludes.length ? { excludes } : {}),
+        };
+
+  const result = QuestSchema.safeParse(JSON.parse(JSON.stringify(quest)));
+  if (!result.success) {
+    throw new Error(result.error.issues.map((i) => `${i.path.join(".")} ${i.message}`).join("; "));
+  }
+  return result.data;
 }

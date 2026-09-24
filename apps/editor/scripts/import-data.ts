@@ -61,6 +61,26 @@ async function importMonsters(): Promise<void> {
   console.log(`✅ Imported ${monsters.length} monsters`);
 }
 
+async function importEffects(): Promise<void> {
+  const { effects } = await import(path.join(WEB_CONFIG_DIR, "effects.js"));
+  await fs.writeFile(
+    path.join(EDITOR_DATA_DIR, "effects.json"),
+    JSON.stringify(effects, null, 2),
+    "utf-8"
+  );
+  console.log(`✅ Imported ${effects.length} effects`);
+}
+
+async function importMap(): Promise<void> {
+  const { worldMap } = await import(path.join(WEB_CONFIG_DIR, "map.js"));
+  await fs.writeFile(
+    path.join(EDITOR_DATA_DIR, "map.json"),
+    JSON.stringify(worldMap, null, 2),
+    "utf-8"
+  );
+  console.log(`✅ Imported map (${worldMap.regions.length} regions, ${worldMap.landmarks.length} landmarks)`);
+}
+
 async function importNpcs(): Promise<void> {
   const { npcs } = await import(path.join(WEB_CONFIG_DIR, "npcs.js"));
   await fs.writeFile(
@@ -125,6 +145,8 @@ async function main(): Promise<void> {
     await importResources();
     await importTiles();
     await importMonsters();
+    await importEffects();
+    await importMap();
     await importNpcs();
     await importQuests();
     await importHouseTiles();

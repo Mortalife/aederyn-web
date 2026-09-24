@@ -8,9 +8,11 @@ interface GraphViewProps {
     items: boolean;
     resources: boolean;
     tiles: boolean;
+    effects: boolean;
     npcs: boolean;
     quests: boolean;
     houseTiles: boolean;
+    map: boolean;
   };
 }
 
@@ -19,9 +21,11 @@ export const GraphView: FC<GraphViewProps> = ({ graphData, filters }) => {
     items: true,
     resources: true,
     tiles: true,
+    effects: true,
     npcs: true,
     quests: true,
     houseTiles: true,
+    map: true,
   };
   const activeFilters = filters || defaultFilters;
 
@@ -30,9 +34,11 @@ export const GraphView: FC<GraphViewProps> = ({ graphData, filters }) => {
     if (node.type === "item") return activeFilters.items;
     if (node.type === "resource") return activeFilters.resources;
     if (node.type === "tile") return activeFilters.tiles;
+    if (node.type === "effect") return activeFilters.effects;
     if (node.type === "npc") return activeFilters.npcs;
     if (node.type === "quest") return activeFilters.quests;
     if (node.type === "house-tile") return activeFilters.houseTiles;
+    if (node.type === "map") return activeFilters.map;
     return true;
   });
 
@@ -48,9 +54,11 @@ export const GraphView: FC<GraphViewProps> = ({ graphData, filters }) => {
     items: filteredNodes.filter((n) => n.type === "item").length,
     resources: filteredNodes.filter((n) => n.type === "resource").length,
     tiles: filteredNodes.filter((n) => n.type === "tile").length,
+    effects: filteredNodes.filter((n) => n.type === "effect").length,
     npcs: filteredNodes.filter((n) => n.type === "npc").length,
     quests: filteredNodes.filter((n) => n.type === "quest").length,
     houseTiles: filteredNodes.filter((n) => n.type === "house-tile").length,
+    map: filteredNodes.filter((n) => n.type === "map").length,
   };
 
   return (
@@ -110,6 +118,13 @@ export const GraphView: FC<GraphViewProps> = ({ graphData, filters }) => {
                 checked={activeFilters.tiles}
               />
               <FilterCheckbox
+                id="filter-effects"
+                label="Effects"
+                count={nodesByType.effects}
+                color="yellow"
+                checked={activeFilters.effects}
+              />
+              <FilterCheckbox
                 id="filter-npcs"
                 label="NPCs"
                 count={nodesByType.npcs}
@@ -130,6 +145,13 @@ export const GraphView: FC<GraphViewProps> = ({ graphData, filters }) => {
                 color="cyan"
                 checked={activeFilters.houseTiles}
               />
+              <FilterCheckbox
+                id="filter-map"
+                label="Map"
+                count={nodesByType.map}
+                color="lime"
+                checked={activeFilters.map}
+              />
             </div>
 
             <div class="mt-6 pt-4 border-t border-gray-700">
@@ -149,6 +171,11 @@ export const GraphView: FC<GraphViewProps> = ({ graphData, filters }) => {
                 <EdgeLegend type="giver" label="Quest Giver" />
                 <EdgeLegend type="rewards" label="Rewards" />
                 <EdgeLegend type="transforms_to" label="Transforms To" />
+                <EdgeLegend type="applies" label="Applies Effect" />
+                <EdgeLegend type="protects" label="Protects Against" />
+                <EdgeLegend type="places" label="Places Tile" />
+                <EdgeLegend type="home" label="Lives At" />
+                <EdgeLegend type="excludes" label="Excludes" />
               </div>
             </div>
           </div>
@@ -219,6 +246,8 @@ const FilterCheckbox: FC<FilterCheckboxProps> = ({ id, label, count, color, chec
     purple: "text-purple-400",
     rose: "text-rose-400",
     cyan: "text-cyan-400",
+    yellow: "text-yellow-400",
+    lime: "text-lime-400",
   };
 
   const filterKey = id.replace("filter-", "").replace("-", "T");
@@ -259,10 +288,12 @@ const EdgeLegend: FC<EdgeLegendProps> = ({ type, label }) => {
 };
 
 function getNodeEditUrl(node: GraphNode): string {
-  const typeToPath: Record<GraphNode["type"], string> = {
+  if (node.type === "map") return "/map";
+  const typeToPath: Record<Exclude<GraphNode["type"], "map">, string> = {
     item: "items",
     resource: "resources",
     tile: "tiles",
+    effect: "effects",
     npc: "npcs",
     quest: "quests",
     "house-tile": "house-tiles",

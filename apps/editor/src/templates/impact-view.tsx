@@ -10,23 +10,27 @@ const ImpactNodeCard: FC<{ node: ImpactNode }> = ({ node }) => {
     item: "bg-amber-600/20 text-amber-400 border-amber-600/30",
     resource: "bg-emerald-600/20 text-emerald-400 border-emerald-600/30",
     tile: "bg-blue-600/20 text-blue-400 border-blue-600/30",
+    effect: "bg-yellow-600/20 text-yellow-400 border-yellow-600/30",
     npc: "bg-purple-600/20 text-purple-400 border-purple-600/30",
     quest: "bg-cyan-600/20 text-cyan-400 border-cyan-600/30",
     houseTile: "bg-pink-600/20 text-pink-400 border-pink-600/30",
+    map: "bg-lime-600/20 text-lime-400 border-lime-600/30",
   };
 
   const typeIcons: Record<string, string> = {
     item: "📦",
     resource: "🪨",
     tile: "🗺️",
+    effect: "✨",
     npc: "👤",
     quest: "📜",
     houseTile: "🏠",
+    map: "🧭",
   };
 
   return (
     <a
-      href={`/${node.type}s/${node.id}`}
+      href={node.type === "map" ? "/map" : `/${node.type}s/${node.id}`}
       class={`block p-3 rounded border ${typeColors[node.type] || "bg-gray-700"} hover:opacity-80 transition`}
     >
       <div class="flex items-center gap-2 mb-1">
@@ -44,9 +48,11 @@ export const ImpactView: FC<ImpactViewProps> = ({ analysis }) => {
     item: "📦",
     resource: "🪨",
     tile: "🗺️",
+    effect: "✨",
     npc: "👤",
     quest: "📜",
     houseTile: "🏠",
+    map: "🧭",
   };
 
   return (

@@ -2,438 +2,303 @@ import type { NPC } from "./types.js";
 
 export const npcs: NPC[] = [
   {
-    entity_id: "npc_elder_sage",
-    name: "Elara the Elder Sage",
+    entity_id: "npc_maren_pike",
+    name: "Maren Pike the Quartermaster",
     backstory:
-      "The last survivor of the extinct Order of the Crystal Mind, Elara's silver hair crackles with residual magic from a century of spellcraft. She carries the burden of her order's downfall, caused by a forbidden spell gone wrong.",
+      "Maren ran supply depots for the charter company downriver for eleven years before she volunteered for the valley, on the promise of a surveyor's share of whatever land the settlement proves. She keeps the camp's ledger, the stores and the contract board, and she knows to the nail how much the company has sunk into this place. As far as she's concerned the valley was empty until the company's boats tied up.",
     personalMission:
-      "To find a worthy apprentice to pass on her knowledge before time runs out.",
+      "To turn the camp into a settlement that pays its charter back before the company loses patience and calls everyone downriver.",
     hopes:
-      "To rebuild a small magical academy that honors her order's traditions while avoiding their fatal mistakes.",
+      "That the valley is as rich and empty as the survey promised, and that her name goes on the first stone building.",
     fears:
-      "That ancient magical knowledge will die with her, lost to time like her order before it.",
+      "That something she hasn't been told about will cost the company the valley, and her the share she gave eleven years for.",
+    relationships: {
+      colleagues: [
+        "Hobb Carrow - the carpenter-smith she relies on to keep tools in settlers' hands",
+        "Ada Thwaite - feeds the camp, and knows more about the land than the company's survey does",
+      ],
+      "wary of": [
+        "Ansel Morrow - an old man with no contract who came upriver on his own coin and won't say why",
+      ],
+    },
+    home: "landmark_camp",
+    idleLine:
+      "Board's by my tent. Company pays for honest work, and there's plenty of it. Mind you sign the ledger when you take something from stores.",
+    faction: "charter-company",
+  },
+  {
+    entity_id: "npc_hobb_carrow",
+    name: "Hobb Carrow the Carpenter",
+    backstory:
+      "Hobb was a wheelwright's son from a river town who signed on with the company because his brother got the shop. He's making do in the valley with flint, green wood and whatever iron came up on the boats, and he's quietly proud of it. He found an old iron hinge in a field wall near the stream, forged better than anything he could make, and he keeps it on his bench.",
+    personalMission:
+      "To keep every settler in axes, picks and handles until the camp has a proper forge and someone who knows how to run it.",
+    hopes:
+      "To have a workshop of his own with his name over the door, somewhere his brother never has to hear about.",
+    fears:
+      "That the hinge means someone lived here, and that they didn't leave of their own accord.",
     relationships: {
       friends: [
-        "Professor Lumen - shares her passion for ancient knowledge and often debates magical theory",
-        "Celeste the Mystic Seer - both understand the burden of profound knowledge",
+        "Ada Thwaite - trades her supper for his mending, and they both come out ahead",
+        "Bett Oakes - the smith he's been waiting for, up on the Scarp with a forge of her own",
       ],
-      rivals: [
-        "Vex the Hermit Alchemist - disapproves of their reckless experimentation",
-      ],
-      mentors: [
-        "Gizmo the Inventor - secretly guides their magical-mechanical experiments",
-      ],
+      employer: ["Maren Pike - fair, but counts every nail he uses"],
     },
+    home: "landmark_workbench",
+    idleLine:
+      "Flint's sharp enough if you knap it right, and willow makes a fair handle. Bring me the makings and I'll show you.",
+    faction: "charter-company",
   },
   {
-    entity_id: "npc_rogue_merchant",
-    name: "Zephyr the Rogue Merchant",
+    entity_id: "npc_ada_thwaite",
+    name: "Ada Thwaite the Cook",
     backstory:
-      "The disguised son of House Blackwind, a noble family framed for trading forbidden artifacts. He maintains a carefully crafted persona of the carefree trader while searching for proof of their innocence.",
+      "Ada cooked for drovers on the long roads downriver and came to the valley because a cook with a company contract eats first. She forages every morning and knows the Landing's plants better than anyone in camp. She has noticed that the mushrooms get stranger the further up the valley she walks, and she has stopped picking them.",
     personalMission:
-      "To acquire a legendary artifact that will clear his family's name.",
-    hopes: "To reopen his family's grand trading house in the capital city.",
-    fears: "Being discovered before completing his mission.",
+      "To keep the camp fed and healthy from the land, so no one has to wait for the next boat.",
+    hopes:
+      "That the valley's soil is as good as it looks, and that there'll be a kitchen with walls around it by winter.",
+    fears:
+      "The mushrooms past the tree line, which grow in rows as if something planted them.",
     relationships: {
       friends: [
-        "Merry the Innkeeper - they exchange information about travelers",
-        "Lyria the Bard - helps spread positive rumors about his business",
+        "Hobb Carrow - mends her pots and eats whatever she puts in front of him",
+        "Ansel Morrow - the only one in camp who knows the old names for the valley's plants, though he won't say where he learned them",
+        "Jory Flint - brings her boar and rabbit, and mushrooms she throws straight on the fire",
+        "Col Reeve - sends fish and jars up from the fen, when he remembers",
       ],
-      cautious: [
-        "Forge the Blacksmith - suspects there's more to Zephyr than meets the eye",
+      employer: [
+        "Maren Pike - wants the stores to last and the settlers to stay strong, both at once",
       ],
-      avoids: ["Doran the Village Elder - fears his past might be discovered"],
     },
+    home: "landmark_campfire",
+    idleLine:
+      "Sit down, you look done in. The fire's for everyone. Only don't bring me any mushrooms you found past the trees.",
+    faction: "charter-company",
   },
   {
-    entity_id: "npc_warrior_outcast",
-    name: "Thorne the Warrior Outcast",
+    entity_id: "npc_ansel_morrow",
+    name: "Warden-Keeper Ansel Morrow",
     backstory:
-      "Once heir to his clan's leadership, Thorne was framed for stealing a sacred weapon. His clan tattoos are partially scarred over - a self-imposed mark of shame.",
+      "Ansel is among the last of the Wardens, the order that raised the ward across the valley some 120 years ago. He learned the craft from a master who helped raise it, and was sworn, as every Warden was, never to speak of what the ward was for or who was on the wrong side of it. He paid his own way upriver when he heard the company had found the valley open, and says only that he came to see it again.",
     personalMission:
-      "To prove his innocence and restore his honor among his people.",
-    hopes: "To return home as a hero rather than a penitent.",
-    fears: "That too much time has passed for true reconciliation.",
+      "To learn how far the ward has failed, and whether it can still be mended before the settlers walk into what it was holding.",
+    hopes:
+      "That the ward can be made whole again without anyone learning what the Wardens did to raise it.",
+    fears:
+      "That the people the Wardens sealed inside are still in there, and that the settlers will find them before he finds the courage to tell the truth.",
     relationships: {
       friends: [
-        "Grizzled Greg - understands the weight of past failures",
-        "Forge the Blacksmith - helps maintain his weapons and shares warrior's code",
+        "Ada Thwaite - shares his tea and doesn't ask why he knows the plants",
       ],
-      trust: ["Willow the Guardian - helps her protect the forest's borders"],
-      tense: [
-        "Zephyr the Merchant - suspects he knows something about the stolen weapon",
+      "wary of": [
+        "Maren Pike - she'd put the ward on the company's books as a hazard, and she'd be right to",
+        "Old Wick - a Wicken, from the roll of families the order left north of the stones; Ansel isn't ready to face him",
       ],
-    },
-  },
-  {
-    entity_id: "npc_nature_guardian",
-    name: "Willow the Nature Guardian",
-    backstory:
-      "Chosen by the ancient trees as a child, marked with glowing leaf-like birthmarks. She feels the forest's pain as her own and battles an encroaching corruption that plagues her dreams.",
-    personalMission:
-      "To heal the corrupted heart of the forest and restore balance to the land.",
-    hopes: "To find a way for humans and nature to truly coexist.",
-    fears: "That the corruption will spread faster than she can contain it.",
-    relationships: {
-      allies: [
-        "Sylvan the Ranger - work together to protect the forest",
-        "Vex the Alchemist - provides remedies for sick plants",
+      order: [
+        "Sister Edith of the Seventh Stone - his master's friend, who stayed at her wardstone when the ward went up and was never heard from again",
       ],
-      conflict: [
-        "Gizmo the Inventor - worries about their experiments affecting nature",
-      ],
-      respect: [
-        "Doran the Elder - values their traditional knowledge of the land",
+      "haunted by": [
+        "The Sixth Stone - he re-cut its lines at nineteen, and someone from inside came to the stone while he worked",
       ],
     },
+    home: "landmark_camps_edge",
+    idleLine:
+      "Sit if you like. I'm only watching the valley. It's greener than I remember, and I don't care for the colour of it.",
+    faction: "wardens",
   },
   {
-    entity_id: "npc_inventor_tinkerer",
-    name: "Gizmo the Inventor Tinkerer",
+    entity_id: "npc_jory_flint",
+    name: "Jory Flint the Hunter",
     backstory:
-      "A brilliant mind driven by the need to prove wrong those who mocked his father's failed inventions. His workshop is a chaos of projects, each promising to be 'the one' that changes everything.",
+      "Jory kept the deer for a lord's park downriver until the keepers caught him taking a hind for his own pot, and signing with the charter company was cheaper than the assizes. Maren pays him by the carcass to keep the camp in meat. He built his lodge in a Southwood clearing from the beams of a fallen farmhouse, and he's the only settler who sleeps past the tree line.",
     personalMission:
-      "To create the ultimate invention that will revolutionize the world.",
-    hopes: "To honor his father's memory with a world-changing discovery.",
+      "To keep the camp in meat and hides, and to learn the Southwood so well that nothing in it can surprise him.",
+    hopes:
+      "That the company makes him its gamekeeper, with the whole Southwood to himself.",
     fears:
-      "Repeating his father's pattern of brilliant ideas that fail in execution.",
+      "That there's something in the wood he can't track, and that the wolves know it and he doesn't.",
     relationships: {
-      collaborators: [
-        "Forge the Blacksmith - helps with metalwork for inventions",
-        "Professor Lumen - shares theoretical knowledge",
-      ],
-      strained: [
-        "Willow the Guardian - their experiments sometimes disturb the forest",
-      ],
-      admires: ["Elara the Sage - seeks her approval for magical mechanisms"],
-    },
-  },
-  {
-    entity_id: "npc_village_elder",
-    name: "Doran the Village Elder",
-    backstory:
-      "Former adventurer who settled down to lead after saving the village from a terrible drought. His seemingly simple wisdom masks deep knowledge of ancient threats.",
-    personalMission:
-      "To preserve the village's traditions and guide the younger generation.",
-    hopes: "To see the village become a beacon of stability in troubled times.",
-    fears:
-      "That modern influences will erode the old ways that protect the village.",
-    relationships: {
-      trusted_advisors: [
-        "Elara the Sage - consults on magical matters",
-        "Merry the Innkeeper - keeps him informed of village gossip",
-      ],
-      wary: ["Zephyr the Merchant - distrusts his mysterious background"],
-      guides: ["Finn the Fisherman - helps keep traditional stories alive"],
-    },
-  },
-  {
-    entity_id: "npc_traveling_bard",
-    name: "Lyria the Traveling Bard",
-    backstory:
-      "Born during a meteor shower, Lyria's songs carry subtle magic that stirs deep emotions. She searches for tales of heroes not to entertain, but to understand what makes legends rise or fall.",
-    personalMission:
-      "To compose an epic ballad that will be remembered for generations.",
-    hopes: "To witness and chronicle a truly world-changing event.",
-    fears: "That her greatest songs will be forgotten or misunderstood.",
-    relationships: {
+      employer: ["Maren Pike - pays by the carcass and weighs every one"],
       friends: [
-        "Finn the Fisherman - they exchange stories",
-        "Merry the Innkeeper - performs regularly at the inn",
+        "Ada Thwaite - takes his meat gladly and his mushrooms never",
+        "Hobb Carrow - hafts his spears and asks no questions about where the bone came from",
       ],
-      fascinated_by: [
-        "Celeste the Seer - hopes to write a ballad about their visions",
+      "wary of": [
+        "Ansel Morrow - asked him once whether he'd seen anything odd up north, and has watched him ever since",
       ],
-      inspired_by: ["Grizzled Greg - collects tales of his adventures"],
     },
+    home: "landmark_hunters_lodge",
+    idleLine:
+      "Wolves on the deer tracks, boar under the oaks, crows wherever there's something dead. Bring a bow for the first, don't stand in front of the second, and swing at the third.",
+    faction: "charter-company",
   },
   {
-    entity_id: "npc_hermit_alchemist",
-    name: "Vex the Hermit Alchemist",
+    entity_id: "npc_bett_oakes",
+    name: "Bett Oakes the Smith",
     backstory:
-      "Lost their family to an incurable plague, leading to an obsession with medicinal alchemy. Their reclusive nature stems from a failed cure that had devastating side effects.",
-    personalMission: "To create an elixir that can cure any ailment.",
-    hopes: "To prevent others from experiencing their loss.",
-    fears: "That their experiments might cause more harm than good.",
-    relationships: {
-      collaborates: [
-        "Willow the Guardian - studies natural remedies",
-        "Professor Lumen - shares research notes",
-      ],
-      distrusts: ["Elara the Sage - differs on approach to magical healing"],
-      helps: ["Thorne the Warrior - provides healing potions for his quests"],
-    },
-  },
-  {
-    entity_id: "npc_blacksmith",
-    name: "Forge the Master Blacksmith",
-    backstory:
-      "Descendant of legendary dwarven smiths, raised by humans after being orphaned. Combines traditional techniques with innovative methods learned through necessity.",
+      "Bett cast bell-metal for a foundry downriver for fourteen years, until the master died and his son let her go, and the charter company was the only one hiring smiths. The survey promised copper in the western hills, so she walked up the Scarp alone in the first week and found a mine already dug: adits cut dead square, spoil heaps grown over, and lines carved over every doorway. She set her forge up in its old ore-house, and from the tool marks, the tally at the cairn and the lines that match Ansel's slab, she has worked out that the Wardens dug it.",
     personalMission:
-      "To forge a legendary weapon using rare materials from the crystal cavern.",
+      "To put bronze in every settler's hands, and to find out what the Wardens took out of her mine and why they cut lines into its walls.",
     hopes:
-      "To create something that proves they honor both their dwarven heritage and human upbringing.",
-    fears: "That they'll never live up to their ancestors' legacy.",
-    relationships: {
-      partnerships: [
-        "Gizmo the Inventor - collaborate on mechanical projects",
-        "Thorne the Warrior - tests weapons and provides feedback",
-      ],
-      suspicious: ["Zephyr the Merchant - questions source of rare materials"],
-      respects: ["Doran the Elder - appreciates their traditional knowledge"],
-    },
-  },
-  {
-    entity_id: "npc_mystic_seer",
-    name: "Celeste the Mystic Seer",
-    backstory:
-      "Cursed with visions of possible futures after drinking from an enchanted spring. Each prophecy she prevents adds another strand of white to her raven hair.",
-    personalMission: "To prevent a dark prophecy from coming true.",
-    hopes: "To find someone who can share her burden of knowledge.",
-    fears: "That attempting to prevent one disaster will cause a worse one.",
-    relationships: {
-      confidants: [
-        "Elara the Sage - discusses prophetic visions",
-        "Professor Lumen - helps interpret historical context",
-      ],
-      worried_about: [
-        "Vex the Alchemist - has seen troubling futures involving their experiments",
-      ],
-      inspires: ["Lyria the Bard - provides cryptic warnings through her"],
-    },
-  },
-  {
-    entity_id: "npc_ranger",
-    name: "Sylvan the Forest Ranger",
-    backstory:
-      "Raised by woodland spirits after being lost in the forest as a child. Can communicate with animals but struggles to understand human social cues.",
-    personalMission:
-      "To protect the forest from a creeping corruption spreading from the abandoned mine.",
-    hopes: "To bridge the gap between the human and spirit worlds.",
+      "That the company signs the old mine over to her, and she never casts to someone else's pattern again.",
     fears:
-      "That they'll have to choose between their human and spirit families.",
+      "That the stone the Wardens cut out of the lower gallery went into something that is failing, and that her forge sits on the only place it can be mended from.",
     relationships: {
-      partners: [
-        "Willow the Guardian - work together protecting the forest",
-        "Finn the Fisherman - helps monitor water purity",
+      employer: [
+        "Maren Pike - wants the mine on the company's books, and hasn't asked whose it was",
       ],
-      distrusts: ["Gizmo the Inventor - worries about mechanical disturbances"],
-      learns_from: ["Doran the Elder - helps understand human customs"],
-    },
-  },
-  {
-    entity_id: "npc_fisherman",
-    name: "Finn the Lucky Fisherman",
-    backstory:
-      "Made a deal with a water spirit for legendary fishing luck, but must tell a true story for every fish caught. His tall tales are actually all true.",
-    personalMission:
-      "To catch the legendary fish said to inhabit the depths of the wondrous waterfall.",
-    hopes:
-      "To find an apprentice who appreciates both fishing and storytelling.",
-    fears: "Running out of stories to tell the water spirit.",
-    relationships: {
       friends: [
-        "Lyria the Bard - share stories and songs",
-        "Merry the Innkeeper - favorite storytelling spot",
+        "Hobb Carrow - sends her oak hafts and asks after bronze every week",
+        "Jory Flint - trades her oak for charcoal against a bronze knife she hasn't cast yet",
       ],
-      helps: ["Sylvan the Ranger - monitors river health"],
-      entertains: ["Grizzled Greg - they compete with adventure stories"],
-    },
-  },
-  {
-    entity_id: "npc_scholar",
-    name: "Professor Lumen",
-    backstory:
-      "Former royal archivist who discovered a conspiracy in ancient texts. Now poses as an absent-minded academic while secretly documenting a pattern in historical events.",
-    personalMission:
-      "To decipher the mysterious runes found in the crystal cavern.",
-    hopes: "To prevent history from repeating a forgotten catastrophe.",
-    fears:
-      "That publishing their findings would trigger the very disaster they hope to prevent.",
-    relationships: {
-      collaborates: [
-        "Elara the Sage - share magical research",
-        "Celeste the Seer - connects prophecies to historical events",
-      ],
-      mentors: ["Gizmo the Inventor - guides theoretical studies"],
-      concerned_about: [
-        "Vex the Alchemist - recognizes dangerous historical parallels",
+      "wary of": [
+        "Ansel Morrow - the only settler who never asked about the lines in her mine",
       ],
     },
+    home: "landmark_forge",
+    idleLine:
+      "Three of copper to one of tin, charcoal under it, and don't stand where it pours. Whoever dug this mine knew their business. Look at the lintels on your way down.",
+    faction: "charter-company",
   },
   {
-    entity_id: "npc_innkeeper",
-    name: "Merry the Welcoming Innkeeper",
+    entity_id: "npc_col_reeve",
+    name: "Col Reeve the Potter",
     backstory:
-      "A retired spy who now uses her network of contacts to protect travelers and track threats to the village. Her famous recipes contain coded messages for other former spies.",
+      "Col threw pots and set eel traps on the fens downriver, like his father, until the drainage company bought the fen out from under them and dug it dry. He signed with the charter company because the valley's survey showed a lake and nobody else wanted it. He built his kiln on a rise above the Sinks from the fen's own clay, and found the old peat banks already cut in steps and a fish weir in the mere with stakes older than the company's charter. He has been sleeping badly: at night the fen rises and falls around his hut, slow as a sleeper's chest.",
     personalMission:
-      "To make her inn famous throughout the land for its hospitality and hearty meals.",
-    hopes: "To create a true safe haven for all travelers.",
-    fears: "That her past will endanger her guests.",
-    relationships: {
-      information_network: [
-        "Zephyr the Merchant - exchange traveler news",
-        "Doran the Elder - reports village concerns",
-      ],
-      hosts: ["Lyria the Bard - regular performer at the inn"],
-      watches: ["Celeste the Seer - monitors their prophetic mumblings"],
-    },
-  },
-  {
-    entity_id: "npc_retired_adventurer",
-    name: "Grizzled Greg",
-    backstory:
-      "Lost his leg to a legendary beast he failed to slay. The creature still lives, and he secretly tracks its movements while training others to succeed where he failed.",
-    personalMission:
-      "To train a worthy successor to take up his mantle and continue his unfinished quests.",
-    hopes: "To see his greatest failure turned into someone else's triumph.",
-    fears: "That his pride will lead another adventurer to their doom.",
-    relationships: {
-      mentors: [
-        "Thorne the Warrior - sees potential for redemption",
-        "Several young villagers - teaches combat basics",
-      ],
-      drinking_buddies: ["Finn the Fisherman - they exchange tall tales"],
-      respects: ["Doran the Elder - fellow retired adventurer"],
-    },
-  },
-  {
-    entity_id: "silvanis-the-wandering-bloom",
-    name: "Silvanis the Wandering Bloom",
-    backstory:
-      "Silvanis was born under the luminescent canopy of the Verdant Thicket during a rare celestial event known as the Night of Blossoms, where the flora glows with heightened magic. From a young age, he exhibited a strong affinity for Nature's Weave, able to coax flowers into bloom and communicate with the spirits of the forest. As he grew, he became a dedicated protector of the Thicket, using his abilities to heal the land and educate others about the importance of harmony with nature. However, during one fateful encounter with the Iron Consortium, an operation to extract Crystaltite from a sacred grove led to the destruction of a beloved clearing. This incident ignited a fire within Silvanis, pushing him to adopt the title of 'Wandering Bloom' as he now travels Aederyn, seeking allies to safeguard the Thicket and eliminate the threat of industrialization.\r\n" +
-      "\r\n" +
-      "Silvanis carries with him a deep connection to the land, feeling the pain of its wounds as if they were his own. His travels have taken him to various regions, where he learns about the struggles of other factions, particularly the Nerathi and their efforts to maintain balance. He often collaborates with the Elunari to orchestrate defensive measures against the encroaching Iron Consortium, while also acting as a bridge between the natural world and the more industrialized societies that threaten it. Silvanis's adventures are not just about combating threats; he seeks to spread knowledge and foster understanding between the differing peoples of Aederyn.",
-    personalMission:
-      "Silvanis is driven by the mission to protect the Verdant Thicket and ensure that the teachings of nature are respected and preserved. He aims to unite the Elunari and other factions against the Iron Consortium, using diplomacy as much as his innate powers to foster alliances and defend against exploitation.",
+      "To make the Sinks pay in pots, glass and fish, so the company never has a reason to drain them.",
     hopes:
-      "Silvanis hopes to see Aederyn flourish in a way where nature and civilization can coexist harmoniously, with respect for the land at the forefront of decision-making. He dreams of a day when the Elunari's wisdom is not only acknowledged but sought after by all.",
+      "That the fen is only a fen, and that one day there'll be a village of fishers on the lake shore with his kiln at the middle of it.",
     fears:
-      "His greatest fear is the irreversible damage that the Iron Consortium's greed could inflict on the Thicket and the loss of his connection to the land. He worries that without intervention, future generations will never experience the sanctity of nature's true beauty.",
-    relationships: {},
+      "That the ground breathing under his hut is alive, and that the herons standing wrong in the carr are what it looks like when it wakes.",
+    relationships: {
+      employer: [
+        "Maren Pike - wants jars, glass and fish on the books, and has never been east of the Southwood",
+      ],
+      friends: [
+        "Ada Thwaite - takes every fish he sends and every pot, and sends back bread",
+        "Jory Flint - swaps wolf hides for peat-tanned leather, and they argue about which of them has the worse neighbours",
+      ],
+      "wary of": [
+        "Ansel Morrow - looked at the fen from camp's edge like a man looking at a grave",
+      ],
+    },
+    home: "landmark_kiln",
+    idleLine:
+      "Mind where you stand, it's colder than it's any right to be. Clay from the bank, peat from the cuttings, sand off the shore. The fen gives you everything, if you can keep your feet warm.",
+    faction: "charter-company",
   },
   {
-    entity_id: "npc_quest_new__lyara_glimmerleaf",
-    name: "Lyara Glimmerleaf",
+    entity_id: "npc_old_wick",
+    name: "Old Wick the Elder",
     backstory:
-      "Lyara Glimmerleaf, a guardian of the sacred grove in the Verdant Thicket, was born under the ancient branches of the Yew Tree, a powerful source of life and magic. Her mother, a revered healer, taught her the secrets of nature and the importance of balance between the realms of magic and the earth. As a child, she often played among the roots of the Yew, feeling its pulsing energy connect her to the very essence of Aederyn. Yet, her idyllic life was shattered when her village began to hear whispers of the Iron Consortium's encroachment on their sacred lands, threatening not just their home but also the delicate harmony they had nurtured. Lyara has since dedicated her life to protecting the grove, gathering her fellow Elunari to stand against the growing industrialization that seeks to destroy their way of life.",
+      "Wick is the eldest in the holdfast and the last who heard it from someone who was there. His grandmother, Annis Wicken, was nine when the Wardens came up through the fields one spring, carted the southern families down the valley, and told everyone north of them to stay put because they'd be back within the week. They never came back. The stones were lit instead, and the road south shut like a door. Annis waited at the gate every evening for a year. Wick has kept the holdfast's walls, and its grudge, for sixty years, and his grandmother drew him a warder's staff in the hearth ash so he'd know one if it ever came back.",
     personalMission:
-      "Lyara is driven by a fierce determination to protect the Yew Tree and the grove it nurtures. She believes that if the Yew is lost, the magic that sustains the forest and its inhabitants will fade, leading to the awakening of dark forces from the Mire of Whispers. Her mission is to unite the Elunari and seek allies, including the adventurers who dare to challenge the Iron Consortium, in a desperate race against time to reclaim the grove.",
+      "To keep the holdfast standing and its people fed, and to see a Warden stand in front of its gate and say out loud what the order did.",
     hopes:
-      "Lyara hopes to restore balance to Aederyn by preserving the sacred grove and demonstrating to the Iron Consortium that coexistence with nature is possible. She dreams of a future where the Elunari and the industrial factions can find common ground, but doubts linger in her heart about whether such unity can truly be achieved amidst the chaos.",
+      "That before he dies someone from outside will admit, in front of everyone, that his grandmother was left on purpose.",
     fears:
-      "Lyara fears losing the Yew Tree and the grove to the Iron Consortium, which would not only mean the betrayal of her people but also the awakening of monstrous entities from the Mire of Whispers. The thought of these dark forces being unleashed upon Aederyn weighs heavily on her, as she knows that the balance of magic and nature must be upheld at all costs.",
+      "That the settlers are the Wardens come back in new clothes, and that the young ones, Tam first, will trust them.",
     relationships: {
-      allies: [
-        "Thalen Glimmerwood - the Elunari elder who taught her the old rites of the Yew Tree",
-        "The Elunari - her people, sworn to protect the Verdant Thicket's sacred groves",
+      kin: [
+        "Tam Reedsdaughter - not his blood, but he's watched over her since her mother died, and she's far too curious about outsiders for his liking",
+        "Annis Wicken - his grandmother, who waited at the gate for the Wardens every evening for a year",
+      ],
+      neighbours: [
+        "Nell-of-the-Ditch - keeps the holdfast's north wall and the ewes, and posts what needs doing on the board by the gate",
       ],
       enemies: [
-        "Gorak Ironfist - his forges and clear-cutting threaten the grove she guards",
+        "The Wardens - they left his family inside the ring and never came back; he knows a warder's staff when he sees one",
+      ],
+      "over the ring": [
+        "Gill - Davy Reed's child in the Bloom, a walker's child who weeds a garden, whom Tam has gone over the ring to see",
       ],
     },
+    home: "landmark_holdfast",
+    idleLine:
+      "Wipe your feet and keep your hands where I can see them. We've kept this wall a hundred and twenty years without help from downriver, and we'll keep it a while yet.",
+    faction: "descendants",
   },
   {
-    entity_id: "npc_quest_new__gorak_ironfist",
-    name: "Gorak Ironfist",
+    entity_id: "npc_tam_reedsdaughter",
+    name: "Tam Reedsdaughter the Healer",
     backstory:
-      "Gorak Ironfist started his life in the harsh Sunstone Desert, where survival meant embracing the flames of industry and ambition. Born to a family of blacksmiths, he learned the art of forging at an early age and quickly grew to believe that metal was the key to civilization's progress. After witnessing the collapse of his hometown due to dwindling resources, Gorak vowed not to let the same fate befall others. He spearheaded the Iron Consortium’s expansion into Aederyn, convinced that the bounty of Crystaltite would empower his people to rise above their past. However, his relentless pursuit of wealth and progress has made him blind to the consequences of his actions, especially towards the sacred lands of the Elunari.",
+      "Tam keeps the holdfast's loom and stillroom, as the Reed women have for four generations: masks, tinctures, salves and setting bones. She was born behind the wall and has never seen a town, and the settlers are the most interesting thing that has happened in her life. Her grandmother used to sing her a song about a brother who went into the wood laughing, the spring after the stones were lit, and Tam still hums it over the still without knowing why it makes the old ones get up and leave.",
     personalMission:
-      "Gorak's primary motivation is to extract as much Crystaltite as possible to establish an economic stronghold for the Iron Consortium. He believes that through mining and industrialization, he can prevent his people from facing another economic collapse, no matter the cost to the land or its inhabitants.",
+      "To keep the holdfast breathing: a mask for everyone who goes over the wall, tinctures for the long days in the fields, and one day something better than either.",
     hopes:
-      "Gorak hopes to create a prosperous future for the Iron Consortium, where every member has access to resources and power. He dreams of building a thriving city where industry and craftsmanship reign supreme, free from the constraints he faced in his youth.",
+      "To go downriver just once, see a town with a thousand people in it, and ask whether anyone there has her name.",
     fears:
-      "Gorak fears the loss of his power and influence, particularly the thought of being usurped by rival factions like the Shadow Syndicate or the Elunari. He is also haunted by the possibility of history repeating itself, where his people could once again find themselves powerless and destitute if they do not harness the land's resources fully.",
+      "That one day she'll understand the threads well enough to see why people went to them.",
     relationships: {
-      rivals: [
-        "Lyara Glimmerleaf - the grove guardian who stands between him and the Thicket's timber",
-        "Thalen Glimmerwood - the Elunari elder who rallies the forest against his industry",
+      kin: [
+        "Old Wick - not her grandfather, though he acts like it, and he'd keep her behind the wall for ever if he could",
+      ],
+      "curious about": [
+        "The settlers - what they eat, what they breathe through, and whether the Crown is a real person",
+      ],
+      family: [
+        "Her grandmother's brother - went into the wood the spring after the stones were lit, and never came out",
+        "Gill - Davy Reed's child, born in the Bloom, and her cousin, though neither of them knew it until the song",
       ],
     },
+    home: "landmark_apothecary",
+    idleLine:
+      "You're breathing through that? Sit down, let me listen to your chest. And then tell me what a town's like. A real one, with a market.",
+    faction: "descendants",
   },
   {
-    entity_id: "npc_quest_new__thalen_glimmerwood",
-    name: "Thalen Glimmerwood",
+    entity_id: "npc_gill",
+    name: "Gill",
     backstory:
-      "Thalen Glimmerwood, a revered elder of the Elunari, has spent centuries in the Verdant Thicket, serving as a guardian of the forest's ancient wisdom. His lineage traces back to the first Elunari who forged a sacred bond with the Yew Tree, which is said to be the heart of Aederyn’s ley lines. The Yew Tree's roots intertwine with magical currents that nourish the land and its inhabitants. Thalen witnessed the rise of the Iron Consortium and their ruthless pursuit of Crystaltite, which threatens to disrupt the balance of magic in the realm. Haunted by visions of a dark future should the Yew Tree fall, he has dedicated himself to teaching the next generation the importance of preserving the forest and its sacred sites. He believes that the fate of Aederyn rests on the shoulders of those willing to stand against the encroaching darkness, leading him to seek out champions who can protect the grove.",
+      "Gill was born in the Bloom to a father who walked into the wood the spring after the stones were lit, and has never been outside the ring. Gill keeps the growing pit north of the old green, setting growth out in beds and tending the hosts there as family, and is the first of the hybrids to speak to anyone from outside. Gill's skin is grey-green and fine-threaded at the temples, and Gill breathes the Bloom's air as easily as you breathe a meadow's.",
     personalMission:
-      "To protect the Yew Tree and ensure that its magic continues to sustain Aederyn, while educating others about the importance of harmony with nature.",
+      "To show the people outside the ring that what grows in the Bloom is a way of living, not a sickness, and to find out who they are.",
     hopes:
-      "Thalen hopes to rally enough support among the Elunari and other allies to prevent the Iron Consortium from destroying the sacred grove, believing that if the Yew Tree remains safe, Aederyn can thrive in balance with both nature and progress.",
+      "That someone from outside will learn to grow instead of cut, and carry it back past the stones.",
     fears:
-      "Thalen fears that if the Yew Tree is compromised, the protective magic it provides will wither, unleashing dark forces from the Mire of Whispers that could plunge Aederyn into chaos. He dreads the thought of his people losing their connection to the land and the ancient wisdom that sustains them.",
+      "That the stones will be mended and the ring shut again, and the people in the Bloom forgotten for another hundred and twenty years.",
     relationships: {
-      allies: [
-        "Lyara Glimmerleaf - his former pupil and the grove's sworn guardian",
-        "The Elunari - the people he has served as elder for centuries",
+      kin: [
+        "The hosts on the Standing Green - Gill calls them the parents, and goes to sit with them",
+        "Tam Reedsdaughter - a cousin across the ring: Davy Reed's grand-niece, who sings the song the ground sings and goes flat on the high note",
       ],
-      enemies: [
-        "Gorak Ironfist - an industrialist who sees the Thicket only as fuel for his forges",
-        "The Iron Consortium - whose expansion endangers the forest's ancient wisdom",
+      "wary of": [
+        "The Wardens - the stone-cutters who shut the ring; Gill knows the shape of a warding focus and doesn't like it",
+      ],
+      "listens to": [
+        "Hollow - who hears the whole of the ground and says what it hears, from behind the Threaded Wall",
       ],
     },
+    home: "landmark_growing_pit",
+    idleLine:
+      "You smell of the wax-women's smoke, and of the stones. Sit on the edge if you like. Don't step in the beds.",
+    faction: "hybrids",
   },
   {
-    entity_id: "npc_quest_new__sylvara_of_the_heartwood",
-    name: "Sylvara of the Heartwood",
+    entity_id: "npc_hollow",
+    name: "Hollow",
     backstory:
-      "Sylvara is the awakened spirit of the Heartwood Sanctuary, a sacred grove that has stood for centuries as a nexus of life and magic within the Verdant Thicket. Once a guardian who maintained the delicate balance between nature and the forces that sought to exploit it, she fell into a deep slumber to protect the sanctuary from the encroaching chaos of the outside world. However, the awakening of the Iron Consortium, which seeks to extract resources from the Thicket, has caused a disturbance that has roused her from her slumber, flooding her with anger and a sense of betrayal. Sylvara’s essence is intertwined with the very heart of the forest, and the pain of its suffering echoes through her being. As she emerges, she struggles with the power of her feelings, seeking to reclaim her role while confronting the looming threat of those who disregard the sanctity of her home.",
+      "Hollow was among the first children born inside the network, in the years just after the stones were lit, and has sat at the lip of the Threadwell for longer than Gill has been alive. Hollow's legs go down into the swell and don't come out, and the threads at Hollow's temples run straight into the ground. The hybrids say Hollow hears the whole of it: every host, every stone, every step on the mat from the Bloom to the ring.",
     personalMission:
-      "Sylvara's mission is to restore the balance of nature within the Heartwood Sanctuary by confronting the forces of the Iron Consortium that threaten her sacred grove. She desires to teach those who intrude on her territory the consequences of their actions while protecting the Elunari guardians who are caught in a moral conflict between their duties and the demands of industrial progress.",
+      "To say what the network wants to whoever finally comes to the Heart, and to get the ring broken.",
     hopes:
-      "Sylvara hopes to unify the Elunari and the Nerathi in a common cause to stand against the Iron Consortium, fostering a deep respect for nature among the peoples of Aederyn. She dreams of a future where the Heartwood Sanctuary flourishes and serves as a beacon of harmony, rather than a battleground for exploitation.",
+      "That someone from outside will hear the ground the way Hollow does and choose to open the jar.",
     fears:
-      "Sylvara fears that if her anger consumes her, she may become a force of destruction rather than a protector, potentially leading to irrevocable harm to the very forest she swore to guard. She also fears that the increasing conflict will lead to the ultimate decay of the Heartwood Sanctuary, leaving behind only echoes of its former glory.",
+      "That what the ground wants and what Hollow wants stopped being different so long ago that nobody can tell any more, Hollow least of all.",
     relationships: {
-      alliance: ["Korrin of the Thicket", "Elunari Guardians"],
-      antagonistic: ["Aric Faldin", "Iron Consortium"],
-    },
-  },
-  {
-    entity_id: "npc_quest_new__korrin_of_the_thicket",
-    name: "Korrin of the Thicket",
-    backstory:
-      "Korrin of the Thicket was born under the canopy of the Verdant Thicket, raised among the Elunari who have long revered the Heartwood Sanctuary as a sacred site. His parents were respected herbalists, known for their deep knowledge of the forest's flora and their ability to heal both body and spirit. Growing up, Korrin was enchanted by their work and the whispers of the ancient trees, often spending hours listening to the tales of the Elders about the spirit Sylvara who safeguards the grove. However, as he grew older, he began to recognize the growing reliance of his people on the sanctuary's power, and the resulting complacency that followed. The recent awakening of Sylvara, now wrought with fury, leaves Korrin torn between his loyalty to his people and his fear of the consequences of their actions. He now stands at the precipice of change, seeking to restore harmony but grappling with doubts about whether his people can truly change their ways.",
-    personalMission:
-      "Korrin's personal mission is to uncover the truth behind the spirit's awakening and restore balance between the Elunari and the Heartwood Sanctuary, believing that they must forge a new path that honors the land without sacrificing their strength.",
-    hopes:
-      "Korrin hopes to unite the Elunari in a new understanding of their relationship with the sanctuary, fostering a deeper respect for nature and its spirits, while also seeking redemption for the past mistakes of his people.",
-    fears:
-      "Korrin fears that if the spirit's wrath is not quelled, the Heartwood Sanctuary will be lost forever, along with his people's connection to nature. He also fears his own inability to convince them to change, leading to further destruction of their home.",
-    relationships: {
-      friends: [
-        "Sylvara of the Heartwood - the sanctuary's spirit, whom he has revered since childhood",
+      kin: [
+        "Gill - one of the children Hollow listened to being born; Gill carries Hollow's words to the pit",
       ],
-      allies: [
-        "The Elunari - the people who raised him beneath the Thicket's canopy",
-      ],
-      adversaries: [
-        "Aric Faldin - his mining ambitions put the Heartwood Sanctuary at risk",
+      watches: [
+        "The Heart-Warden - the stone-cutter who stayed; Hollow has listened to it keep watch at the Keepers' Camp for longer than anyone has been alive",
       ],
     },
-  },
-  {
-    entity_id: "npc_quest_new__aric_faldin",
-    name: "Aric Faldin",
-    backstory:
-      "Aric Faldin was born into a family of miners and craftsmen who were once part of the Sunforged civilization. Growing up amidst the remnants of grandeur, he learned to appreciate the power of industry and the potential it held to bring prosperity to Aederyn. As a young boy, he witnessed his parents struggle to make ends meet, and he vowed to change their fate. This desire to uplift his family drove him to join the Iron Consortium, where he quickly climbed the ranks due to his keen intellect and ruthless ambition. Now, as a representative for the Consortium, Aric is determined to extract the energies of the Heartwood Sanctuary, believing it to be the key to a new age of progress for Aederyn.",
-    personalMission:
-      "To harness the mystical energies of the Heartwood Sanctuary to advance the Iron Consortium's cause, ensuring prosperity and security for his people, while overcoming the archaic beliefs of the Elunari.",
-    hopes:
-      "Aric hopes to unveil the potential of Aederyn's untapped resources, believing that industrial progress will lead to a golden age for all, where no one will ever have to suffer from poverty or hardship again.",
-    fears:
-      "He fears that if he fails to secure the Heartwood's power, the Iron Consortium will lose its influence and that Aederyn will fall into chaos and stagnation, returning to a time of struggle and despair. His greatest fear is that he will become just another forgotten tale of ambition gone wrong, like the fallen Sunforged.",
-    relationships: {
-      rivals: [
-        "Korrin of the Thicket - a stubborn defender of the Heartwood who blocks his surveys",
-      ],
-      enemies: [
-        "Sylvara of the Heartwood - the grove spirit whose power guards the ore beneath her roots",
-      ],
-      allies: [
-        "The Iron Consortium - his backers, eager to reclaim the Sunforged's buried wealth",
-      ],
-    },
+    home: "landmark_threadwell",
+    idleLine:
+      "You came through the Parting like it was a door. It is one, for you. Sit. The ground's been talking about you since you cut your first stick down at the Landing.",
+    faction: "hybrids",
   },
 ];
 

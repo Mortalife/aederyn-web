@@ -1,9 +1,10 @@
+import { poolIds, poolThings } from "@aederyn/types";
 import { repository } from "../repository/index.js";
 
 export interface GraphNode {
   id: string;
   label: string;
-  type: "item" | "resource" | "tile" | "npc" | "quest" | "house-tile";
+  type: "item" | "resource" | "tile" | "effect" | "npc" | "quest" | "house-tile" | "map";
   data: Record<string, unknown>;
 }
 
@@ -12,7 +13,7 @@ export interface GraphEdge {
   source: string;
   target: string;
   label: string;
-  type: "yields" | "requires" | "found_on" | "giver" | "involves" | "rewards" | "transforms_to";
+  type: "yields" | "requires" | "found_on" | "giver" | "involves" | "rewards" | "transforms_to" | "applies" | "protects" | "places" | "home" | "excludes";
 }
 
 export interface GraphData {
@@ -21,13 +22,15 @@ export interface GraphData {
 }
 
 export async function buildGraphData(): Promise<GraphData> {
-  const [items, resources, tiles, npcs, quests, houseTiles] = await Promise.all([
+  const [items, resources, tiles, effects, npcs, quests, houseTiles, map] = await Promise.all([
     repository.items.getAll(),
     repository.resources.getAll(),
     repository.tiles.getAll(),
+    repository.effects.getAll(),
     repository.npcs.getAll(),
     repository.quests.getAll(),
     repository.houseTiles.getAll(),
+    repository.map.get(),
   ]);
 
   const nodes: GraphNode[] = [];
@@ -41,6 +44,44 @@ export async function buildGraphData(): Promise<GraphData> {
       type: "item",
       data: { rarity: item.rarity, itemType: item.type },
     });
+
+    for (const effect of item.effects || []) {
+      edges.push({
+        id: `${item.id}-use-${effect.id}`,
+        source: item.id,
+        target: effect.id,
+        label: `on use ${effect.strength}`,
+        type: "applies",
+      });
+    }
+    for (const effect of item.wornEffects || []) {
+      edges.push({
+        id: `${item.id}-worn-${effect.id}`,
+        source: item.id,
+        target: effect.id,
+        label: `worn ${effect.strength}`,
+        type: "applies",
+      });
+    }
+  }
+
+  for (const effect of effects) {
+    nodes.push({
+      id: effect.id,
+      label: effect.name,
+      type: "effect",
+      data: { kind: effect.kind, mode: effect.mode },
+    });
+
+    if (effect.kind === "protects") {
+      edges.push({
+        id: `${effect.id}-protects-${effect.target}`,
+        source: effect.id,
+        target: effect.target,
+        label: "protects",
+        type: "protects",
+      });
+    }
   }
 
   // Add resource nodes and edges
@@ -85,7 +126,7 @@ export async function buildGraphData(): Promise<GraphData> {
     });
 
     // Tile contains resources
-    for (const resourceId of tile.resources || []) {
+    for (const resourceId of poolIds(tile.resources)) {
       edges.push({
         id: `${tile.id}-contains-${resourceId}`,
         source: tile.id,
@@ -94,6 +135,55 @@ export async function buildGraphData(): Promise<GraphData> {
         type: "found_on",
       });
     }
+
+    for (const effect of poolThings(tile.effects)) {
+      edges.push({
+        id: `${tile.id}-applies-${effect.id}-${effect.strength}`,
+        source: tile.id,
+        target: effect.id,
+        label: `applies ${effect.strength}`,
+        type: "applies",
+      });
+    }
+  }
+
+  // Map regions and landmarks
+  for (const region of map.regions) {
+    const id = regionNodeId(region.id);
+    nodes.push({ id, label: `Region: ${region.id}`, type: "map", data: { tier: region.tier } });
+    for (const tile of region.tiles) {
+      edges.push({
+        id: `${id}-places-${tile.id}`,
+        source: id,
+        target: tile.id,
+        label: `weight ${tile.weight}`,
+        type: "places",
+      });
+    }
+    for (const effect of region.effects) {
+      edges.push({
+        id: `${id}-applies-${effect.id}`,
+        source: id,
+        target: effect.id,
+        label: `applies ${effect.strength}`,
+        type: "applies",
+      });
+    }
+  }
+  for (const landmark of map.landmarks) {
+    nodes.push({
+      id: landmark.id,
+      label: `Landmark: ${landmark.id}${landmark.spawn ? " (spawn)" : ""}`,
+      type: "map",
+      data: { x: landmark.x, y: landmark.y },
+    });
+    edges.push({
+      id: `${landmark.id}-places-${landmark.tile}`,
+      source: landmark.id,
+      target: landmark.tile,
+      label: `at ${landmark.x},${landmark.y}`,
+      type: "places",
+    });
   }
 
   // Add NPC nodes
@@ -104,6 +194,15 @@ export async function buildGraphData(): Promise<GraphData> {
       type: "npc",
       data: { backstory: npc.backstory?.substring(0, 100) },
     });
+    if (npc.home) {
+      edges.push({
+        id: `${npc.entity_id}-home-${npc.home}`,
+        source: npc.entity_id,
+        target: npc.home,
+        label: "lives at",
+        type: "home",
+      });
+    }
   }
 
   // Add quest nodes and edges
@@ -115,13 +214,22 @@ export async function buildGraphData(): Promise<GraphData> {
       data: { questType: quest.type, isTutorial: quest.is_tutorial },
     });
 
-    // Quest giver
-    if (quest.giver?.entity_id) {
+    // Who gives it: an NPC, or a contract board landmark
+    if (quest.kind === "story" && quest.giver?.entity_id) {
       edges.push({
         id: `${quest.id}-giver-${quest.giver.entity_id}`,
         source: quest.id,
         target: quest.giver.entity_id,
         label: "given by",
+        type: "giver",
+      });
+    }
+    if (quest.kind === "contract" && quest.board) {
+      edges.push({
+        id: `${quest.id}-giver-${quest.board}`,
+        source: quest.id,
+        target: quest.board,
+        label: "posted on",
         type: "giver",
       });
     }
@@ -140,14 +248,15 @@ export async function buildGraphData(): Promise<GraphData> {
       }
     }
 
-    // Quest objectives (collect items)
+    // Quest objectives: items, NPCs to talk to, landmarks to reach
     for (const objective of quest.objectives || []) {
-      const objData = objective as { item_id?: string; type?: string };
-      if (objData.item_id) {
+      const objData = objective as { item_id?: string; entity_id?: string; landmark?: string; type?: string };
+      for (const target of [objData.item_id, objData.entity_id, objData.landmark]) {
+        if (!target || edges.some((e) => e.id === `${quest.id}-involves-${target}`)) continue;
         edges.push({
-          id: `${quest.id}-involves-${objData.item_id}`,
+          id: `${quest.id}-involves-${target}`,
           source: quest.id,
-          target: objData.item_id,
+          target,
           label: "involves",
           type: "involves",
         });
@@ -162,6 +271,16 @@ export async function buildGraphData(): Promise<GraphData> {
         target: prereq,
         label: "requires",
         type: "requires",
+      });
+    }
+
+    for (const excluded of quest.kind === "story" ? quest.excludes || [] : []) {
+      edges.push({
+        id: `${quest.id}-excludes-${excluded}`,
+        source: quest.id,
+        target: excluded,
+        label: "excludes",
+        type: "excludes",
       });
     }
   }
@@ -212,9 +331,11 @@ export function getNodeColor(type: GraphNode["type"]): string {
     item: "#f59e0b",      // amber
     resource: "#10b981",  // emerald
     tile: "#3b82f6",      // blue
+    effect: "#eab308",    // yellow
     npc: "#a855f7",       // purple
     quest: "#f43f5e",     // rose
     "house-tile": "#06b6d4", // cyan
+    map: "#84cc16",       // lime
   };
   return colors[type];
 }
@@ -228,6 +349,14 @@ export function getEdgeColor(type: GraphEdge["type"]): string {
     involves: "#f43f5e",
     rewards: "#fbbf24",
     transforms_to: "#06b6d4",
+    applies: "#eab308",
+    protects: "#84cc16",
+    places: "#3b82f6",
+    home: "#a855f7",
+    excludes: "#ef4444",
   };
   return colors[type];
 }
+
+/** Region IDs share a namespace with nothing else, so graph nodes prefix them. */
+export const regionNodeId = (id: string) => `region:${id}`;

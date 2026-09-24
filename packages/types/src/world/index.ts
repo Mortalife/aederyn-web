@@ -10,7 +10,8 @@ export const WorldSettingSchema = z.object({
 export const WorldRegionSchema = z.object({
   id: z.string().describe("Unique region slug (lowercase, hyphens)"),
   name: z.string().describe("Region name"),
-  description: z.string().describe("~200 word region description"),
+  description: z.string().describe("~200 word region description: what's there now, as a player finds it"),
+  lore: z.string().describe("~100-200 words of what content authors need: its history, secrets and what it's hiding, which players learn over time"),
   climate: z.string().describe("Climate type, e.g. temperate, arid"),
   inhabitants: z.array(z.string()).describe("Types of inhabitants"),
   resources: z.array(z.string()).describe("Natural resources found here (prose, not resource IDs)"),

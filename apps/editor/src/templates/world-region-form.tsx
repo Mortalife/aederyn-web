@@ -11,6 +11,7 @@ export const WorldRegionForm: FC<WorldRegionFormProps> = ({ region, isNew }) => 
     id: "",
     name: "",
     description: "",
+    lore: "",
     climate: "",
     inhabitants: [],
     resources: [],
@@ -71,6 +72,18 @@ export const WorldRegionForm: FC<WorldRegionFormProps> = ({ region, isNew }) => 
             placeholder="Describe this region's geography, atmosphere, and notable features..."
           >
             {r.description}
+          </textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Lore</label>
+          <textarea
+            name="lore"
+            rows={4}
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+            placeholder="Its history and secrets, which players learn over time..."
+          >
+            {r.lore}
           </textarea>
         </div>
 

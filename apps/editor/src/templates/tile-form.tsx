@@ -1,14 +1,38 @@
 import type { FC } from "hono/jsx";
-import type { Tile, Resource } from "../repository/index.js";
-import { ResourceSelector } from "../components/ResourceSelector.js";
+import type { Tile } from "../repository/index.js";
+import type { UsedByReference } from "../services/references.js";
+import { UsedBySection } from "./components/used-by-section.js";
 
 interface TileFormProps {
   tile?: Tile;
   isNew?: boolean;
-  resources?: Resource[];
+  usedBy?: UsedByReference[];
 }
 
-export const TileForm: FC<TileFormProps> = ({ tile, isNew = true, resources = [] }) => {
+const PoolField: FC<{ name: string; label: string; hint: string; value: unknown[] }> = ({
+  name,
+  label,
+  hint,
+  value,
+}) => (
+  <div class="col-span-2 bg-gray-700/50 rounded-lg p-4 border border-gray-600">
+    <label class="block text-sm font-medium text-cyan-400 mb-1" for={`pool-${name}`}>
+      {label}
+    </label>
+    <p class="text-xs text-gray-400 mb-3">{hint}</p>
+    <textarea
+      id={`pool-${name}`}
+      name={name}
+      rows={Math.min(14, Math.max(3, value.length + 2))}
+      spellcheck={false}
+      class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white font-mono text-xs focus:outline-none focus:border-blue-500"
+    >
+      {value.length === 0 ? "[]" : `[\n${value.map((entry) => `  ${JSON.stringify(entry)}`).join(",\n")}\n]`}
+    </textarea>
+  </div>
+);
+
+export const TileForm: FC<TileFormProps> = ({ tile, isNew = true, usedBy = [] }) => {
   const defaultTile: Partial<Tile> = {
     id: "",
     name: "",
@@ -17,7 +41,6 @@ export const TileForm: FC<TileFormProps> = ({ tile, isNew = true, resources = []
     theme: "forest",
     texture: "grass",
     resources: [],
-    rarity: 0.5,
     accessible: true,
   };
 
@@ -144,21 +167,6 @@ export const TileForm: FC<TileFormProps> = ({ tile, isNew = true, resources = []
             </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-2">
-              Rarity (0-1)
-            </label>
-            <input
-              type="number"
-              name="rarity"
-              value={t.rarity}
-              min={0}
-              max={1}
-              step={0.01}
-              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
           <div class="flex items-center gap-4">
             <label class="flex items-center gap-2 cursor-pointer">
               <input
@@ -171,12 +179,32 @@ export const TileForm: FC<TileFormProps> = ({ tile, isNew = true, resources = []
             </label>
           </div>
 
-          <ResourceSelector
+          <div class="col-span-2 text-xs text-gray-400">
+            Pools are rolled per map cell. Each entry is the thing itself or{" "}
+            <code>{'{ "oneOf": [...] }'}</code> (exactly one option is picked), with an optional{" "}
+            <code>"chance"</code> in (0, 1]; without one it's always there. Where the tile appears is set on the{" "}
+            <a href="/map" class="text-blue-400 hover:underline">Map</a>.
+          </div>
+
+          <PoolField
             name="resources"
-            label="Available Resources"
-            resources={resources}
+            label="Resource pool"
+            hint='Entries like { "id": "resource_x" }.'
             value={t.resources || []}
-            placeholder="Select a resource..."
+          />
+
+          <PoolField
+            name="monsters"
+            label="Monster pool"
+            hint='Entries like { "id": "monster_x", "count": 2 }. A spawn is identified by its position after rolling.'
+            value={t.monsters || []}
+          />
+
+          <PoolField
+            name="effects"
+            label="Effect pool"
+            hint='Entries like { "id": "effect_x", "strength": 1 }, active on anyone on the cell.'
+            value={t.effects || []}
           />
 
           <div class="col-span-2">
@@ -207,6 +235,7 @@ export const TileForm: FC<TileFormProps> = ({ tile, isNew = true, resources = []
           </a>
         </div>
       </form>
+      {!isNew && <UsedBySection references={usedBy} entityName={t.name || "this tile"} />}
     </div>
   );
 };

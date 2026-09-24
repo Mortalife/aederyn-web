@@ -1,5 +1,7 @@
-import { quests, questsById } from "../../config/quests.js";
-import type { Quest, TileQuest } from "../../config/types.js";
+import { questsById } from "../../config/quests.js";
+import type { Quest } from "../../config/types.js";
+import type { PlacedObjective, PlacedQuest } from "../../world/quests.js";
+import { getTileSelection } from "../../world/index.js";
 import { writer } from "../../db/writer.js";
 import {
   getDefaultRequiredAmount,
@@ -20,6 +22,9 @@ const deleteQuestObjectives = writer.prepare<[string, string]>(
 );
 const deleteQuest = writer.prepare<[string, string]>(
   "DELETE FROM quest_progress WHERE user_id = ? AND quest_id = ?"
+);
+const deleteUnfinishedQuest = writer.prepare<[string, string]>(
+  "DELETE FROM quest_progress WHERE user_id = ? AND quest_id = ? AND status != 'completed'"
 );
 const insertQuest = writer.prepare<[string, string, number]>(
   `INSERT INTO quest_progress (
@@ -82,7 +87,7 @@ const markQuestCompletable = writer.prepare<[string, string]>(
   WHERE user_id = ? AND quest_id = ?`
 );
 
-export const startQuest = (userId: string, quest: TileQuest, now: number) => {
+export const startQuest = (userId: string, quest: PlacedQuest, now: number) => {
   // Clear any completed run from a previous appearance of this quest
   deleteQuestObjectives.run(userId, quest.id);
   deleteQuest.run(userId, quest.id);
@@ -99,9 +104,7 @@ export const startQuest = (userId: string, quest: TileQuest, now: number) => {
 };
 
 export const completeQuest = (userId: string, questId: string, now: number) => {
-  // Tutorials aren't in questsById
-  const quest: Quest | undefined =
-    questsById.get(questId) ?? quests.find((q) => q.id === questId);
+  const quest: Quest | undefined = questsById.get(questId);
 
   if (!quest) {
     addSystemMessage(userId, "Quest not found", "error", now, {
@@ -140,8 +143,9 @@ export const completeQuest = (userId: string, questId: string, now: number) => {
   );
 };
 
+/** Abandons a quest in hand; a completed one stays completed. */
 export const cancelQuest = (userId: string, questId: string) => {
-  deleteQuest.run(userId, questId);
+  deleteUnfinishedQuest.run(userId, questId);
   userChanged(userId);
 };
 
@@ -224,10 +228,15 @@ export const handleQuestEvents = (events: GameEvent[], now: number) => {
   }
 };
 
+const inRegion = (objective: PlacedObjective, x: number, y: number) =>
+  !("region" in objective) ||
+  !objective.region ||
+  getTileSelection(x, y).region?.id === objective.region;
+
 /** Returns true if it changed any progress. */
 const applyQuestEvent = (
   event: GameEvent,
-  inProgress: TileQuest[],
+  inProgress: PlacedQuest[],
   now: number
 ) => {
   let changed = false;
@@ -289,7 +298,8 @@ const applyQuestEvent = (
       case "resource_completed":
         if (
           (objective.type === "craft" || objective.type === "gather") &&
-          objective.resource_id === event.resourceId
+          objective.resource_id === event.resourceId &&
+          inRegion(objective, event.x, event.y)
         ) {
           updateObjectiveProgress(
             event.userId,
@@ -303,7 +313,11 @@ const applyQuestEvent = (
         break;
 
       case "monster_killed":
-        if (objective.type === "kill" && objective.monster_id === event.monsterId) {
+        if (
+          objective.type === "kill" &&
+          objective.monster_id === event.monsterId &&
+          inRegion(objective, event.x, event.y)
+        ) {
           updateObjectiveProgress(event.userId, quest.id, objective.id, current + 1, now);
           changed = true;
         }

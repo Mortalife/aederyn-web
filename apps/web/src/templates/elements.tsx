@@ -15,6 +15,7 @@ import {
   MAX_INVENTORY_SIZE,
   BASE_USER,
   type RewardItem,
+  type NPC,
   UNARMED,
 } from "../config.js";
 import type { UserAction } from "../user/action.js";
@@ -37,8 +38,12 @@ import {
   SocialIcon,
   MonstersIcon,
 } from "./icons.js";
-import type { ZoneMonster } from "../game/view/select.js";
+import type { Resident, ZoneMonster } from "../game/view/select.js";
 import type { CombatHit } from "../world/monsters.js";
+import { animateBetween, type ProgressTimes } from "./animate.js";
+import { PlayerEffects, TileEffects } from "./effects.js";
+import type { ResolvedEffect } from "../world/effects.js";
+import { effectsById } from "../config/effects.js";
 
 export const KeyboardShortcut = (shortcut: string) => html`<span
   class="h-4 hidden md:flex items-center justify-center text-[0.4rem] text-gray-400 font-mono p-[0.2rem] rounded-sm border border-gray-400 mix-blend-color-dodge"
@@ -502,6 +507,15 @@ const getResourceTypeIcon = (type: string) => {
         />
       </svg>`;
     case "workbench":
+    case "campfire":
+    case "forge":
+    case "kiln":
+    case "tanning_rack":
+    case "apothecary":
+    case "loom":
+    case "warding_table":
+    case "growing_pit":
+    case "keystone":
       return html`<svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -692,6 +706,8 @@ const ZoneSectionHeader = (
 export const Zone = (parts: {
   header: HtmlEscapedString;
   nav: HtmlEscapedString;
+  npcs: HtmlEscapedString;
+  board: HtmlEscapedString;
   resources: HtmlEscapedString;
   monsters: HtmlEscapedString;
   quests: HtmlEscapedString;
@@ -700,7 +716,9 @@ export const Zone = (parts: {
   players: HtmlEscapedString;
   chatMessages: HtmlEscapedString;
 }) => html`<div id="zone" class="flex flex-col gap-4 pr-1">
-  ${parts.header} ${parts.nav} ${parts.resources} ${parts.monsters}
+  ${parts.header} ${parts.nav} ${parts.npcs} ${parts.board}
+  ${parts.resources}
+  ${parts.monsters}
   ${parts.quests}
   ${parts.inventory} ${parts.equipment}
 
@@ -779,6 +797,15 @@ export const ZoneHeader = (worldTile: WorldTile) => {
             ${worldTile.tile?.description ??
             `Coordinates: ${worldTile.x}, ${worldTile.y}`}
           </p>
+          ${TileEffects(
+            [
+              ...(worldTile.tile?.effects ?? []),
+              ...(worldTile.tile?.region?.effects ?? []),
+            ].flatMap(({ id, strength }) => {
+              const effect = effectsById.get(id);
+              return effect ? [{ effect, strength }] : [];
+            })
+          )}
         </div>
       </div>
       <div class="flex items-center gap-3">
@@ -804,6 +831,68 @@ export const ZoneHeader = (worldTile: WorldTile) => {
           Exit Zone ${KeyboardShortcut("esc")}
         </button>
       </div>
+    </div>
+  </div>`;
+};
+
+/**
+ * The people who live here: each offers the story quests they have for the
+ * player, or says their idle line when they have none.
+ */
+export const ZoneNPCs = (residents: Resident[]) => {
+  if (residents.length === 0) {
+    return html`<div id="npcs"></div>`;
+  }
+
+  return html`<div
+    id="npcs"
+    class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
+    data-show="$_showQuests"
+  >
+    ${ZoneSectionHeader(
+      "People",
+      residents.length === 1
+        ? "Someone lives here"
+        : `${residents.length} people live here`,
+      SocialIcon
+    )}
+    <div class="grid grid-cols-1 gap-2">
+      ${residents.map(
+        ({ npc, offers }) => html`<div
+          class="flex flex-col gap-2 p-4 rounded-xl bg-white/5 border ${offers.length
+            ? "border-yellow-500/30"
+            : "border-white/10"}"
+        >
+          <h3 class="font-semibold">
+            ${npc.name}${offers.length
+              ? html` <span class="text-yellow-400 font-bold">!</span>`
+              : null}
+          </h3>
+          ${offers.length
+            ? offers.map(
+                (quest) => html`<div
+                  id="offer-${quest.id}"
+                  class="flex flex-col md:flex-row md:items-start gap-3"
+                >
+                  <div class="flex flex-col gap-1 flex-1">
+                    <span class="font-medium text-yellow-300"
+                      >${quest.name}</span
+                    >
+                    <p class="text-sm text-gray-300">${quest.description}</p>
+                  </div>
+                  <button
+                    class="btn btn-sm btn-primary"
+                    data-on:click="@post('/game/quest/${quest.id}')"
+                  >
+                    Accept Quest
+                  </button>
+                </div>`
+              )
+            : npc.idleLine
+            ? html`<p class="text-sm text-gray-300 italic">"${npc.idleLine}"</p>`
+            : null}
+        </div>`
+      )}
     </div>
   </div>`;
 };
@@ -892,6 +981,19 @@ export const ZoneResources = (props: {
   contextFlashes: Map<string, SystemMessage>;
 }) => {
   const { worldTile, inprogress } = props;
+  const resourceTypeLabels: Record<Resource["type"], string> = {
+    resource: "Gathering",
+    workbench: "Workbench",
+    campfire: "Campfire",
+    forge: "Forge",
+    kiln: "Kiln",
+    tanning_rack: "Tanning Rack",
+    apothecary: "Apothecary",
+    loom: "Loom",
+    warding_table: "Warding Table",
+    growing_pit: "Growing Pit",
+    keystone: "Keystone",
+  };
   const groupedResources = Object.groupBy(
     worldTile.tile?.resources ?? [],
     (resource) => resource.type
@@ -922,7 +1024,7 @@ export const ZoneResources = (props: {
               <div class="flex items-center gap-2 ${theme.accent}">
                 ${getResourceTypeIcon(type)}
                 <h3 class="text-lg font-semibold capitalize">
-                  ${type === "workbench" ? "Crafting" : "Gathering"}
+                  ${resourceTypeLabels[type as Resource["type"]]}
                 </h3>
                 <span class="text-xs opacity-60">(${resources.length})</span>
               </div>
@@ -1673,7 +1775,8 @@ export const UserInfo = (
   user: GameUser,
   messages?: SystemMessage[],
   totalPlayersOnline?: number,
-  alert?: SystemMessage | null
+  alert?: SystemMessage | null,
+  effects: ResolvedEffect[] = []
 ) => html`<div
   id="user-info"
   class="w-full flex flex-wrap justify-between items-center gap-2 px-2"
@@ -1711,12 +1814,15 @@ export const UserInfo = (
         >`
       : null}
   </div>
-  <div class="flex items-center gap-2 min-w-32 max-w-48 flex-1 text-xs text-red-200" aria-label="Health: ${user.h} of ${BASE_USER.h}">
-    <span aria-hidden="true">♥</span>
-    <div class="h-2 flex-1 rounded-full bg-red-950/70 overflow-hidden" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="${BASE_USER.h}" aria-valuenow="${user.h}">
-      <div class="h-full bg-red-500 transition-[width] duration-200" style="width: ${Math.max(0, Math.min(100, (user.h / BASE_USER.h) * 100))}%"></div>
+  <div class="flex min-w-32 flex-1 items-center gap-2">
+    <div class="flex min-w-32 max-w-48 flex-1 items-center gap-2 text-xs text-red-200" aria-label="Health: ${user.h} of ${BASE_USER.h}">
+      <span aria-hidden="true">♥</span>
+      <div class="h-2 flex-1 rounded-full bg-red-950/70 overflow-hidden" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="${BASE_USER.h}" aria-valuenow="${user.h}">
+        <div class="h-full bg-red-500 transition-[width] duration-200" style="width: ${Math.max(0, Math.min(100, (user.h / BASE_USER.h) * 100))}%"></div>
+      </div>
+      <span class="font-mono whitespace-nowrap">${user.h}/${BASE_USER.h}</span>
     </div>
-    <span class="font-mono whitespace-nowrap">${user.h}/${BASE_USER.h}</span>
+    ${PlayerEffects(effects)}
   </div>
   ${GameMenu(user, messages, alert)}
 </div>`;
@@ -1769,18 +1875,6 @@ export const ContextualFlash = (props: { message?: SystemMessage }) => {
     </div>
   `;
 };
-
-type ProgressTimes = { startedAt: number; endsAt: number };
-
-/**
- * A `data-init` expression running `keyframes` on the element from
- * `startedAt` to `endsAt` (server clock, ms), seeked to the elapsed time
- * using the `_serverOffset` signal from `Game`.
- */
-const animateBetween = (times: ProgressTimes, keyframes: object) =>
-  `el.animate(${JSON.stringify(keyframes)}, { duration: ${
-    times.endsAt - times.startedAt
-  }, delay: ${times.startedAt} - Date.now() - $_serverOffset, fill: 'forwards' })`;
 
 /**
  * A bar that fills from `startedAt` to `endsAt` (server clock, ms) on its own,
@@ -2051,6 +2145,16 @@ export const InventorySlot = (props: {
 
     <!-- Durability (if applicable) -->
     ${item.durability ? DurabilityMeter(item.durability) : null}
+
+    ${item.effects?.length
+      ? html`<button
+          class="px-3 py-1.5 rounded-lg text-sm bg-emerald-500/20 border border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/30 transition-colors"
+          data-on:click="@post('/game/inventory/${props.slot.id}/use')"
+          title="Use one ${item.name}"
+        >
+          Use
+        </button>`
+      : null}
 
     ${item.equippable && item.equipSlot
       ? html`<button

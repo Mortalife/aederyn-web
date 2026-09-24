@@ -29,13 +29,17 @@ const selectFinishedActions = writer.prepare<[number], UserAction>(
   "SELECT * FROM inprogress WHERE completed_at <= ? LIMIT 500"
 );
 
-/** Returns false if the user is already doing something. */
+/**
+ * Returns false if the user is already doing something. `speed` scales the
+ * resource's collection time (from gather speed effects).
+ */
 export const markActionInProgress = (
   user_id: string,
   x: number,
   y: number,
   resource: ResourceModel,
-  now: number
+  now: number,
+  speed = 1
 ) => {
   if (countUserActions.get(user_id)!.count > 0) {
     return false;
@@ -47,7 +51,7 @@ export const markActionInProgress = (
     y,
     resource_id: resource.id,
     inprogress_at: now,
-    completed_at: now + resource.collectionTime * 1000,
+    completed_at: now + Math.round(resource.collectionTime * 1000 * speed),
   });
   userChanged(user_id);
 
@@ -244,6 +248,8 @@ const completeAction = (action: UserAction, now: number) => {
     type: "resource_completed",
     userId: action.user_id,
     resourceId: resource.id,
+    x: action.x,
+    y: action.y,
   });
   addSystemMessage(
     action.user_id,

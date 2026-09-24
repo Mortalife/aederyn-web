@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { streamSSE } from "hono/streaming";
-import type { EquipSlot, QuestType } from "@aederyn/types";
+import { ResourceTypeSchema, type EquipSlot } from "@aederyn/types";
 import { Layout } from "./components/Layout.js";
 import { repository } from "./repository/index.js";
 import { fragmentEvent } from "./sse/index.js";
@@ -10,9 +10,11 @@ import {
   ITEMS_UPDATED,
   RESOURCES_UPDATED,
   TILES_UPDATED,
+  EFFECTS_UPDATED,
   NPCS_UPDATED,
   QUESTS_UPDATED,
   HOUSE_TILES_UPDATED,
+  MAP_UPDATED,
 } from "./sse/pubsub.js";
 import { Dashboard } from "./templates/dashboard.js";
 import { ItemsList } from "./templates/items-list.js";
@@ -24,7 +26,10 @@ import { HouseTilesList } from "./templates/house-tiles-list.js";
 import { ItemForm } from "./templates/item-form.js";
 import { ResourceForm } from "./templates/resource-form.js";
 import { TileForm } from "./templates/tile-form.js";
+import { EffectsList } from "./templates/effects-list.js";
+import { EffectForm, parseEffectForm } from "./templates/effect-form.js";
 import { NPCForm } from "./templates/npc-form.js";
+import { MapEditor, MapPreview, parseMapForm } from "./templates/map-editor.js";
 import { QuestForm } from "./templates/quest-form.js";
 import { HouseTileForm } from "./templates/house-tile-form.js";
 import { GraphView } from "./templates/graph-view.js";
@@ -42,10 +47,10 @@ import {
   parseItemAttributes,
   parseItemRequirements,
   parseItemEffects,
+  parseEffectStrengths,
   parseRelationships,
-  parseObjectives,
-  parseRewards,
-  parseCompletion,
+  parseQuestForm,
+  parseTilePools,
 } from "./utils/form-parser.js";
 import { analyzeImpact, type EntityType } from "./services/impact-analysis.js";
 import { ImpactView } from "./templates/impact-view.js";
@@ -101,17 +106,21 @@ app.get("/sse/dashboard", async (c) => {
   PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
   PubSub.subscribe(RESOURCES_UPDATED, handleUpdate);
   PubSub.subscribe(TILES_UPDATED, handleUpdate);
+  PubSub.subscribe(EFFECTS_UPDATED, handleUpdate);
   PubSub.subscribe(NPCS_UPDATED, handleUpdate);
   PubSub.subscribe(QUESTS_UPDATED, handleUpdate);
   PubSub.subscribe(HOUSE_TILES_UPDATED, handleUpdate);
+  PubSub.subscribe(MAP_UPDATED, handleUpdate);
 
   stream.onAbort(() => {
     PubSub.off(ITEMS_UPDATED, handleUpdate);
     PubSub.off(RESOURCES_UPDATED, handleUpdate);
     PubSub.off(TILES_UPDATED, handleUpdate);
+    PubSub.off(EFFECTS_UPDATED, handleUpdate);
     PubSub.off(NPCS_UPDATED, handleUpdate);
     PubSub.off(QUESTS_UPDATED, handleUpdate);
     PubSub.off(HOUSE_TILES_UPDATED, handleUpdate);
+    PubSub.off(MAP_UPDATED, handleUpdate);
   });
 
   return returnStream(c, stream);
@@ -151,7 +160,8 @@ app.get("/items/new", async (c) => {
 
 app.get("/sse/items/new", async (c) => {
   return streamSSE(c, async (stream) => {
-    await stream.writeSSE(fragmentEvent(ItemForm({ isNew: true })));
+    const effects = await repository.effects.getAll();
+    await stream.writeSSE(fragmentEvent(ItemForm({ isNew: true, effects })));
   });
 });
 
@@ -172,9 +182,10 @@ app.get("/sse/items/:id", async (c) => {
   return streamSSE(c, async (stream) => {
     const item = await repository.items.getById(id);
     const usedBy = await findUsedBy(id);
+    const effects = await repository.effects.getAll();
     if (item) {
       await stream.writeSSE(
-        fragmentEvent(ItemForm({ item, isNew: false, usedBy }))
+        fragmentEvent(ItemForm({ item, isNew: false, usedBy, effects }))
       );
     } else {
       await stream.writeSSE(
@@ -311,8 +322,7 @@ app.get("/tiles/new", async (c) => {
 
 app.get("/sse/tiles/new", async (c) => {
   return streamSSE(c, async (stream) => {
-    const resources = await repository.resources.getAll();
-    await stream.writeSSE(fragmentEvent(TileForm({ isNew: true, resources })));
+    await stream.writeSSE(fragmentEvent(TileForm({ isNew: true })));
   });
 });
 
@@ -331,13 +341,13 @@ app.get("/tiles/:id", async (c) => {
 app.get("/sse/tiles/:id", async (c) => {
   const id = c.req.param("id");
   return streamSSE(c, async (stream) => {
-    const [tile, resources] = await Promise.all([
+    const [tile, usedBy] = await Promise.all([
       repository.tiles.getById(id),
-      repository.resources.getAll(),
+      findUsedBy(id),
     ]);
     if (tile) {
       await stream.writeSSE(
-        fragmentEvent(TileForm({ tile, isNew: false, resources }))
+        fragmentEvent(TileForm({ tile, isNew: false, usedBy }))
       );
     } else {
       await stream.writeSSE(
@@ -349,6 +359,85 @@ app.get("/sse/tiles/:id", async (c) => {
               class="text-blue-400 hover:underline mt-4 inline-block"
             >
               ← Back to Tiles
+            </a>
+          </div>
+        )
+      );
+    }
+  });
+});
+
+// Effects routes
+app.get("/effects", async (c) => {
+  const counts = await repository.getCounts();
+  return c.html(
+    <Layout title="Effects" sseEndpoint="/sse/effects" counts={counts} />
+  );
+});
+
+app.get("/sse/effects", async (c) => {
+  const stream = getStream(c);
+  const effects = await repository.effects.getAll();
+  await stream.writeSSE(fragmentEvent(EffectsList({ effects })));
+
+  const handleUpdate = async () => {
+    const effects = await repository.effects.getAll();
+    await stream.writeSSE(fragmentEvent(EffectsList({ effects })));
+  };
+
+  PubSub.subscribe(EFFECTS_UPDATED, handleUpdate);
+  stream.onAbort(() => PubSub.off(EFFECTS_UPDATED, handleUpdate));
+  return returnStream(c, stream);
+});
+
+app.get("/effects/new", async (c) => {
+  const counts = await repository.getCounts();
+  return c.html(
+    <Layout title="New Effect" sseEndpoint="/sse/effects/new" counts={counts} />
+  );
+});
+
+app.get("/sse/effects/new", async (c) => {
+  return streamSSE(c, async (stream) => {
+    const effects = await repository.effects.getAll();
+    await stream.writeSSE(fragmentEvent(EffectForm({ isNew: true, effects })));
+  });
+});
+
+app.get("/effects/:id", async (c) => {
+  const counts = await repository.getCounts();
+  const id = c.req.param("id");
+  return c.html(
+    <Layout
+      title="Edit Effect"
+      sseEndpoint={`/sse/effects/${id}`}
+      counts={counts}
+    />
+  );
+});
+
+app.get("/sse/effects/:id", async (c) => {
+  const id = c.req.param("id");
+  return streamSSE(c, async (stream) => {
+    const [effect, effects, usedBy] = await Promise.all([
+      repository.effects.getById(id),
+      repository.effects.getAll(),
+      findUsedBy(id),
+    ]);
+    if (effect) {
+      await stream.writeSSE(
+        fragmentEvent(EffectForm({ effect, isNew: false, effects, usedBy }))
+      );
+    } else {
+      await stream.writeSSE(
+        fragmentEvent(
+          <div id="main-content" class="text-center py-12">
+            <h1 class="text-2xl font-bold text-red-400">Effect not found</h1>
+            <a
+              href="/effects"
+              class="text-blue-400 hover:underline mt-4 inline-block"
+            >
+              ← Back to Effects
             </a>
           </div>
         )
@@ -475,8 +564,16 @@ app.get("/npcs/new", async (c) => {
 
 app.get("/sse/npcs/new", async (c) => {
   return streamSSE(c, async (stream) => {
-    const allNpcs = await repository.npcs.getAll();
-    await stream.writeSSE(fragmentEvent(NPCForm({ isNew: true, allNpcs })));
+    const [allNpcs, map, worldBible] = await Promise.all([
+      repository.npcs.getAll(),
+      repository.map.get(),
+      repository.worldBible.get(),
+    ]);
+    await stream.writeSSE(
+      fragmentEvent(
+        NPCForm({ isNew: true, allNpcs, landmarks: map.landmarks, factions: worldBible.factions })
+      )
+    );
   });
 });
 
@@ -491,11 +588,23 @@ app.get("/npcs/:id", async (c) => {
 app.get("/sse/npcs/:id", async (c) => {
   const id = c.req.param("id");
   return streamSSE(c, async (stream) => {
-    const npc = await repository.npcs.getById(id);
-    const allNpcs = await repository.npcs.getAll();
+    const [npc, allNpcs, map, worldBible] = await Promise.all([
+      repository.npcs.getById(id),
+      repository.npcs.getAll(),
+      repository.map.get(),
+      repository.worldBible.get(),
+    ]);
     if (npc) {
       await stream.writeSSE(
-        fragmentEvent(NPCForm({ npc, isNew: false, allNpcs }))
+        fragmentEvent(
+          NPCForm({
+            npc,
+            isNew: false,
+            allNpcs,
+            landmarks: map.landmarks,
+            factions: worldBible.factions,
+          })
+        )
       );
     } else {
       await stream.writeSSE(
@@ -550,8 +659,9 @@ app.get("/sse/quests/new", async (c) => {
   return streamSSE(c, async (stream) => {
     const npcs = await repository.npcs.getAll();
     const allQuests = await repository.quests.getAll();
+    const map = await repository.map.get();
     await stream.writeSSE(
-      fragmentEvent(QuestForm({ isNew: true, npcs, allQuests }))
+      fragmentEvent(QuestForm({ isNew: true, npcs, allQuests, map }))
     );
   });
 });
@@ -574,9 +684,10 @@ app.get("/sse/quests/:id", async (c) => {
     const quest = await repository.quests.getById(id);
     const npcs = await repository.npcs.getAll();
     const allQuests = await repository.quests.getAll();
+    const map = await repository.map.get();
     if (quest) {
       await stream.writeSSE(
-        fragmentEvent(QuestForm({ quest, isNew: false, npcs, allQuests }))
+        fragmentEvent(QuestForm({ quest, isNew: false, npcs, allQuests, map }))
       );
     } else {
       await stream.writeSSE(
@@ -605,10 +716,12 @@ app.get("/graph", async (c) => {
   if (query.resources !== undefined)
     filterParams.set("resources", query.resources);
   if (query.tiles !== undefined) filterParams.set("tiles", query.tiles);
+  if (query.effects !== undefined) filterParams.set("effects", query.effects);
   if (query.npcs !== undefined) filterParams.set("npcs", query.npcs);
   if (query.quests !== undefined) filterParams.set("quests", query.quests);
   if (query.houseTiles !== undefined)
     filterParams.set("houseTiles", query.houseTiles);
+  if (query.map !== undefined) filterParams.set("map", query.map);
   const sseEndpoint = `/sse/graph${
     filterParams.toString() ? `?${filterParams.toString()}` : ""
   }`;
@@ -623,9 +736,11 @@ app.get("/sse/graph", async (c) => {
     items: query.items !== "false",
     resources: query.resources !== "false",
     tiles: query.tiles !== "false",
+    effects: query.effects !== "false",
     npcs: query.npcs !== "false",
     quests: query.quests !== "false",
     houseTiles: query.houseTiles !== "false",
+    map: query.map !== "false",
   };
 
   const stream = getStream(c);
@@ -640,17 +755,21 @@ app.get("/sse/graph", async (c) => {
   PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
   PubSub.subscribe(RESOURCES_UPDATED, handleUpdate);
   PubSub.subscribe(TILES_UPDATED, handleUpdate);
+  PubSub.subscribe(EFFECTS_UPDATED, handleUpdate);
   PubSub.subscribe(NPCS_UPDATED, handleUpdate);
   PubSub.subscribe(QUESTS_UPDATED, handleUpdate);
   PubSub.subscribe(HOUSE_TILES_UPDATED, handleUpdate);
+  PubSub.subscribe(MAP_UPDATED, handleUpdate);
 
   stream.onAbort(() => {
     PubSub.off(ITEMS_UPDATED, handleUpdate);
     PubSub.off(RESOURCES_UPDATED, handleUpdate);
     PubSub.off(TILES_UPDATED, handleUpdate);
+    PubSub.off(EFFECTS_UPDATED, handleUpdate);
     PubSub.off(NPCS_UPDATED, handleUpdate);
     PubSub.off(QUESTS_UPDATED, handleUpdate);
     PubSub.off(HOUSE_TILES_UPDATED, handleUpdate);
+    PubSub.off(MAP_UPDATED, handleUpdate);
   });
 
   return returnStream(c, stream);
@@ -676,17 +795,21 @@ app.get("/sse/validate", async (c) => {
     PubSub.subscribe(ITEMS_UPDATED, handleUpdate);
     PubSub.subscribe(RESOURCES_UPDATED, handleUpdate);
     PubSub.subscribe(TILES_UPDATED, handleUpdate);
+    PubSub.subscribe(EFFECTS_UPDATED, handleUpdate);
     PubSub.subscribe(NPCS_UPDATED, handleUpdate);
     PubSub.subscribe(QUESTS_UPDATED, handleUpdate);
     PubSub.subscribe(HOUSE_TILES_UPDATED, handleUpdate);
+    PubSub.subscribe(MAP_UPDATED, handleUpdate);
 
     stream.onAbort(() => {
       PubSub.off(ITEMS_UPDATED, handleUpdate);
       PubSub.off(RESOURCES_UPDATED, handleUpdate);
       PubSub.off(TILES_UPDATED, handleUpdate);
+      PubSub.off(EFFECTS_UPDATED, handleUpdate);
       PubSub.off(NPCS_UPDATED, handleUpdate);
       PubSub.off(QUESTS_UPDATED, handleUpdate);
       PubSub.off(HOUSE_TILES_UPDATED, handleUpdate);
+      PubSub.off(MAP_UPDATED, handleUpdate);
     });
   });
 });
@@ -1215,8 +1338,8 @@ app.post("/commands/items", async (c) => {
     durability: parseItemDurability(body),
     attributes: parseItemAttributes(body),
     requirements: parseItemRequirements(body),
-    effects:
-      parseItemEffects(body).length > 0 ? parseItemEffects(body) : undefined,
+    effects: parseItemEffects(body),
+    wornEffects: parseEffectStrengths(body, "wornEffects"),
     value: parseInt(body.value as string) || 0,
     weight: parseFloat(body.weight as string) || 0,
   };
@@ -1253,8 +1376,8 @@ app.post("/commands/items/:id", async (c) => {
     durability: parseItemDurability(body),
     attributes: parseItemAttributes(body),
     requirements: parseItemRequirements(body),
-    effects:
-      parseItemEffects(body).length > 0 ? parseItemEffects(body) : undefined,
+    effects: parseItemEffects(body),
+    wornEffects: parseEffectStrengths(body, "wornEffects"),
     value: parseInt(body.value as string) || 0,
     weight: parseFloat(body.weight as string) || 0,
   };
@@ -1281,7 +1404,7 @@ app.post("/commands/resources", async (c) => {
     reward_items: parseItemQuantityList(body, "reward_items"),
     required_items: parseRequiredItemList(body, "required_items"),
     collectionTime: parseInt(body.collectionTime as string) || 5,
-    type: body.type as "resource" | "workbench" | "furnace" | "magic",
+    type: ResourceTypeSchema.parse(body.type),
     verb: (body.verb as string) || "Collect",
   };
   await repository.resources.create(resource);
@@ -1300,7 +1423,7 @@ app.post("/commands/resources/:id", async (c) => {
     reward_items: parseItemQuantityList(body, "reward_items"),
     required_items: parseRequiredItemList(body, "required_items"),
     collectionTime: parseInt(body.collectionTime as string) || 5,
-    type: body.type as "resource" | "workbench" | "furnace" | "magic",
+    type: ResourceTypeSchema.parse(body.type),
     verb: (body.verb as string) || "Collect",
   };
   await repository.resources.update(id, updates);
@@ -1318,6 +1441,12 @@ app.post("/commands/resources/:id/delete", async (c) => {
 // Create new tile
 app.post("/commands/tiles", async (c) => {
   const body = await c.req.parseBody();
+  let pools;
+  try {
+    pools = parseTilePools(body);
+  } catch (e) {
+    return c.text((e as Error).message, 400);
+  }
   const tile = {
     id: body.id as string,
     name: body.name as string,
@@ -1325,8 +1454,7 @@ app.post("/commands/tiles", async (c) => {
     backgroundColor: body.backgroundColor as string,
     theme: body.theme as string,
     texture: body.texture as string,
-    resources: parseStringArray(body, "resources"),
-    rarity: parseFloat(body.rarity as string) || 0.5,
+    ...pools,
     accessible: body.accessible === "on",
   };
   await repository.tiles.create(tile);
@@ -1338,14 +1466,19 @@ app.post("/commands/tiles", async (c) => {
 app.post("/commands/tiles/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.parseBody();
+  let pools;
+  try {
+    pools = parseTilePools(body);
+  } catch (e) {
+    return c.text((e as Error).message, 400);
+  }
   const updates = {
     name: body.name as string,
     color: body.color as string,
     backgroundColor: body.backgroundColor as string,
     theme: body.theme as string,
     texture: body.texture as string,
-    resources: parseStringArray(body, "resources"),
-    rarity: parseFloat(body.rarity as string) || 0.5,
+    ...pools,
     accessible: body.accessible === "on",
   };
   await repository.tiles.update(id, updates);
@@ -1360,6 +1493,79 @@ app.post("/commands/tiles/:id/delete", async (c) => {
   return c.redirect("/tiles");
 });
 
+// Create new effect
+app.post("/commands/effects", async (c) => {
+  const body = await c.req.parseBody({ all: true });
+  const effect = parseEffectForm(body);
+  await repository.effects.create(effect);
+  PubSub.publish(EFFECTS_UPDATED, { id: effect.id });
+  return c.redirect("/effects");
+});
+
+// Update existing effect
+app.post("/commands/effects/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.parseBody({ all: true });
+  await repository.effects.update(id, parseEffectForm({ ...body, id }));
+  PubSub.publish(EFFECTS_UPDATED, { id });
+  return c.redirect("/effects");
+});
+
+app.post("/commands/effects/:id/delete", async (c) => {
+  const id = c.req.param("id");
+  await repository.effects.delete(id);
+  PubSub.publish(EFFECTS_UPDATED, { id });
+  return c.redirect("/effects");
+});
+
+/** Optional NPC fields; blank ones are cleared rather than saved empty. */
+const parseNpcPlacement = (body: Record<string, unknown>) => {
+  const text = (name: string) =>
+    typeof body[name] === "string" && (body[name] as string).trim()
+      ? (body[name] as string).trim()
+      : undefined;
+  return { home: text("home"), idleLine: text("idleLine"), faction: text("faction") };
+};
+
+// Map
+app.get("/map", async (c) => {
+  const counts = await repository.getCounts();
+  return c.html(<Layout title="Map" sseEndpoint="/sse/map" counts={counts} />);
+});
+
+app.get("/sse/map", async (c) => {
+  const stream = getStream(c);
+  const render = async () => {
+    const [map, tiles, effects] = await Promise.all([
+      repository.map.get(),
+      repository.tiles.getAll(),
+      repository.effects.getAll(),
+    ]);
+    await stream.writeSSE(fragmentEvent(MapEditor({ map, tiles, effects })));
+  };
+  await render();
+
+  PubSub.subscribe(MAP_UPDATED, render);
+  stream.onAbort(() => PubSub.off(MAP_UPDATED, render));
+  return returnStream(c, stream);
+});
+
+// Live preview of the unsaved form
+app.post("/map/preview", async (c) => {
+  const body = await c.req.parseBody();
+  const tiles = await repository.tiles.getAll();
+  return streamSSE(c, async (stream) => {
+    await stream.writeSSE(fragmentEvent(MapPreview({ map: parseMapForm(body), tiles })));
+  });
+});
+
+app.post("/commands/map", async (c) => {
+  const body = await c.req.parseBody();
+  await repository.map.save(parseMapForm(body));
+  PubSub.publish(MAP_UPDATED, {});
+  return c.redirect("/map");
+});
+
 // Create new NPC
 app.post("/commands/npcs", async (c) => {
   const body = await c.req.parseBody();
@@ -1371,6 +1577,7 @@ app.post("/commands/npcs", async (c) => {
     hopes: body.hopes as string,
     fears: body.fears as string,
     relationships: parseRelationships(body),
+    ...parseNpcPlacement(body),
   };
   await repository.npcs.create(npc);
   PubSub.publish(NPCS_UPDATED, { id: npc.entity_id });
@@ -1388,6 +1595,7 @@ app.post("/commands/npcs/:id", async (c) => {
     hopes: body.hopes as string,
     fears: body.fears as string,
     relationships: parseRelationships(body),
+    ...parseNpcPlacement(body),
   };
   await repository.npcs.update(id, updates);
   PubSub.publish(NPCS_UPDATED, { id });
@@ -1404,39 +1612,12 @@ app.post("/commands/npcs/:id/delete", async (c) => {
 // Create new quest
 app.post("/commands/quests", async (c) => {
   const body = await c.req.parseBody();
-  const isTileQuest = body.quest_mode === "tile";
-
-  const baseQuest = {
-    id: body.id as string,
-    name: body.name as string,
-    description: body.description as string,
-    type: body.type as QuestType,
-    giver: isTileQuest
-      ? {
-          entity_id: body.giver_entity_id as string,
-          zone_id: (body.giver_zone_id as string) || "",
-          x: parseInt(body.giver_x as string) || 0,
-          y: parseInt(body.giver_y as string) || 0,
-        }
-      : {
-          entity_id: body.giver_entity_id as string,
-          zone_id: (body.giver_zone_id as string) || "",
-        },
-    objectives: parseObjectives(body, isTileQuest),
-    completion: parseCompletion(body, isTileQuest),
-    rewards: parseRewards(body),
-    is_tutorial: body.is_tutorial === "on",
-    prerequisites: parseStringArray(body, "prerequisites"),
-  };
-
-  const quest = isTileQuest
-    ? {
-        ...baseQuest,
-        starts_at: parseInt(body.starts_at as string) || 0,
-        ends_at: parseInt(body.ends_at as string) || 0,
-      }
-    : baseQuest;
-
+  let quest;
+  try {
+    quest = parseQuestForm(body, (body.id as string) || "");
+  } catch (e) {
+    return c.text((e as Error).message, 400);
+  }
   await repository.quests.create(quest);
   PubSub.publish(QUESTS_UPDATED, { id: quest.id });
   return c.redirect("/quests");
@@ -1446,39 +1627,13 @@ app.post("/commands/quests", async (c) => {
 app.post("/commands/quests/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.parseBody();
-  const isTileQuest = body.quest_mode === "tile";
-
-  const baseUpdates = {
-    name: body.name as string,
-    description: body.description as string,
-    type: body.type as QuestType,
-    giver: isTileQuest
-      ? {
-          entity_id: body.giver_entity_id as string,
-          zone_id: (body.giver_zone_id as string) || "",
-          x: parseInt(body.giver_x as string) || 0,
-          y: parseInt(body.giver_y as string) || 0,
-        }
-      : {
-          entity_id: body.giver_entity_id as string,
-          zone_id: (body.giver_zone_id as string) || "",
-        },
-    objectives: parseObjectives(body, isTileQuest),
-    completion: parseCompletion(body, isTileQuest),
-    rewards: parseRewards(body),
-    is_tutorial: body.is_tutorial === "on",
-    prerequisites: parseStringArray(body, "prerequisites"),
-  };
-
-  const updates = isTileQuest
-    ? {
-        ...baseUpdates,
-        starts_at: parseInt(body.starts_at as string) || 0,
-        ends_at: parseInt(body.ends_at as string) || 0,
-      }
-    : baseUpdates;
-
-  await repository.quests.update(id, updates);
+  let quest;
+  try {
+    quest = parseQuestForm(body, id);
+  } catch (e) {
+    return c.text((e as Error).message, 400);
+  }
+  await repository.quests.update(id, quest);
   PubSub.publish(QUESTS_UPDATED, { id });
   return c.redirect("/quests");
 });
@@ -1642,6 +1797,7 @@ app.post("/commands/world/regions", async (c) => {
     id: body.id as string,
     name: body.name as string,
     description: body.description as string,
+    lore: (body.lore as string) ?? "",
     climate: body.climate as string,
     themes: (body.themes as string)
       .split(",")
@@ -1671,6 +1827,7 @@ app.post("/commands/world/regions/:id", async (c) => {
       id,
       name: body.name as string,
       description: body.description as string,
+      lore: (body.lore as string) ?? "",
       climate: body.climate as string,
       themes: (body.themes as string)
         .split(",")

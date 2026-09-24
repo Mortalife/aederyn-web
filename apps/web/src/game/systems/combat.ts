@@ -9,18 +9,18 @@ import {
 import { itemsById } from "../../config/items.js";
 import { monstersById } from "../../config/monsters.js";
 import { writer } from "../../db/writer.js";
+import { MITIGATION_K } from "../../lib/mitigation.js";
 import { getTileSelection, isOutOfBounds } from "../../world/index.js";
 import { COMBAT_LOG_MS, type Combat } from "../../world/monsters.js";
 import { userChanged, zoneChanged } from "../changes.js";
 import { emit } from "../events.js";
 import { currentDurability, wearItem } from "./actions.js";
-import { resetHealthRegen } from "./health.js";
+import { blockedMessage, blockingEffect } from "../../world/effects.js";
+import { effectsOn } from "./effects.js";
 import { markMonsterKilled } from "./monsters.js";
 import { removeUserFromZone } from "./presence.js";
 import { addSystemMessage } from "./system-messages.js";
 import { addToInventory, loadUser, saveInventory, saveUser } from "./users.js";
-
-const K = 100;
 
 const selectUserCombat = writer.prepare<[string], Combat>(
   "SELECT * FROM combat WHERE user_id = ?"
@@ -30,8 +30,8 @@ const selectMonsterCombat = writer.prepare<[number, number, number], Combat>(
 );
 const selectMonsterState = writer.prepare<
   [number, number, number],
-  { hp: number; respawn_at: number | null }
->("SELECT hp, respawn_at FROM monster_state WHERE x = ? AND y = ? AND spawn = ?");
+  { hp: number; respawn_at: number | null; monster_id: string }
+>("SELECT hp, respawn_at, monster_id FROM monster_state WHERE x = ? AND y = ? AND spawn = ?");
 const countActions = writer.prepare<[string], { count: number }>(
   "SELECT count(*) AS count FROM inprogress WHERE user_id = ?"
 );
@@ -83,7 +83,7 @@ const selectDueCombat = writer.prepare<[number, number], Combat>(
 export const combatForUser = (userId: string) => selectUserCombat.get(userId);
 
 export const damageAfterDefence = (damage: number, defence: number) =>
-  Math.max(1, Math.floor((damage * K) / (Math.max(0, defence) + K)));
+  Math.max(1, Math.floor((damage * MITIGATION_K) / (Math.max(0, defence) + MITIGATION_K)));
 
 const userDefence = (user: GameUserModel, style: AttackStyle) =>
   Object.values(user.e).reduce(
@@ -125,12 +125,19 @@ export const startCombat = (
   if (!monster) return false;
 
   let state = selectMonsterState.get(user.p.x, user.p.y, spawn);
-  if (state?.respawn_at != null && state.respawn_at <= now) {
+  if (
+    state &&
+    (state.monster_id !== monster.id ||
+      (state.respawn_at != null && state.respawn_at <= now))
+  ) {
     clearMonsterState.run(user.p.x, user.p.y, spawn);
     zoneChanged(user.p.x, user.p.y);
     state = undefined;
   }
-  const reason = combatForUser(user.id)
+  const blocker = blockingEffect(effectsOn(user, now), "attack");
+  const reason = blocker
+    ? blockedMessage(blocker, "attack")
+    : combatForUser(user.id)
     ? "You're already fighting."
     : countActions.get(user.id)!.count > 0
     ? "Finish gathering before fighting."
@@ -161,7 +168,6 @@ export const startCombat = (
     now,
     now + monster.attack.speed
   );
-  resetHealthRegen(user.id);
   zoneChanged(user.p.x, user.p.y);
   userChanged(user.id);
   addSystemMessage(
@@ -214,7 +220,13 @@ const killMonster = (combat: Combat, monster: Monster, now: number) => {
     }
   }
 
-  emit({ type: "monster_killed", userId: combat.user_id, monsterId: monster.id });
+  emit({
+    type: "monster_killed",
+    userId: combat.user_id,
+    monsterId: monster.id,
+    x: combat.x,
+    y: combat.y,
+  });
   addSystemMessage(
     combat.user_id,
     `You defeated ${monster.name}.${drops.length ? ` Acquired: ${drops.join(", ")}.` : ""}`,

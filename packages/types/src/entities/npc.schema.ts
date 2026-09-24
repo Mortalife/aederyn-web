@@ -8,6 +8,9 @@ export const NPCSchema = z.object({
   hopes: z.string().describe("What they hope for"),
   fears: z.string().describe("What they fear"),
   relationships: z.record(z.string(), z.array(z.string())).describe("Relationship categories (friends, rivals, family) mapped to descriptions"),
+  home: z.string().optional().describe("Landmark ID in map.json where the NPC lives"),
+  idleLine: z.string().optional().describe("What they say to a visitor when they have no quest to give"),
+  faction: z.string().optional().describe("World bible faction ID"),
 });
 
 export const CreateNPCDTOSchema = NPCSchema.partial({ entity_id: true });

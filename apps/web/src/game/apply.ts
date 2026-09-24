@@ -1,7 +1,14 @@
 import { resourcesById } from "../config/resources.js";
 import { getTileSelection, isOutOfBounds } from "../world/index.js";
 import type { Command } from "./commands.js";
+import {
+  blockedMessage,
+  blockingEffect,
+  gatherDurationMultiplier,
+} from "../world/effects.js";
 import { markActionComplete, markActionInProgress } from "./systems/actions.js";
+import { effectsOn } from "./systems/effects.js";
+import { useItem } from "./systems/use.js";
 import { combatForUser, startCombat, stopCombat } from "./systems/combat.js";
 import { saveMessage } from "./systems/chat.js";
 import {
@@ -10,7 +17,7 @@ import {
   markUserOnline,
   removeUserFromZone,
 } from "./systems/presence.js";
-import { questManager } from "./systems/quest-rotation.js";
+import { rotateContracts } from "./systems/contract-rotation.js";
 import {
   cancelQuest,
   completeQuest,
@@ -41,8 +48,9 @@ export const apply = (command: Command, now: number): unknown => {
   switch (command.type) {
     case "login":
       return loginUser(command.userId)?.id ?? null;
-    case "rotate_quests":
-      return questManager.rotateActiveQuests(now, { force: command.force });
+    case "rotate_contracts":
+      rotateContracts(now, { force: command.force });
+      return;
   }
 
   const user = loadUser(command.userId);
@@ -131,7 +139,20 @@ export const apply = (command: Command, now: number): unknown => {
         return;
       }
 
-      if (!markActionInProgress(user.id, user.p.x, user.p.y, resource, now)) {
+      const effects = effectsOn(user, now);
+      const blocker = blockingEffect(effects, "gather");
+      if (blocker) {
+        addSystemMessage(user.id, blockedMessage(blocker, "gather"), "warning", now, {
+          action_type: "resource",
+          action_id: resource.id,
+          location_x: user.p.x,
+          location_y: user.p.y,
+        });
+        return;
+      }
+
+      const speed = gatherDurationMultiplier(effects);
+      if (!markActionInProgress(user.id, user.p.x, user.p.y, resource, now, speed)) {
         addSystemMessage(user.id, "You can't do that yet.", "warning", now, {
           action_type: "resource",
           action_id: resource.id,
@@ -165,6 +186,10 @@ export const apply = (command: Command, now: number): unknown => {
 
     case "inventory_drop":
       removeFromInventoryById(user.id, command.inventoryId, now);
+      return;
+
+    case "use":
+      useItem(user.id, command.inventoryId, now);
       return;
 
     case "equip":
@@ -238,8 +263,21 @@ export const apply = (command: Command, now: number): unknown => {
       } as const;
 
       switch (status?.status) {
-        case "completable":
+        case "completable": {
+          const here = questQueries
+            .getZoneQuestsForUser(user.id, user.p.x, user.p.y, now)
+            .completableQuests.some((q) => q.id === command.questId);
+          if (!here) {
+            return addSystemMessage(
+              user.id,
+              "This isn't where you hand that in.",
+              "error",
+              now,
+              context
+            );
+          }
           return completeQuest(user.id, command.questId, now);
+        }
         case undefined:
           return addSystemMessage(user.id, "No such quest", "error", now, context);
         case "in_progress":

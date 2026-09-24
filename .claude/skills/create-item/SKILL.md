@@ -35,7 +35,9 @@ Read the `game-data` skill first for file locations, lookups, editing rules and 
 | `durability` | Tools that wear out: `{ "current": N, "max": N }`. Resources reduce it via `required_items[].itemDurabilityReduction` |
 | `weapon` | Weapons only, and required for them: `type: "weapon"`, `equipSlot: "mainHand"`, plus `{ "style", "damage", "speed" }`. `style` is `melee`, `ranged` or `magic`. `damage` is a whole number per hit, 10–40: fast weapons low, slow ones high. `speed` is milliseconds between attacks, 1000–3000. Give weapons `durability`: each attack uses 1. See `docs/COMBAT.md` |
 | `defence` | Armour and shields: `{ "melee", "ranged", "magic" }`, 0–60 per piece. A full set tops out around 200. Only on equippable items. Give each weight of armour a different profile (heavy is strong against melee and weak against magic) |
-| `attributes`, `requirements`, `effects` | Only when they mean something for this item. The game doesn't read `attributes.damage` or `attributes.armor`. Use `weapon` and `defence` instead |
+| `effects` | The on-use list: `[{ "id", "strength", "duration" }]` referencing `data/effects.json` (`create-effect`). The item gets a Use button; using it consumes one from the stack. `duration` is seconds; `0` applies a `health` effect instantly (a heal of `strength` HP). Using the item again restarts its timers rather than stacking. Usually `type: "consumable"`, stackable |
+| `wornEffects` | `[{ "id", "strength" }]`, active while equipped. Only on equippable items. This is how gear protects against tile hazards: a mask with `effect_spore_ward`, a torch with `effect_light`. Pick the slot so protections compete sensibly (a light in `offHand` competes with shields) |
+| `attributes`, `requirements` | Only when they mean something for this item. The game doesn't read `attributes`. Use `weapon`, `defence` and `wornEffects` instead |
 
 Example material and tool from the current data:
 

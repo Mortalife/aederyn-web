@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AttackSchema, DefenceSchema } from "./combat.schema.js";
+import { EffectStrengthSchema } from "./effect.schema.js";
 
 export const ItemTypeSchema = z.enum(["resource", "tool", "weapon", "armor", "consumable", "quest", "item"]);
 export const ItemRaritySchema = z.enum(["common", "uncommon", "rare", "epic", "legendary"]);
@@ -27,10 +28,8 @@ export const ItemRequirementsSchema = z.object({
   intelligence: z.number().optional().describe("Required intelligence stat"),
 });
 
-export const ItemEffectSchema = z.object({
-  type: z.string().describe("Effect type identifier"),
-  value: z.number().describe("Effect magnitude"),
-  duration: z.number().describe("Effect duration in seconds"),
+export const ItemEffectSchema = EffectStrengthSchema.extend({
+  duration: z.number().min(0).describe("Seconds the effect lasts; 0 applies a health effect instantly"),
 });
 
 export const ItemSchema = z.object({
@@ -46,7 +45,8 @@ export const ItemSchema = z.object({
   durability: ItemDurabilitySchema.optional().describe("Durability if item can break"),
   attributes: ItemAttributesSchema.optional().describe("Stat bonuses when equipped"),
   requirements: ItemRequirementsSchema.optional().describe("Requirements to use/equip"),
-  effects: z.array(ItemEffectSchema).optional().describe("Special effects when used"),
+  effects: z.array(ItemEffectSchema).optional().describe("Effects applied when the item is used, which consumes one"),
+  wornEffects: z.array(EffectStrengthSchema).optional().describe("Effects active while the item is equipped"),
   weapon: AttackSchema.optional().describe("Attack stats, for weapons"),
   defence: DefenceSchema.optional().describe("Defence against each attack style when equipped"),
   value: z.number().min(0).describe("Gold value based on rarity"),

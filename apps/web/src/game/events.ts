@@ -13,9 +13,27 @@ export type GameEvent =
       /** Everything the user owns: the inventory and what's equipped. */
       inventory: UserInventoryItem[];
     }
-  | { type: "resource_completed"; userId: string; resourceId: string }
-  | { type: "monster_killed"; userId: string; monsterId: string }
-  | { type: "player_died"; userId: string; monsterId: string };
+  | {
+      type: "resource_completed";
+      userId: string;
+      resourceId: string;
+      x: number;
+      y: number;
+    }
+  | {
+      type: "monster_killed";
+      userId: string;
+      monsterId: string;
+      x: number;
+      y: number;
+    }
+  | {
+      type: "player_died";
+      userId: string;
+      /** What did it: a monster in a fight, or an effect such as spores. */
+      monsterId?: string;
+      effectId?: string;
+    };
 
 const pending: GameEvent[] = [];
 

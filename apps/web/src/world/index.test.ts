@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MAP_HEIGHT, MAP_WIDTH } from "../config.js";
+import "../test/config/index.js";
+import { MAP_BOUNDS } from "../config.js";
 import { buildTile, generateMap, getTileSelection, visibleArea } from "./index.js";
 
 const tileWithResources = () => {
-  for (let x = 0; x < MAP_WIDTH; x++) {
-    for (let y = 0; y < MAP_HEIGHT; y++) {
+  for (let x = MAP_BOUNDS.minX; x <= MAP_BOUNDS.maxX; x++) {
+    for (let y = MAP_BOUNDS.minY; y <= MAP_BOUNDS.maxY; y++) {
       if (buildTile(x, y).resources.length > 0) {
         return { x, y };
       }

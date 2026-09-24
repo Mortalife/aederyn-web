@@ -1,4 +1,4 @@
-import { USER_VERSION, type GameUserModel } from "../config.js";
+import { BASE_USER, USER_VERSION, type GameUserModel } from "../config.js";
 
 export type Migration = {
   version: number;
@@ -22,6 +22,15 @@ const migrations: Migration[] = [
       ...user,
       v: 2,
       e: {},
+    }),
+  },
+  {
+    // The world reboot: old saves hold items and positions from the old world.
+    version: 3,
+    up: (user) => ({
+      ...structuredClone(BASE_USER),
+      id: user.id,
+      v: 3,
     }),
   },
 ];

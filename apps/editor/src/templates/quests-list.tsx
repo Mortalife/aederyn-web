@@ -26,7 +26,7 @@ export const QuestsList: FC<QuestsListProps> = ({ quests }) => {
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Name</th>
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">ID</th>
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Type</th>
-              <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Giver</th>
+              <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Kind · giver</th>
               <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Objectives</th>
               <th class="px-4 py-3 text-right text-sm font-medium text-gray-300">Actions</th>
             </tr>
@@ -48,7 +48,9 @@ export const QuestsList: FC<QuestsListProps> = ({ quests }) => {
                       {quest.type}
                     </span>
                   </td>
-                  <td class="px-4 py-3 text-gray-300">{quest.giver.entity_id}</td>
+                  <td class="px-4 py-3 text-gray-300">
+                    {quest.kind === "contract" ? `Contract · ${quest.board}` : `Story · ${quest.giver.entity_id}`}
+                  </td>
                   <td class="px-4 py-3 text-gray-300">{quest.objectives.length}</td>
                   <td class="px-4 py-3 text-right">
                     <a

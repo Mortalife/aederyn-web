@@ -18,6 +18,7 @@ import {
   getMonsterStateInArea,
 } from "../../world/monsters.js";
 import { visibleArea } from "../../world/index.js";
+import { getTimedEffects } from "../../world/effects.js";
 import { chatVersion, onlineVersion, zoneVersion } from "../versions.js";
 
 /**
@@ -98,6 +99,7 @@ export const loadView = (userId: string, now: number) => {
     messages: getSystemMessages(user.id),
     totalPlayersOnline: loadOnlineCount(),
     inprogress: getInProgressAction(user.id),
+    timedEffects: getTimedEffects(user.id, now),
     activeQuests: questProgressManager.getActiveQuests(now),
     questState: questProgressManager.getUserQuestState(user.id),
   };

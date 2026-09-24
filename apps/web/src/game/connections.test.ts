@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SSEStreamingApi } from "hono/streaming";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import "../test/config/index.js";
 
 // The connections open at import time, so point them at a scratch database
 // before importing anything that touches them.
@@ -15,7 +16,7 @@ const { openConnection, closeConnection, connectionCount } = await import(
 );
 const { getUser } = await import("../user/user.js");
 const { getTileSelection } = await import("../world/index.js");
-const { MAP_HEIGHT, MAP_WIDTH } = await import("../config.js");
+const { MAP_BOUNDS } = await import("../config.js");
 const { resourcesById } = await import("../config/resources.js");
 const { writer } = await import("../db/writer.js");
 const { bumpUser, userVersion } = await import("./versions.js");
@@ -66,8 +67,8 @@ const patchedElements = (data: string) => {
 const patchedIds = (data: string) => [...patchedElements(data).keys()];
 
 const accessibleZone = () => {
-  for (let x = 0; x < MAP_WIDTH; x++) {
-    for (let y = 0; y < MAP_HEIGHT; y++) {
+  for (let x = MAP_BOUNDS.minX; x <= MAP_BOUNDS.maxX; x++) {
+    for (let y = MAP_BOUNDS.minY; y <= MAP_BOUNDS.maxY; y++) {
       if (getTileSelection(x, y).accessible) {
         return { x, y };
       }
@@ -78,8 +79,8 @@ const accessibleZone = () => {
 
 /** A tile with a limitless resource that needs no items. */
 const gatherableZone = () => {
-  for (let x = 0; x < MAP_WIDTH; x++) {
-    for (let y = 0; y < MAP_HEIGHT; y++) {
+  for (let x = MAP_BOUNDS.minX; x <= MAP_BOUNDS.maxX; x++) {
+    for (let y = MAP_BOUNDS.minY; y <= MAP_BOUNDS.maxY; y++) {
       const tile = getTileSelection(x, y);
       const resource = tile.resources
         .map((id) => resourcesById.get(id))
@@ -259,8 +260,8 @@ describe("connections", () => {
   it("keeps a resource's messages to the tile it was gathered on", async () => {
     // Two neighbouring tiles with the same limited resource.
     const { a, resource } = (() => {
-      for (let x = 0; x < MAP_WIDTH; x++) {
-        for (let y = 0; y < MAP_HEIGHT; y++) {
+      for (let x = MAP_BOUNDS.minX; x <= MAP_BOUNDS.maxX; x++) {
+        for (let y = MAP_BOUNDS.minY; y <= MAP_BOUNDS.maxY; y++) {
           const here = getTileSelection(x, y);
           const right = getTileSelection(x + 1, y);
           const resource = here.resources

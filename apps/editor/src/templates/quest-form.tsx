@@ -1,38 +1,58 @@
 import type { FC } from "hono/jsx";
-import type { QuestGroup, NPC } from "../repository/index.js";
-import type { Objective, RequirementReward } from "@aederyn/types";
+import type { Quest, NPC, MapData } from "../repository/index.js";
+import type { RequirementReward } from "@aederyn/types";
 
 interface QuestFormProps {
-  quest?: QuestGroup;
+  quest?: Quest;
   isNew?: boolean;
   npcs?: NPC[];
-  allQuests?: QuestGroup[];
+  allQuests?: Quest[];
+  map?: MapData;
 }
 
-export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], allQuests = [] }) => {
-  const defaultQuest: Partial<QuestGroup> = {
+const inputClass =
+  "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-rose-500";
+
+const OBJECTIVES_HELP = `Each objective: { "id", "type", "description", "progress": null, ... }
+gather  { "resource_id", "amount", "region"? }      region: only counts there
+collect { "item_id", "amount" }
+craft   { "resource_id", "amount" }
+kill    { "monster_id", "count", "region"? }
+talk    { "entity_id", "landmark"?, "dialog_steps": [{ "entity_id" | null, "dialog" }] }
+explore { "landmark" } or, contracts only, { "region", "tile"? }, plus "chance", "found_message"`;
+
+const LandmarkSelect: FC<{ name: string; value?: string; landmarks: MapData["landmarks"]; emptyLabel: string; disabled?: boolean }> = ({
+  name,
+  value,
+  landmarks,
+  emptyLabel,
+  disabled,
+}) => (
+  <select name={name} disabled={disabled} class={inputClass}>
+    <option value="">{emptyLabel}</option>
+    {landmarks.map((l) => (
+      <option value={l.id} selected={value === l.id}>
+        {l.id} ({l.x},{l.y})
+      </option>
+    ))}
+  </select>
+);
+
+export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], allQuests = [], map }) => {
+  const q: Partial<Quest> & { kind: Quest["kind"] } = quest ?? {
     id: "",
+    kind: "story",
     name: "",
     description: "",
     type: "collection",
-    giver: {
-      entity_id: "",
-      zone_id: "",
-    },
     objectives: [],
-    completion: {
-      entity_id: "",
-      zone_id: "",
-      message: "",
-      return_message: "",
-    },
     rewards: [],
-    is_tutorial: false,
-    prerequisites: [],
   };
-
-  const q = quest || defaultQuest;
-  const isTile = quest && "starts_at" in quest;
+  const story = q.kind === "story" ? (q as Extract<Quest, { kind: "story" }>) : null;
+  const contract = q.kind === "contract" ? (q as Extract<Quest, { kind: "contract" }>) : null;
+  const landmarks = map?.landmarks ?? [];
+  const npcLabel = (npc: NPC) => `${npc.name} (${npc.home ? `lives at ${npc.home}` : "no home"})`;
+  const questTypes = ["collection", "messenger", "investigation", "crafting", "exploration", "defence", "combat", "delivery", "dialog"];
 
   return (
     <div id="main-content">
@@ -69,75 +89,57 @@ export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], 
                 name="id"
                 value={q.id}
                 required
-                pattern="^quest_[a-z0-9_]+$"
-                placeholder="quest_example_01"
+                pattern="^[a-z0-9_]+$"
+                placeholder="quest_example"
                 disabled={!isNew}
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-rose-500 disabled:opacity-50"
+                class={`${inputClass} disabled:opacity-50`}
               />
-              <p class="text-xs text-gray-500 mt-1">Format: quest_[name]_[number]</p>
+              <p class="text-xs text-gray-500 mt-1">Format: quest_[name]</p>
             </div>
 
             <div class="col-span-2 md:col-span-1">
               <label class="block text-sm font-medium text-gray-300 mb-2">
                 Name <span class="text-red-400">*</span>
               </label>
-              <input
-                type="text"
-                name="name"
-                value={q.name}
-                required
-                placeholder="The Great Adventure"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-rose-500"
-              />
+              <input type="text" name="name" value={q.name} required placeholder="The Great Adventure" class={inputClass} />
             </div>
 
             <div class="col-span-2">
               <label class="block text-sm font-medium text-gray-300 mb-2">
                 Description <span class="text-red-400">*</span>
               </label>
-              <textarea
-                name="description"
-                required
-                rows={3}
-                placeholder="A brief description of the quest..."
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-rose-500"
-              >
+              <textarea name="description" required rows={3} placeholder="A brief description of the quest..." class={inputClass}>
                 {q.description}
               </textarea>
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">
-                Type <span class="text-red-400">*</span>
+                Kind <span class="text-red-400">*</span>
               </label>
               <select
-                name="type"
-                required
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
+                name="kind"
+                data-testid="quest-kind"
+                class={inputClass}
+                onchange="window.updateQuestKind(this.value)"
               >
-                <option value="collection" selected={q.type === "collection"}>Collection</option>
-                <option value="crafting" selected={q.type === "crafting"}>Crafting</option>
-                <option value="exploration" selected={q.type === "exploration"}>Exploration</option>
-                <option value="combat" selected={q.type === "combat"}>Combat</option>
-                <option value="delivery" selected={q.type === "delivery"}>Delivery</option>
-                <option value="dialog" selected={q.type === "dialog"}>Dialog</option>
+                <option value="story" selected={q.kind === "story"}>Story (one-time, from an NPC)</option>
+                <option value="contract" selected={q.kind === "contract"}>Contract (repeatable, from a board)</option>
               </select>
+              <p class="text-xs text-gray-500 mt-1">
+                Story quests are always available once their prerequisites are done. Contracts rotate on the board every two hours.
+              </p>
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">
-                Quest Mode
+                Type <span class="text-red-400">*</span>
               </label>
-              <select
-                name="quest_mode"
-                id="quest-mode-select"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
-                onchange="document.querySelectorAll('.tile-quest-fields').forEach(el => el.style.display = this.value === 'tile' ? 'block' : 'none')"
-              >
-                <option value="base" selected={!isTile}>Quest (Randomized at runtime)</option>
-                <option value="tile" selected={isTile}>TileQuest (Fixed map positions)</option>
+              <select name="type" required class={inputClass}>
+                {questTypes.map((type) => (
+                  <option value={type} selected={q.type === type}>{type}</option>
+                ))}
               </select>
-              <p class="text-xs text-gray-500 mt-1">Base quests have positions assigned at runtime. TileQuests have fixed x,y coordinates.</p>
             </div>
 
             <div class="flex items-center gap-4">
@@ -154,98 +156,73 @@ export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], 
           </div>
         </div>
 
-        {/* Quest Giver Section */}
-        <div class="mb-8">
+        {/* Story: giver and turn-in */}
+        <div class="mb-8" data-quest-kind="story" style={{ display: story ? "" : "none" }}>
           <h2 class="text-lg font-semibold text-rose-400 mb-4 border-b border-gray-700 pb-2">
-            Quest Giver
+            Quest Giver and Turn-in
           </h2>
+          <p class="text-xs text-gray-500 mb-4">
+            NPCs are met at their home landmark. Pick a landmark only to meet them somewhere else for this quest.
+          </p>
           <div class="grid grid-cols-2 gap-6">
-            <div class="col-span-2 md:col-span-1">
+            <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">
-                NPC <span class="text-red-400">*</span>
+                Giver <span class="text-red-400">*</span>
               </label>
-              <select
-                name="giver_entity_id"
-                required
-                data-testid="quest-giver"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
-              >
+              <select name="giver_entity_id" data-testid="quest-giver" disabled={!story} class={inputClass}>
                 <option value="">Select NPC...</option>
                 {npcs.map((npc) => (
-                  <option
-                    key={npc.entity_id}
-                    value={npc.entity_id}
-                    selected={q.giver?.entity_id === npc.entity_id}
-                  >
-                    {npc.name} ({npc.entity_id})
+                  <option value={npc.entity_id} selected={story?.giver.entity_id === npc.entity_id}>
+                    {npcLabel(npc)}
                   </option>
                 ))}
               </select>
             </div>
-
-            <div class="col-span-2 md:col-span-1">
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                Zone ID
-              </label>
-              <input
-                type="text"
-                name="giver_zone_id"
-                value={q.giver?.zone_id || ""}
-                placeholder="zone_village"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-rose-500"
-              />
-            </div>
-
-            <div class="tile-quest-fields" style={{ display: isTile ? "block" : "none" }}>
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                X Position
-              </label>
-              <input
-                type="number"
-                name="giver_x"
-                value={(q.giver as any)?.x || 0}
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
-              />
-            </div>
-
-            <div class="tile-quest-fields" style={{ display: isTile ? "block" : "none" }}>
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                Y Position
-              </label>
-              <input
-                type="number"
-                name="giver_y"
-                value={(q.giver as any)?.y || 0}
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
-              />
-            </div>
-          </div>
-
-          {/* TileQuest timing fields */}
-          <div class="tile-quest-fields grid grid-cols-2 gap-6 mt-4" style={{ display: isTile ? "block" : "none" }}>
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                Starts At (timestamp)
-              </label>
-              <input
-                type="number"
-                name="starts_at"
-                value={(q as any).starts_at || 0}
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
-              />
+              <label class="block text-sm font-medium text-gray-300 mb-2">Met at</label>
+              <LandmarkSelect name="giver_landmark" value={story?.giver.landmark} landmarks={landmarks} emptyLabel="Their home" disabled={!story} />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                Ends At (timestamp)
-              </label>
-              <input
-                type="number"
-                name="ends_at"
-                value={(q as any).ends_at || 0}
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-rose-500"
-              />
+              <label class="block text-sm font-medium text-gray-300 mb-2">Turn-in NPC</label>
+              <select name="completion_entity_id" disabled={!story} class={inputClass}>
+                <option value="">Same as giver</option>
+                {npcs.map((npc) => (
+                  <option value={npc.entity_id} selected={story?.completion.entity_id === npc.entity_id}>
+                    {npcLabel(npc)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Met at</label>
+              <LandmarkSelect name="completion_landmark" value={story?.completion.landmark} landmarks={landmarks} emptyLabel="Their home" disabled={!story} />
+            </div>
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-gray-300 mb-2">Return message (if the player talks again)</label>
+              <textarea name="completion_return_message" rows={2} disabled={!story} class={inputClass}>{story?.completion.return_message ?? ""}</textarea>
             </div>
           </div>
+        </div>
+
+        {/* Contract: board */}
+        <div class="mb-8" data-quest-kind="contract" style={{ display: contract ? "" : "none" }}>
+          <h2 class="text-lg font-semibold text-rose-400 mb-4 border-b border-gray-700 pb-2">
+            Contract Board
+          </h2>
+          <label class="block text-sm font-medium text-gray-300 mb-2">
+            Board <span class="text-red-400">*</span>
+          </label>
+          <LandmarkSelect name="board" value={contract?.board} landmarks={landmarks} emptyLabel="Select landmark..." disabled={!contract} />
+          <p class="text-xs text-gray-500 mt-1">
+            Taken and handed in at this landmark. Objectives can be scoped to a map region; explore with a region picks a new cell each rotation.
+          </p>
+        </div>
+
+        <div class="mb-8">
+          <label class="block text-sm font-medium text-gray-300 mb-2">Completion message</label>
+          <textarea name="completion_message" rows={3} placeholder="What the player is told when they hand it in..." class={inputClass}>
+            {q.completion?.message ?? ""}
+          </textarea>
         </div>
 
         {/* Objectives Section */}
@@ -253,110 +230,16 @@ export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], 
           <h2 class="text-lg font-semibold text-rose-400 mb-4 border-b border-gray-700 pb-2">
             Objectives
           </h2>
-          <div data-testid="objectives-builder" class="space-y-4">
-            <div id="objectives-list" class="space-y-4">
-              {(q.objectives || []).map((obj: Objective, index: number) => (
-                <div key={index} class="bg-gray-700 rounded-lg p-4 border border-gray-600" data-objective-index={index}>
-                  <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                      <select
-                        name={`objectives[${index}].type`}
-                        class="bg-gray-600 rounded px-3 py-1 text-white"
-                        onchange={`window.updateObjectiveFields(${index}, this.value)`}
-                      >
-                        <option value="gather" selected={obj.type === "gather"}>Gather Resource</option>
-                        <option value="collect" selected={obj.type === "collect"}>Collect Item</option>
-                        <option value="talk" selected={obj.type === "talk"}>Talk to NPC</option>
-                        <option value="explore" selected={obj.type === "explore"}>Explore Location</option>
-                        <option value="craft" selected={obj.type === "craft"}>Craft at Station</option>
-                      </select>
-                    </div>
-                    <button type="button" onclick="this.closest('[data-objective-index]').remove()" class="text-red-400 hover:text-red-300">Remove</button>
-                  </div>
-                  <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label class="text-xs text-gray-400">Objective ID</label>
-                      <input type="text" name={`objectives[${index}].id`} value={obj.id} placeholder="obj_01" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                    </div>
-                    <div>
-                      <label class="text-xs text-gray-400">Description</label>
-                      <input type="text" name={`objectives[${index}].description`} value={obj.description} placeholder="Auto-generated if empty" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                    </div>
-                  </div>
-                  {obj.type === "gather" && (
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <label class="text-xs text-gray-400">Resource ID</label>
-                        <input type="text" name={`objectives[${index}].resource_id`} value={(obj as any).resource_id} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                      <div>
-                        <label class="text-xs text-gray-400">Amount</label>
-                        <input type="number" name={`objectives[${index}].amount`} value={(obj as any).amount} min={1} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                    </div>
-                  )}
-                  {obj.type === "collect" && (
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <label class="text-xs text-gray-400">Item ID</label>
-                        <input type="text" name={`objectives[${index}].item_id`} value={(obj as any).item_id} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                      <div>
-                        <label class="text-xs text-gray-400">Amount</label>
-                        <input type="number" name={`objectives[${index}].amount`} value={(obj as any).amount} min={1} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                    </div>
-                  )}
-                  {obj.type === "talk" && (
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <label class="text-xs text-gray-400">NPC Entity ID</label>
-                        <input type="text" name={`objectives[${index}].entity_id`} value={(obj as any).entity_id} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                      <div>
-                        <label class="text-xs text-gray-400">Zone ID</label>
-                        <input type="text" name={`objectives[${index}].zone_id`} value={(obj as any).zone_id} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                    </div>
-                  )}
-                  {obj.type === "explore" && (
-                    <div class="grid grid-cols-3 gap-4">
-                      <div>
-                        <label class="text-xs text-gray-400">Zone ID</label>
-                        <input type="text" name={`objectives[${index}].zone_id`} value={(obj as any).zone_id} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                      <div>
-                        <label class="text-xs text-gray-400">Chance (%)</label>
-                        <input type="number" name={`objectives[${index}].chance`} value={(obj as any).chance} min={1} max={100} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                      <div class="col-span-3">
-                        <label class="text-xs text-gray-400">Found Message</label>
-                        <input type="text" name={`objectives[${index}].found_message`} value={(obj as any).found_message || ""} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                    </div>
-                  )}
-                  {obj.type === "craft" && (
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <label class="text-xs text-gray-400">Station Resource ID</label>
-                        <input type="text" name={`objectives[${index}].resource_id`} value={(obj as any).resource_id} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                      <div>
-                        <label class="text-xs text-gray-400">Amount</label>
-                        <input type="number" name={`objectives[${index}].amount`} value={(obj as any).amount} min={1} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              class="w-full py-3 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:border-rose-500 hover:text-rose-400 transition"
-              onclick="window.addObjective()"
+          <div data-testid="objectives-builder">
+            <textarea
+              name="objectives"
+              rows={16}
+              spellcheck={false}
+              class={`${inputClass} font-mono text-xs`}
             >
-              + Add Objective
-            </button>
+              {JSON.stringify(q.objectives ?? [], null, 2)}
+            </textarea>
+            <pre class="text-xs text-gray-500 mt-2 whitespace-pre-wrap">{OBJECTIVES_HELP}</pre>
           </div>
         </div>
 
@@ -420,48 +303,6 @@ export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], 
           </div>
         </div>
 
-        {/* Completion Section */}
-        <div class="mb-8">
-          <h2 class="text-lg font-semibold text-rose-400 mb-4 border-b border-gray-700 pb-2">
-            Completion Dialog
-          </h2>
-          <div class="bg-gray-700 rounded p-4 space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="text-xs text-gray-400">Turn-in NPC</label>
-                <select name="completion_entity_id" class="w-full px-3 py-2 bg-gray-600 rounded text-white">
-                  <option value="">Same as Quest Giver</option>
-                  {npcs.map(n => (
-                    <option value={n.entity_id} selected={q.completion?.entity_id === n.entity_id}>{n.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label class="text-xs text-gray-400">Zone ID</label>
-                <input type="text" name="completion_zone_id" value={q.completion?.zone_id || ""} placeholder="zone_village" class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-              </div>
-            </div>
-            <div class="tile-quest-fields grid grid-cols-2 gap-4" style={{ display: isTile ? "grid" : "none" }}>
-              <div>
-                <label class="text-xs text-gray-400">X Position</label>
-                <input type="number" name="completion_x" value={(q.completion as any)?.x || 0} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-              </div>
-              <div>
-                <label class="text-xs text-gray-400">Y Position</label>
-                <input type="number" name="completion_y" value={(q.completion as any)?.y || 0} class="w-full px-3 py-2 bg-gray-600 rounded text-white" />
-              </div>
-            </div>
-            <div>
-              <label class="text-xs text-gray-400">Completion Message</label>
-              <textarea name="completion_message" rows={3} placeholder="What the NPC says when you complete the quest..." class="w-full px-3 py-2 bg-gray-600 rounded text-white">{q.completion?.message || ""}</textarea>
-            </div>
-            <div>
-              <label class="text-xs text-gray-400">Return Message (if player talks again)</label>
-              <textarea name="completion_return_message" rows={2} placeholder="What the NPC says if you talk to them after completing..." class="w-full px-3 py-2 bg-gray-600 rounded text-white">{q.completion?.return_message || ""}</textarea>
-            </div>
-          </div>
-        </div>
-
         {/* Prerequisites Section */}
         <div class="mb-8">
           <h2 class="text-lg font-semibold text-rose-400 mb-4 border-b border-gray-700 pb-2">
@@ -498,6 +339,39 @@ export const QuestForm: FC<QuestFormProps> = ({ quest, isNew = true, npcs = [], 
             {(q.prerequisites || []).length === 0 && (
               <p class="text-xs text-gray-500">No prerequisites - quest is immediately available.</p>
             )}
+          </div>
+        </div>
+
+        {/* Story: mutually exclusive quests */}
+        <div class="mb-8" data-quest-kind="story" style={{ display: story ? "" : "none" }}>
+          <h2 class="text-lg font-semibold text-rose-400 mb-4 border-b border-gray-700 pb-2">
+            Excludes
+          </h2>
+          <div class="bg-gray-700 rounded p-4 space-y-3">
+            <div id="excludes-list" class="flex flex-wrap gap-2">
+              {(story?.excludes || []).map((questId: string, index: number) => (
+                <span key={questId} class="inline-flex items-center gap-1 px-3 py-1 bg-rose-500/20 text-rose-400 rounded-full text-sm">
+                  <input type="hidden" name={`excludes[${index}]`} value={questId} disabled={!story} />
+                  {allQuests.find((quest) => quest.id === questId)?.name || questId}
+                  <button type="button" onclick="this.parentElement.remove()" class="ml-1 hover:text-rose-300">✕</button>
+                </span>
+              ))}
+            </div>
+            <select
+              class="w-full px-3 py-2 bg-gray-600 rounded text-white"
+              disabled={!story}
+              onchange="window.addPrerequisite(this, 'excludes')"
+            >
+              <option value="">+ Add excluded story quest...</option>
+              {allQuests
+                .filter((quest) => quest.kind === "story" && quest.id !== q.id && !(story?.excludes || []).includes(quest.id))
+                .map((quest) => (
+                  <option value={quest.id}>{quest.name} ({quest.id})</option>
+                ))}
+            </select>
+            <p class="text-xs text-gray-500">
+              A choice between story quests: this one isn't offered while the player has any of these taken or completed. List it on each of them too; abandoning frees the choice, completing makes it final.
+            </p>
           </div>
         </div>
 

@@ -1,27 +1,18 @@
 import type { FC } from "hono/jsx";
-import type { Item } from "../repository/index.js";
-import type { ItemAttributes, ItemRequirements, ItemEffect } from "@aederyn/types";
+import type { Effect, Item } from "../repository/index.js";
+import { EffectList } from "../components/EffectList.js";
+import type { ItemAttributes, ItemRequirements } from "@aederyn/types";
 import type { UsedByReference } from "../services/references.js";
 import { UsedBySection } from "./components/used-by-section.js";
-
-const EFFECT_TYPES = [
-  { value: "heal", label: "Heal HP" },
-  { value: "restore_mana", label: "Restore Mana" },
-  { value: "buff_strength", label: "Buff Strength" },
-  { value: "buff_dexterity", label: "Buff Dexterity" },
-  { value: "buff_intelligence", label: "Buff Intelligence" },
-  { value: "damage_over_time", label: "Damage Over Time" },
-  { value: "poison", label: "Poison" },
-  { value: "speed_boost", label: "Speed Boost" },
-];
 
 interface ItemFormProps {
   item?: Item;
   isNew?: boolean;
   usedBy?: UsedByReference[];
+  effects?: Effect[];
 }
 
-export const ItemForm: FC<ItemFormProps> = ({ item, isNew = true, usedBy = [] }) => {
+export const ItemForm: FC<ItemFormProps> = ({ item, isNew = true, usedBy = [], effects = [] }) => {
   const defaultItem: Partial<Item> = {
     id: "",
     name: "",
@@ -391,54 +382,22 @@ export const ItemForm: FC<ItemFormProps> = ({ item, isNew = true, usedBy = [] })
             </div>
           )}
 
-          {/* Effects Section */}
-          <div class="col-span-2 bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-            <h3 class="text-sm font-medium text-cyan-400 mb-3">Effects</h3>
-            <div id="effects-list" class="space-y-2 mb-3">
-              {(i.effects || []).map((effect, index) => (
-                <div class="flex items-center gap-2 bg-gray-600/50 p-2 rounded" data-effect-index={index}>
-                  <select
-                    name={`effects[${index}].type`}
-                    class="flex-1 px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-cyan-500"
-                  >
-                    {EFFECT_TYPES.map((t) => (
-                      <option value={t.value} selected={effect.type === t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    name={`effects[${index}].value`}
-                    value={effect.value}
-                    placeholder="Value"
-                    class="w-20 px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-cyan-500"
-                  />
-                  <input
-                    type="number"
-                    name={`effects[${index}].duration`}
-                    value={effect.duration}
-                    placeholder="Duration"
-                    class="w-24 px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-cyan-500"
-                  />
-                  <button
-                    type="button"
-                    class="px-2 py-1 text-red-400 hover:text-red-300"
-                    onclick="this.closest('[data-effect-index]').remove()"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              class="w-full py-2 border-2 border-dashed border-gray-500 rounded text-gray-400 hover:border-cyan-500 hover:text-cyan-400 transition text-sm"
-              onclick="window.addItemEffect()"
-            >
-              + Add Effect
-            </button>
-          </div>
+          <EffectList
+            name="effects"
+            label="On-use Effects"
+            hint="Using the item consumes one and applies these. Duration is in seconds; 0 applies a health effect instantly. Using it again refreshes the timer."
+            effects={effects}
+            value={i.effects || []}
+            withDuration
+          />
+
+          <EffectList
+            name="wornEffects"
+            label="Worn Effects"
+            hint="Active while the item is equipped."
+            effects={effects}
+            value={i.wornEffects || []}
+          />
         </div>
 
         <div class="mt-6 flex gap-4">

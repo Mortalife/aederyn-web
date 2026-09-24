@@ -1,20 +1,25 @@
+import { poolIds, poolThings, questNpcReferences } from "@aederyn/types";
 import { repository } from "../repository/index.js";
 
 export interface UsedByReference {
   entityId: string;
   entityName: string;
-  entityType: "item" | "resource" | "tile" | "npc" | "quest" | "house-tile";
+  entityType: "item" | "resource" | "tile" | "effect" | "npc" | "quest" | "house-tile" | "map";
   context: string;
 }
 
 export async function findUsedBy(targetId: string): Promise<UsedByReference[]> {
   const references: UsedByReference[] = [];
 
-  const [resources, tiles, quests, houseTiles] = await Promise.all([
+  const [items, resources, tiles, effects, npcs, quests, houseTiles, map] = await Promise.all([
+    repository.items.getAll(),
     repository.resources.getAll(),
     repository.tiles.getAll(),
+    repository.effects.getAll(),
+    repository.npcs.getAll(),
     repository.quests.getAll(),
     repository.houseTiles.getAll(),
+    repository.map.get(),
   ]);
 
   // Check resources for item references
@@ -44,30 +49,125 @@ export async function findUsedBy(targetId: string): Promise<UsedByReference[]> {
     }
   }
 
-  // Check tiles for resource references
+  // Tile pools, which can hold resources, monsters and effects
   for (const tile of tiles) {
-    for (const resourceId of tile.resources || []) {
-      if (resourceId === targetId) {
+    if (poolIds(tile.resources).includes(targetId)) {
+      references.push({
+        entityId: tile.id,
+        entityName: tile.name,
+        entityType: "tile",
+        context: "Resource pool",
+      });
+    }
+    if (poolIds(tile.monsters).includes(targetId)) {
+      references.push({
+        entityId: tile.id,
+        entityName: tile.name,
+        entityType: "tile",
+        context: "Monster pool",
+      });
+    }
+    for (const effect of poolThings(tile.effects)) {
+      if (effect.id === targetId) {
         references.push({
           entityId: tile.id,
           entityName: tile.name,
           entityType: "tile",
-          context: "Contains resource",
+          context: `Effect pool (strength ${effect.strength})`,
         });
       }
     }
   }
 
+  // The map: region fills and effects, landmarks' tiles, and NPC homes
+  for (const region of map.regions) {
+    for (const tile of region.tiles) {
+      if (tile.id === targetId) {
+        references.push({
+          entityId: region.id,
+          entityName: `Region ${region.id}`,
+          entityType: "map",
+          context: `Fills the region (weight ${tile.weight})`,
+        });
+      }
+    }
+    for (const effect of region.effects) {
+      if (effect.id === targetId) {
+        references.push({
+          entityId: region.id,
+          entityName: `Region ${region.id}`,
+          entityType: "map",
+          context: `Region effect (strength ${effect.strength})`,
+        });
+      }
+    }
+  }
+  for (const landmark of map.landmarks) {
+    if (landmark.tile === targetId) {
+      references.push({
+        entityId: landmark.id,
+        entityName: `Landmark ${landmark.id}`,
+        entityType: "map",
+        context: `Pinned at ${landmark.x},${landmark.y}${landmark.spawn ? " (spawn)" : ""}`,
+      });
+    }
+  }
+  for (const npc of npcs) {
+    if (npc.home && npc.home === targetId) {
+      references.push({
+        entityId: npc.entity_id,
+        entityName: npc.name,
+        entityType: "npc",
+        context: "Lives here",
+      });
+    }
+  }
+
+  for (const item of items) {
+    for (const effect of item.effects || []) {
+      if (effect.id === targetId) {
+        references.push({
+          entityId: item.id,
+          entityName: item.name,
+          entityType: "item",
+          context: `On use (strength ${effect.strength}, ${effect.duration}s)`,
+        });
+      }
+    }
+    for (const effect of item.wornEffects || []) {
+      if (effect.id === targetId) {
+        references.push({
+          entityId: item.id,
+          entityName: item.name,
+          entityType: "item",
+          context: `Worn (strength ${effect.strength})`,
+        });
+      }
+    }
+  }
+  for (const effect of effects) {
+    if (effect.kind === "protects" && effect.target === targetId) {
+      references.push({
+        entityId: effect.id,
+        entityName: effect.name,
+        entityType: "effect",
+        context: "Protects against",
+      });
+    }
+  }
+
   // Check quests for various references
   for (const quest of quests) {
-    // Quest giver (NPC)
-    if (quest.giver?.entity_id === targetId) {
-      references.push({
-        entityId: quest.id,
-        entityName: quest.name,
-        entityType: "quest",
-        context: "Quest giver",
-      });
+    // NPCs: giver, talk objectives, turn-in
+    for (const { ref, location } of questNpcReferences(quest)) {
+      if (ref.entity_id === targetId) {
+        references.push({
+          entityId: quest.id,
+          entityName: quest.name,
+          entityType: "quest",
+          context: location === "giver" ? "Quest giver" : location === "completion" ? "Turn-in NPC" : "Talk objective",
+        });
+      }
     }
 
     // Quest rewards
@@ -85,6 +185,14 @@ export async function findUsedBy(targetId: string): Promise<UsedByReference[]> {
 
     // Quest objectives
     for (const objective of quest.objectives || []) {
+      if (objective.type === "explore" && objective.tile === targetId) {
+        references.push({
+          entityId: quest.id,
+          entityName: quest.name,
+          entityType: "quest",
+          context: `Explores a ${objective.region} cell showing it`,
+        });
+      }
       const objData = objective as { item_id?: string };
       if (objData.item_id === targetId) {
         references.push({
@@ -104,6 +212,17 @@ export async function findUsedBy(targetId: string): Promise<UsedByReference[]> {
           entityName: quest.name,
           entityType: "quest",
           context: "Prerequisite",
+        });
+      }
+    }
+
+    for (const excluded of quest.kind === "story" ? quest.excludes || [] : []) {
+      if (excluded === targetId) {
+        references.push({
+          entityId: quest.id,
+          entityName: quest.name,
+          entityType: "quest",
+          context: "Excludes",
         });
       }
     }
@@ -144,10 +263,12 @@ export async function findUsedBy(targetId: string): Promise<UsedByReference[]> {
 }
 
 export function getEntityEditUrl(ref: UsedByReference): string {
-  const typeToPath: Record<UsedByReference["entityType"], string> = {
+  if (ref.entityType === "map") return "/map";
+  const typeToPath: Record<Exclude<UsedByReference["entityType"], "map">, string> = {
     item: "items",
     resource: "resources",
     tile: "tiles",
+    effect: "effects",
     npc: "npcs",
     quest: "quests",
     "house-tile": "house-tiles",
@@ -160,9 +281,11 @@ export function getEntityTypeColor(type: UsedByReference["entityType"]): string 
     item: "text-amber-400",
     resource: "text-emerald-400",
     tile: "text-blue-400",
+    effect: "text-yellow-400",
     npc: "text-purple-400",
     quest: "text-rose-400",
     "house-tile": "text-cyan-400",
+    map: "text-lime-400",
   };
   return colors[type];
 }

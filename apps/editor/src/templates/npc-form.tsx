@@ -1,5 +1,6 @@
 import type { FC } from "hono/jsx";
 import type { NPC } from "../repository/index.js";
+import type { Landmark, WorldFaction } from "@aederyn/types";
 
 function getRelationshipColor(type: string): string {
   const colors: Record<string, string> = {
@@ -31,9 +32,11 @@ interface NPCFormProps {
   npc?: NPC;
   isNew?: boolean;
   allNpcs?: NPC[];
+  landmarks?: Landmark[];
+  factions?: WorldFaction[];
 }
 
-export const NPCForm: FC<NPCFormProps> = ({ npc, isNew = true, allNpcs = [] }) => {
+export const NPCForm: FC<NPCFormProps> = ({ npc, isNew = true, allNpcs = [], landmarks = [], factions = [] }) => {
   const defaultNPC: Partial<NPC> = {
     entity_id: "",
     name: "",
@@ -153,6 +156,66 @@ export const NPCForm: FC<NPCFormProps> = ({ npc, isNew = true, allNpcs = [] }) =
             >
               {n.fears}
             </textarea>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+              Home
+            </label>
+            <select
+              name="home"
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-purple-500"
+            >
+              <option value="">No home</option>
+              {n.home && !landmarks.some((l) => l.id === n.home) && (
+                <option value={n.home} selected>
+                  {n.home} (missing)
+                </option>
+              )}
+              {landmarks.map((l) => (
+                <option value={l.id} selected={l.id === n.home}>
+                  {l.id} ({l.tile} at {l.x},{l.y})
+                </option>
+              ))}
+            </select>
+            <p class="text-xs text-gray-500 mt-1">
+              A landmark on the <a href="/map" class="text-blue-400 hover:underline">Map</a>; players find them there.
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+              Faction
+            </label>
+            <select
+              name="faction"
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-purple-500"
+            >
+              <option value="">None</option>
+              {n.faction && !factions.some((f) => f.id === n.faction) && (
+                <option value={n.faction} selected>
+                  {n.faction} (missing)
+                </option>
+              )}
+              {factions.map((f) => (
+                <option value={f.id} selected={f.id === n.faction}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div class="col-span-2">
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+              Idle Line
+            </label>
+            <input
+              type="text"
+              name="idleLine"
+              value={n.idleLine ?? ""}
+              placeholder="What they say to a visitor when they have no quest for them"
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+            />
           </div>
 
           {/* Relationships Section */}

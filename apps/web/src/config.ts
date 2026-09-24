@@ -1,5 +1,6 @@
-import { EquipSlotSchema } from "@aederyn/types";
+import { EquipSlotSchema, spawnLandmark } from "@aederyn/types";
 import type { Attack, GameUserModel } from "./config/types.js";
+import { worldMap } from "./config/map.js";
 import type { Point } from "./world/index.js";
 
 export { resources } from "./config/resources.js";
@@ -7,21 +8,26 @@ export { tileTypes } from "./config/tiles.js";
 export { items } from "./config/items.js";
 export { npcs } from "./config/npcs.js";
 export { monsters } from "./config/monsters.js";
+export { effects } from "./config/effects.js";
+export { worldMap } from "./config/map.js";
 export * from "./config/types.js";
 
-export const MAP_WIDTH = 20;
-export const MAP_HEIGHT = 20;
+/** Inclusive on every side. */
+export const MAP_BOUNDS = worldMap.bounds;
 export const VISIBILITY = 5;
 export const REFRESH_RATE = 500;
 export const MAX_INVENTORY_SIZE = 20;
-export const START_POSITION: Point = {
-  x: Math.ceil(MAP_WIDTH / 2),
-  y: Math.ceil(MAP_HEIGHT / 2),
-};
+const spawn = spawnLandmark(worldMap);
+if (!spawn) {
+  throw new Error("The map has no spawn landmark");
+}
+
+/** The spawn landmark: where players start and return to on death. */
+export const START_POSITION: Point = { x: spawn.x, y: spawn.y };
 
 export const EQUIP_SLOTS = EquipSlotSchema.options;
 
-export const USER_VERSION = 2;
+export const USER_VERSION = 3;
 
 /** How a player fights without a working weapon in their main hand. */
 export const UNARMED: Attack = { style: "melee", damage: 1, speed: 2000 };

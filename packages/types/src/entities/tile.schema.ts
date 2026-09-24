@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  EffectPoolEntrySchema,
+  MonsterPoolEntrySchema,
+  ResourcePoolEntrySchema,
+} from "./pool.schema.js";
 
 export const TileSchema = z.object({
   id: z.string().describe("Unique tile identifier"),
@@ -7,9 +12,9 @@ export const TileSchema = z.object({
   backgroundColor: z.string().describe("Background color (hex or CSS color)"),
   theme: z.string().describe("Theme category for the tile"),
   texture: z.string().optional().describe("Texture asset path"),
-  resources: z.array(z.string()).describe("Resource IDs available on this tile"),
-  monsters: z.array(z.string()).optional().describe("Monster IDs that live on this tile, one spawn per entry at each map position; list an ID twice for two"),
-  rarity: z.number().describe("Rarity weight for generation"),
+  resources: z.array(ResourcePoolEntrySchema).describe("Resource pool, rolled per map cell"),
+  monsters: z.array(MonsterPoolEntrySchema).optional().describe("Monster pool, rolled per map cell; `count` spawns several"),
+  effects: z.array(EffectPoolEntrySchema).optional().describe("Effect pool, rolled per map cell; active on anyone standing there"),
   accessible: z.boolean().describe("Whether player can walk on this tile"),
   image: z.string().optional().describe("Image asset path"),
   description: z.string().optional().describe("Tile description text"),

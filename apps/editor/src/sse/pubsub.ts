@@ -32,9 +32,11 @@ export const EDITOR_EVENT = Symbol("editor");
 export const ITEMS_UPDATED = Symbol("items_updated");
 export const RESOURCES_UPDATED = Symbol("resources_updated");
 export const TILES_UPDATED = Symbol("tiles_updated");
+export const EFFECTS_UPDATED = Symbol("effects_updated");
 export const NPCS_UPDATED = Symbol("npcs_updated");
 export const QUESTS_UPDATED = Symbol("quests_updated");
 export const HOUSE_TILES_UPDATED = Symbol("house_tiles_updated");
+export const MAP_UPDATED = Symbol("map_updated");
 
 export type EditorEvent = {
   type: "view_changed" | "data_updated";
@@ -50,7 +52,9 @@ export const PubSub = new TypedEventEmitter<{
   [ITEMS_UPDATED]: [EntityUpdatedEvent];
   [RESOURCES_UPDATED]: [EntityUpdatedEvent];
   [TILES_UPDATED]: [EntityUpdatedEvent];
+  [EFFECTS_UPDATED]: [EntityUpdatedEvent];
   [NPCS_UPDATED]: [EntityUpdatedEvent];
   [QUESTS_UPDATED]: [EntityUpdatedEvent];
   [HOUSE_TILES_UPDATED]: [EntityUpdatedEvent];
+  [MAP_UPDATED]: [EntityUpdatedEvent];
 }>();

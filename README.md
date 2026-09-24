@@ -64,14 +64,15 @@ The game follows a basic CQRS pattern:
 
 ## 🎨 Game Content
 
-All game content (items, resources, tiles, NPCs, quests, house tiles and the world bible) lives as JSON in `apps/editor/data/`. That is the source of truth. The game reads generated TypeScript in `apps/web/src/config/`, which the editor's **Export** page writes.
+All game content (items, resources, tiles, monsters, effects, NPCs, quests, house tiles, the map and the world bible) lives as JSON in `apps/editor/data/`. That is the source of truth. The game reads generated TypeScript in `apps/web/src/config/`, which the editor's **Export** page writes.
 
 ### Editor
 
 | Section | Description |
 |---------|-------------|
 | **Dashboard** | Entity counts and data health |
-| **Items / Resources / Tiles / NPCs / Quests / House Tiles** | Create, edit and delete entities |
+| **Items / Resources / Tiles / Effects / NPCs / Quests / House Tiles** | Create, edit and delete entities |
+| **Map** | Bounds, regions (anchors, weighted tiles, effects) and landmarks, with a live preview |
 | **World Bible** | Lore: setting, themes, systems, factions, regions, history, naming conventions |
 | **Graph** | Interactive map of how entities reference each other |
 | **Validate** | Schema, reference and balance checks, with impact analysis |
@@ -83,7 +84,8 @@ Run Claude Code at the repo root and ask for content, for example *"create a sid
 
 - `game-data`: shared rules (file layout, how entities reference each other, ID conventions, finding existing entities to reuse, lore)
 - `world-bible`: builds or extends the lore (setting, themes, systems, factions, regions, history, naming)
-- `create-item`, `create-resource`, `create-tile`, `create-npc`, `create-house-tile`: one per entity type
+- `create-item`, `create-resource`, `create-tile`, `create-monster`, `create-effect`, `create-npc`, `create-house-tile`: one per entity type
+- `edit-map`: the world map's bounds, regions and landmarks
 - `create-quest`: plans a quest from the lore and creates everything it needs
 
 The agent edits `apps/editor/data/*.json` directly and must pass the validator before finishing. Review the result as a git diff and in the editor, then export.

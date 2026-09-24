@@ -2,15 +2,19 @@ import {
   type AttackStyle,
   type Defence,
   type Monster,
+  type NPC,
 } from "../../config.js";
 import { monstersById } from "../../config/monsters.js";
+import { npcs as allNpcs } from "../../config/npcs.js";
 import type { SystemMessage } from "../../user/system.js";
 import {
+  selectBoardContracts,
   selectMapIndicators,
   selectZoneNPCInteractions,
   selectZoneQuests,
   type ZoneQuests,
 } from "../../user/quest-progress-manager.js";
+import { boardLandmarks, type PlacedQuest } from "../../world/quests.js";
 import {
   generateMap,
   type Point,
@@ -22,6 +26,7 @@ import {
   type CombatHit,
   type MonsterState,
 } from "../../world/monsters.js";
+import { collectEffects, resolveEffects } from "../../world/effects.js";
 import type { ViewInput } from "./load.js";
 
 /** How long an action's message flashes next to it. */
@@ -56,18 +61,45 @@ export const selectGame = (
     ? selectZoneMonsters(here, input.monsterState, input.combat, input.combatHits)
     : [];
 
+  const landmark = user.z ? here?.tile?.landmark ?? null : null;
+  const npcs = npcsAtHome(landmark).map((npc) => ({
+    npc,
+    offers: quests.availableQuests.filter(
+      (q) => q.kind === "story" && q.giver.entity_id === npc.entity_id
+    ),
+  }));
+  const board =
+    landmark && boardLandmarks.has(landmark)
+      ? selectBoardContracts(activeQuests, questState, user.p.x, user.p.y)
+      : null;
+
   const contextFlashes = selectContextFlashes(input.messages, user.p, now);
   const recent = input.messages[0];
   const alert = recent && recent.sent_at > now - ALERT_MS ? recent : null;
+
+  const effects = resolveEffects(
+    collectEffects(
+      user.p,
+      Object.values(user.e).map((owned) => owned.item.id),
+      input.timedEffects,
+      now
+    )
+  );
 
   return {
     map,
     mapIndicators: selectMapIndicators(activeQuests, questState, map),
     user,
+    /** Everything acting on the player, with protection applied. */
+    effects,
     messages: input.messages,
     inprogress: input.inprogress ?? undefined,
     zoneUsers: input.zoneUsers,
     monsters,
+    /** NPCs who live here, with the story quests they offer the player. */
+    npcs,
+    /** The contracts posted here, if this is a contract board. */
+    board,
     players: input.zoneUsers.filter((player) => player.id !== user.id),
     chatMessages: input.chatMessages,
     quests,
@@ -100,6 +132,17 @@ export const selectGame = (
 };
 
 export type GameView = ReturnType<typeof selectGame>;
+
+export type Resident = { npc: NPC; offers: PlacedQuest[] };
+
+const npcsByHome = Map.groupBy(
+  allNpcs.filter((npc) => npc.home),
+  (npc) => npc.home!
+);
+
+/** The NPCs whose home is a landmark. */
+export const npcsAtHome = (landmark: string | null): NPC[] =>
+  (landmark && npcsByHome.get(landmark)) || [];
 
 /**
  * Recent messages tied to an action, for flashing next to it. Keys are
@@ -170,7 +213,7 @@ const selectResourceObjectives = (quests: ZoneQuests, map: WorldTile[]) => {
 };
 
 export type ZoneMonster = {
-  /** Its index in the tile's `monsters`, which identifies it on the tile. */
+  /** Its index in the cell's rolled `monsters`, which identifies it on the cell. */
   spawn: number;
   monster: Monster;
   hp: number;
@@ -206,8 +249,12 @@ const selectZoneMonsters = (
       return [];
     }
 
-    const here = (row: { x: number; y: number; spawn: number }) =>
-      row.x === tile.x && row.y === tile.y && row.spawn === spawn;
+    // Rows left from a different spawn (the map changed) don't apply.
+    const here = (row: { x: number; y: number; spawn: number; monster_id: string }) =>
+      row.x === tile.x &&
+      row.y === tile.y &&
+      row.spawn === spawn &&
+      row.monster_id === id;
     const row = state.find(here);
 
     return [
