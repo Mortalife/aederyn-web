@@ -1,5 +1,6 @@
 import { html, raw } from "hono/html";
 import { GameContainer } from "./game.js";
+import { GLYPH_SPRITE } from "./icons.js";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { isProduction } from "../lib/runtime.js";
@@ -64,7 +65,8 @@ const Layout = async (props: SiteData) => {
         />`
     )}
   </head>
-  <body class="p-4">
+  <body>
+    ${GLYPH_SPRITE}
     ${props.children}
   </body>
   </html>

@@ -4,6 +4,7 @@ import { healthRates, type ResolvedEffect } from "../../world/effects.js";
 import { emit } from "../events.js";
 import { markActionComplete } from "./actions.js";
 import { stopCombat } from "./combat.js";
+import { discoverTile } from "./discoveries.js";
 import { effectsOn } from "./effects.js";
 import { removeUserFromZone } from "./presence.js";
 import { addSystemMessage } from "./system-messages.js";
@@ -79,6 +80,7 @@ const collapse = (user: GameUserModel, cause: string, effectId: string, now: num
     "error",
     now
   );
+  discoverTile(user.id, user.p.x, user.p.y, now);
 };
 
 /** Add (or take) health now, up to the maximum. Running out sends the player to camp. */

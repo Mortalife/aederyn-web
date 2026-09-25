@@ -11,6 +11,7 @@ import {
 } from "../../user/quest-progress-manager.js";
 import { userChanged } from "../changes.js";
 import type { GameEvent } from "../events.js";
+import { discoverNpc, discoverQuestTiles } from "./discoveries.js";
 import { addSystemMessage } from "./system-messages.js";
 import { addGold, addToInventory } from "./users.js";
 
@@ -100,6 +101,7 @@ export const startQuest = (userId: string, quest: PlacedQuest, now: number) => {
     insertObjective.run(userId, quest.id, objective.id, required, now);
   }
 
+  discoverQuestTiles(userId, quest, now);
   userChanged(userId);
 };
 
@@ -141,6 +143,9 @@ export const completeQuest = (userId: string, questId: string, now: number) => {
     now,
     { action_type: "quest", action_id: questId }
   );
+  if (quest.kind === "story") {
+    discoverNpc(userId, quest.completion.entity_id, now);
+  }
 };
 
 /** Abandons a quest in hand; a completed one stays completed. */

@@ -28,6 +28,7 @@ Read the `game-data` skill first for file locations, lookups, editing rules and 
 | `description` | 1–3 sentences; hint at its use or lore |
 | `type` | `resource` (raw/crafting material), `tool` (used via a resource's `required_items`), `weapon`, `armor`, `consumable`, `quest` (quest-only object), `item` (other) |
 | `rarity` | `common` → `legendary` |
+| `icon` | Always set one. It's a symbol id in the web app's icon sprite (a game-icons.net name such as `wood-axe`): list them with `sed -n '/ICON_IDS/,/as const/p' apps/web/src/assets/icons.ts`, see which items use one with `jq -r '.[] \| "\(.icon)\t\(.id)"' apps/editor/data/items.json \| sort`, or browse the picker in the editor's item form. Reuse the icon of a similar item (cured leathers share `animal-hide`, raw hides show the animal's head, picks share `war-pick`/`mining`). If nothing fits, find one on https://game-icons.net, add `"<name>": "<author>"` to `ICONS` in `apps/web/scripts/build-icons.ts` (the author is the folder in the icon's URL, `game-icons.net/1x1/<author>/<name>.html`), and run `pnpm --filter web icons` to regenerate `apps/web/src/assets/icons.ts`. Commit both |
 | `value` | Match existing data: common 1–40 (typically ~5), uncommon 10–100 (~25), rare 50–200 (~150), epic ~1200–1500. Legendary has no precedent, so keep it above epic |
 | `weight` | Materials 0.1–1, tools 1–3, heavy gear more |
 | `stackable` / `maxStackSize` | Materials: `true` / `99`. Tools, gear and unique quest items: `false` / `1` |
@@ -42,8 +43,8 @@ Read the `game-data` skill first for file locations, lookups, editing rules and 
 Example material and tool from the current data:
 
 ```json
-{ "id": "item_grass_01", "name": "Wild Grass", "description": "A handful of common wild grass. Can be used in crafting or alchemy.", "type": "resource", "rarity": "common", "stackable": true, "maxStackSize": 99, "equippable": false, "value": 1, "weight": 0.1 }
-{ "id": "item_stone_axe_01", "name": "Stone Axe", "description": "A simple axe made from a stone head and a wooden handle.", "type": "item", "rarity": "common", "stackable": false, "maxStackSize": 1, "equippable": true, "equipSlot": "mainHand", "durability": { "current": 10, "max": 10 }, "value": 10, "weight": 2.5, "attributes": { "damage": 2 } }
+{ "id": "item_grass_01", "name": "Wild Grass", "description": "A handful of common wild grass. Can be used in crafting or alchemy.", "type": "resource", "rarity": "common", "icon": "high-grass", "stackable": true, "maxStackSize": 99, "equippable": false, "value": 1, "weight": 0.1 }
+{ "id": "item_stone_axe_01", "name": "Stone Axe", "description": "A simple axe made from a stone head and a wooden handle.", "type": "item", "rarity": "common", "icon": "stone-axe", "stackable": false, "maxStackSize": 1, "equippable": true, "equipSlot": "mainHand", "durability": { "current": 10, "max": 10 }, "value": 10, "weight": 2.5, "attributes": { "damage": 2 } }
 ```
 
 ## Editing an existing item

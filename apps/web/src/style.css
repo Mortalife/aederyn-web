@@ -4,8 +4,8 @@
 
 /*
  * The seconds counter on progress bars and respawn countdowns (`ProgressBar`
- * and `RespawnCountdown` in templates/elements.tsx), which animate
- * --progress-seconds.
+ * in templates/ui.tsx and `RespawnCountdown` in templates/combat.tsx), which
+ * animate --progress-seconds.
  */
 @property --progress-seconds {
   syntax: "<integer>";
@@ -19,4 +19,702 @@
 
 .progress-seconds::before {
   content: counter(progress-seconds);
+}
+
+/*
+ * The game screen's regions (`Game` in templates/game.tsx). One render for
+ * every screen size: phone, then tablet from 640px, then desktop from 1024px.
+ */
+.hud-shell {
+  display: grid;
+  height: 100dvh;
+  overflow: hidden;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "hud" "scene" "activity" "tabbar";
+}
+
+.hud-bar {
+  grid-area: hud;
+  position: relative;
+  z-index: 40;
+}
+
+.hud-scene {
+  grid-area: scene;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.hud-activity {
+  grid-area: activity;
+}
+
+/* A red glow around the screen when the player is hit (`Activity`). */
+.hurt-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  box-shadow: inset 0 0 6rem rgb(239 68 68 / 0.6);
+}
+
+/*
+ * The log (`LogPanel` in templates/log.tsx): every kind of line in one flex
+ * column, ordered by time with `order`, filtered by `data-filter`. The
+ * reversed scroller keeps it pinned to the newest line.
+ */
+.log-scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column-reverse;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.log-line {
+  overflow-wrap: anywhere;
+}
+
+.log-list[data-filter="game"] .log-line:not(.log-game),
+.log-list[data-filter="chat"] .log-line:not(.log-chat),
+.log-list[data-filter="combat"] .log-line:not(.log-combat) {
+  display: none;
+}
+
+.log-list:not(:has(.log-line))::before {
+  content: "Nothing yet.";
+  color: rgb(107 114 128);
+}
+
+.log-unread {
+  min-width: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 9999px;
+  background: rgb(37 99 235);
+  color: white;
+  font-size: 0.625rem;
+  line-height: 1rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-unread:empty {
+  display: none;
+}
+
+.hud-tabbar .log-unread {
+  position: absolute;
+  top: 0.25rem;
+  left: calc(50% + 0.5rem);
+}
+
+.hud-log {
+  grid-area: log;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  padding: 0.5rem;
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(0 0 0 / 0.4);
+}
+
+.hud-rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: rgb(0 0 0 / 0.4);
+}
+
+.hud-side {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.hud-tabbar {
+  grid-area: tabbar;
+  display: flex;
+  height: calc(3.5rem + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+  background: #0d0d0d;
+}
+
+/*
+ * Conversations (`Dialogue` in templates/quests.tsx) sit over the bottom of
+ * the scene, whatever it shows, and the scene makes room for them.
+ */
+.hud-dialogue {
+  grid-area: scene;
+  align-self: end;
+  justify-self: center;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(100%, 48rem);
+  padding: 0.5rem;
+  pointer-events: none;
+}
+
+.hud-dialogue > * {
+  pointer-events: auto;
+}
+
+.hud-dialogue:empty {
+  display: none;
+}
+
+.hud-shell:has(.hud-dialogue:not(:empty)) .hud-scene {
+  padding-bottom: 15rem;
+}
+
+/*
+ * Panels render full detail. Under
+ * compact density `.d-full` shows only in an open row; hidden density keeps
+ * just the title bar. Folded rows show when their section is open.
+ */
+[data-density="compact"] [data-row]:not([data-open]) .d-full,
+[data-density="hidden"] .panel-body,
+[data-fold]:not([data-open]) .fold-rest,
+[data-fold]:not([data-open]) .fold-less,
+[data-fold][data-open] .fold-more {
+  display: none;
+}
+
+.hud-activity:empty,
+#minimap:empty,
+#tracker:empty {
+  display: none;
+}
+
+.item-tip {
+  position: fixed;
+  z-index: 80;
+  top: 0;
+  left: 0;
+  width: min(20rem, calc(100vw - 1rem));
+  pointer-events: none;
+  visibility: hidden;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 0.5rem;
+  background: rgb(12 12 16 / 0.98);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.45);
+  padding: 0.75rem;
+  color: rgb(229 231 235);
+}
+
+.item-tip[data-open] {
+  visibility: visible;
+}
+
+@media (max-width: 639px) {
+  /*
+   * The log and the side panel are bottom sheets over the scene, leaving the
+   * HUD, the activity bar and the tab bar in view.
+   */
+  .hud-log,
+  .hud-rail {
+    display: none;
+    grid-area: scene;
+    align-self: end;
+    height: min(70dvh, 100%);
+    z-index: 30;
+    border-top: 1px solid rgb(255 255 255 / 0.2);
+    border-radius: 0.75rem 0.75rem 0 0;
+    background: #111;
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 0.6);
+  }
+
+  .hud-shell[data-sheet="log"] .hud-log,
+  .hud-shell[data-sheet="side"] .hud-rail {
+    display: flex;
+  }
+}
+
+@media (min-width: 640px) {
+  .hud-shell {
+    grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 35dvh) auto;
+    grid-template-areas: "hud" "scene" "activity" "rail" "log";
+  }
+
+  .hud-scene {
+    padding: 0.75rem;
+  }
+
+  .hud-rail {
+    flex-direction: row;
+    border-top: 1px solid rgb(255 255 255 / 0.1);
+  }
+
+  .hud-tabbar {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hud-shell {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "hud hud" "scene rail" "activity rail" "log rail";
+  }
+
+  .hud-rail {
+    flex-direction: column;
+    border-top: none;
+    border-left: 1px solid rgb(255 255 255 / 0.1);
+  }
+}
+
+/*
+ * The world map fills the scene: square, as large as fits, with the tile
+ * preview under it in a tall scene and beside it in a wide one.
+ */
+.world-map {
+  container-type: size;
+  height: 100%;
+  min-height: 24rem;
+}
+
+.world-map-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  height: 100%;
+}
+
+.world-map-grid {
+  flex: none;
+  width: min(100cqw, 100cqh - 10rem);
+  aspect-ratio: 1;
+}
+
+.world-map-preview {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@container (min-aspect-ratio: 5/4) {
+  .world-map-layout {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  .world-map-grid {
+    width: min(100cqh, 100cqw - 17rem);
+  }
+
+  .world-map-preview {
+    flex: none;
+    width: 16rem;
+  }
+}
+
+.map-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 0.375rem;
+  background: rgb(0 0 0 / 0.4);
+}
+
+.map-grid {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  grid-auto-flow: column;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+}
+
+.map-tile,
+.minimap-cell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 0.375rem;
+  background-size: cover;
+  background-position: center;
+}
+
+.map-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6%;
+  text-align: center;
+}
+
+/* Unexplored tiles show their terrain only, dimmed; heard-of ones less so. */
+.map-tile-unknown::before,
+.map-tile-heard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(10 10 10 / 0.65);
+  backdrop-filter: grayscale(0.8);
+}
+
+.map-tile-heard::before {
+  background: rgb(10 10 10 / 0.35);
+}
+
+/* Past the edge of the world: no tile, no frame, just the rail's dark. */
+.map-edge {
+  border-color: transparent;
+  background: none;
+}
+
+.map-edge::after {
+  content: "";
+  position: absolute;
+  inset: 25%;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.06) 1px, transparent 1.5px) 0 0 / 6px 6px;
+}
+
+button.map-tile:hover,
+button.minimap-cell:hover {
+  border-color: rgb(255 255 255 / 0.6);
+}
+
+.map-tile-here {
+  border-color: transparent;
+  box-shadow: inset 0 0 0 3px #facc15, 0 0 12px rgb(250 204 21 / 0.35);
+}
+
+.map-tile-selected {
+  outline: 2px solid white;
+  outline-offset: 1px;
+  z-index: 1;
+}
+
+.map-tile > * {
+  position: relative;
+}
+
+.map-tile > .discovery-glow {
+  position: absolute;
+}
+
+.map-tile-name {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: clamp(0.55rem, 2.5cqw, 0.9rem);
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.9);
+}
+
+.map-tile > .map-tile-markers {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  font-size: clamp(0.7rem, 3cqw, 1.15rem);
+}
+
+.map-tile > .map-tile-glyphs {
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  display: flex;
+  gap: 2px;
+  color: white;
+}
+
+.map-glyph {
+  display: inline-flex;
+  width: clamp(0.65rem, 2.6cqw, 1.05rem);
+  height: clamp(0.65rem, 2.6cqw, 1.05rem);
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.9));
+}
+
+.quest-marker {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 6px currentColor, 0 1px 2px rgb(0 0 0 / 0.9);
+  user-select: none;
+}
+
+.map-tile .text-quest-available,
+.map-tile .text-quest-completable {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* The minimap and quest tracker in the rail (`Minimap`, `Tracker`). */
+.hud-minimap {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.minimap-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  grid-auto-flow: column;
+  gap: 2px;
+  width: min(100%, 11rem);
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+
+.minimap-cell {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  border-radius: 0.25rem;
+  font-size: 0.65rem;
+}
+
+.minimap-cell .quest-marker {
+  position: relative;
+  margin: 1px;
+}
+
+.hud-tracker {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 40%;
+  overflow-y: auto;
+  padding: 0.25rem;
+  border-bottom: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.hud-tracker-line {
+  grid-area: track;
+  border-bottom: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(0 0 0 / 0.5);
+}
+
+#tracker-line:empty {
+  display: none;
+}
+
+.hud-log-peek {
+  grid-area: peek;
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .hud-shell {
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+    grid-template-areas: "hud" "track" "scene" "activity" "peek" "tabbar";
+  }
+
+  .hud-log-peek:not(:empty) {
+    display: block;
+    overflow: hidden;
+    padding: 0.25rem 0.75rem;
+    border-top: 1px solid rgb(255 255 255 / 0.1);
+    background: rgb(0 0 0 / 0.5);
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hud-shell[data-sheet="log"] .hud-log-peek {
+    display: none;
+  }
+
+  /* The map sheet: the minimap and the tracker, without the side panel. */
+  .hud-shell[data-sheet="map"] .hud-rail {
+    display: flex;
+    height: auto;
+    max-height: min(70dvh, 100%);
+  }
+
+  .hud-shell[data-sheet="map"] .hud-side,
+  .hud-shell[data-sheet="side"] #minimap,
+  .hud-shell[data-sheet="side"] #tracker {
+    display: none;
+  }
+
+  .hud-shell[data-sheet="map"] .hud-tracker {
+    flex: 1;
+    max-height: none;
+  }
+
+  .hud-shell[data-sheet="map"] .minimap-grid {
+    width: min(100%, 16rem);
+  }
+
+  .hud-minimap .btn {
+    min-height: 2.75rem;
+  }
+
+  /* On the world map the scene is the map. */
+  .hud-shell:has(#world-map) .tab-map {
+    display: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .hud-tracker-line {
+    display: none;
+  }
+}
+
+/* The rail under the scene: minimap over tracker, beside the side panel. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .hud-rail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "minimap side" "tracker side";
+  }
+
+  #minimap {
+    grid-area: minimap;
+  }
+
+  #tracker {
+    grid-area: tracker;
+  }
+
+  .minimap-grid {
+    width: min(100%, 8rem);
+  }
+
+  .hud-tracker {
+    max-height: none;
+    border-bottom: none;
+  }
+
+  .hud-side {
+    grid-area: side;
+    border-left: 1px solid rgb(255 255 255 / 0.1);
+  }
+}
+
+/* Health lost in a hit stays pale for a moment, then drains (`UserInfo`). */
+.hud-health-ghost {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgb(254 202 202 / 0.7);
+}
+
+/*
+ * The quest tracker's fold (`Tracker`): folded, it's the first quest's next
+ * step on one line. Phones have `TrackerLine` for that instead.
+ */
+.hud-tracker {
+  position: relative;
+}
+
+.tracker-toggle {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .tracker-toggle {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 0.25rem;
+    color: rgb(156 163 175);
+  }
+
+  .tracker-toggle:hover {
+    background: rgb(255 255 255 / 0.1);
+    color: white;
+  }
+
+  .tracker-toggle + .tracker-quest {
+    padding-right: 1.75rem;
+  }
+
+  .hud-tracker[data-collapsed] .tracker-toggle > span {
+    transform: rotate(180deg);
+  }
+
+  .hud-tracker[data-collapsed] .tracker-quest ~ .tracker-quest,
+  .hud-tracker[data-collapsed] .tracker-name,
+  .hud-tracker[data-collapsed] .tracker-where {
+    display: none;
+  }
+
+  .hud-tracker[data-collapsed] .tracker-step {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/*
+ * The log's height (`LogPanel`): --log-lines lines of text, set by the
+ * resize button or by dragging the grip along its top edge.
+ */
+.log-grip {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .hud-log {
+    position: relative;
+  }
+
+  .log-grip {
+    position: absolute;
+    top: -3px;
+    right: 0;
+    left: 0;
+    z-index: 1;
+    display: block;
+    height: 6px;
+    cursor: ns-resize;
+    touch-action: none;
+  }
+
+  .log-grip:hover {
+    background: rgb(255 255 255 / 0.15);
+  }
+
+  .log-scroll {
+    flex: none;
+    height: calc(var(--log-lines, 3) * 1.375rem);
+    max-height: 60dvh;
+  }
 }

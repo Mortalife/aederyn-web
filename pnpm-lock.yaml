@@ -99,6 +99,9 @@ importers:
       '@hono/vite-dev-server':
         specifier: ^0.23.0
         version: 0.23.0(hono@4.11.0)
+      '@iconify-json/game-icons':
+        specifier: ^1.2.4
+        version: 1.2.4
       '@types/better-sqlite3':
         specifier: ^9.6.0
         version: 9.6.0
@@ -488,6 +491,12 @@ packages:
         optional: true
       wrangler:
         optional: true
+
+  '@iconify-json/game-icons@1.2.4':
+    resolution: {integrity: sha512-/HDDZxowXgDJcOEwPspUCq5RuDdl25OyZKdtxqqiPJQNTrWIym7r4StLzIVs77DyNzOWWhH5wDqwYR3WHeDfkg==}
+
+  '@iconify/types@2.0.0':
+    resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
 
   '@img/sharp-darwin-arm64@0.33.5':
     resolution: {integrity: sha512-UT4p+iz/2H4twwAoLCqfA9UH5pI6DggwKEGuaPy7nCVQ8ZsiY5PIcrRvD1DzuY3qYL07NtIQcWnBSY/heikIFQ==}
@@ -1665,6 +1674,12 @@ snapshots:
       '@hono/node-server': 1.19.7(hono@4.11.0)
       hono: 4.11.0
       minimatch: 9.0.5
+
+  '@iconify-json/game-icons@1.2.4':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify/types@2.0.0': {}
 
   '@img/sharp-darwin-arm64@0.33.5':
     optionalDependencies:

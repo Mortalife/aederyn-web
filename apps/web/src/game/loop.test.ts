@@ -32,12 +32,18 @@ const { monstersById } = await import("../config/monsters.js");
 const { markMonsterKilled } = await import("./systems/monsters.js");
 const { COMBAT_LOG_MS } = await import("../world/monsters.js");
 const { loadView } = await import("./view/load.js");
-const { FLASH_MS, selectGame, weakestStyles } = await import("./view/select.js");
-const { UserInfo, ZoneMonsters } = await import("../templates/elements.js");
+const { FIGHT_LINGER_MS, FLASH_MS, selectGame, weakestStyles } = await import("./view/select.js");
+const { UserInfo } = await import("../templates/hud.js");
+const { ZoneMonsters } = await import("../templates/combat.js");
+const { Activity } = await import("../templates/activity.js");
+const { LogCombat } = await import("../templates/log.js");
 const { zoneVersion } = await import("./versions.js");
 const { itemsById } = await import("../config/items.js");
 const { damageAfterDefence } = await import("./systems/combat.js");
 const { START_POSITION, UNARMED } = await import("../config.js");
+const { getZoneUsers } = await import("../user/zone.js");
+const { getDiscoveries } = await import("../user/discoveries.js");
+const { isOutOfBounds } = await import("../world/index.js");
 
 let now = 1_000_000_000_000;
 
@@ -78,6 +84,26 @@ const placeOn = (find: (x: number, y: number) => Resource | undefined) => {
     }
   }
   throw new Error("No matching resource on the map");
+};
+
+const STEPS = {
+  up: { x: 0, y: -1 },
+  down: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
+} as const;
+
+/** A direction from `p` whose cell does, or doesn't, let the player in. */
+const stepFrom = (p: { x: number; y: number }, reachable: boolean) => {
+  for (const [direction, d] of Object.entries(STEPS)) {
+    const x = p.x + d.x;
+    const y = p.y + d.y;
+    const ok = !isOutOfBounds(x, y) && getTileSelection(x, y).accessible;
+    if (ok === reachable) {
+      return { direction: direction as keyof typeof STEPS, to: { x, y } };
+    }
+  }
+  return null;
 };
 
 /** A limitless resource that needs no items. */
@@ -298,6 +324,56 @@ describe("game loop", () => {
     expect(questProgressManager.getQuestStatus(userId, questId)?.status).toBe(
       "completed"
     );
+  });
+});
+
+describe("moving from a zone", () => {
+  /** A zone with a free resource and a neighbour the player can step onto. */
+  const placeWithExit = () =>
+    placeOn((x, y) => (stepFrom({ x, y }, true) ? freeResourceAt(x, y) : undefined));
+
+  it("leaves the zone and steps onto the next cell in one command", async () => {
+    placeWithExit();
+    await run({ type: "move", userId, direction: "enter" });
+    const from = getUser(userId)!.p;
+    expect(getZoneUsers(from.x, from.y).map((u) => u.id)).toContain(userId);
+    const { direction, to } = stepFrom(from, true)!;
+
+    await run({ type: "move", userId, direction });
+
+    const user = getUser(userId)!;
+    expect(user.z).toBe(false);
+    expect(user.p).toEqual(to);
+    expect(getZoneUsers(from.x, from.y).map((u) => u.id)).not.toContain(userId);
+    expect(getDiscoveries(userId).tiles).toContain(`${to.x},${to.y}`);
+  });
+
+  it("cancels an action in progress, as exit does", async () => {
+    const resource = placeWithExit();
+    const from = getUser(userId)!.p;
+    await run({ type: "gather_start", userId, resourceId: resource.id });
+    expect(getInProgressAction(userId)).not.toBeNull();
+
+    await run({ type: "move", userId, direction: stepFrom(from, true)!.direction });
+
+    expect(getInProgressAction(userId)).toBeNull();
+    expect(getUser(userId)!.z).toBe(false);
+  });
+
+  it("refuses a step onto a cell it can't reach, staying in the zone", async () => {
+    const resource = placeOn((x, y) =>
+      stepFrom({ x, y }, true) && stepFrom({ x, y }, false)
+        ? freeResourceAt(x, y)
+        : undefined
+    );
+    const from = getUser(userId)!.p;
+    await run({ type: "gather_start", userId, resourceId: resource.id });
+
+    await run({ type: "move", userId, direction: stepFrom(from, false)!.direction });
+
+    expect(getUser(userId)!).toMatchObject({ p: from, z: true });
+    expect(getInProgressAction(userId)).not.toBeNull();
+    await run({ type: "gather_cancel", userId, resourceId: resource.id });
   });
 });
 
@@ -687,10 +763,10 @@ describe("combat", () => {
 
     const view = selectGame(loadView(fighter, now)!, { now });
     const html = ZoneMonsters(view.monsters, {
-      userId: fighter, gathering: false, weapon: clubWeapon, health: 100,
+      userId: fighter, gathering: false, weapon: clubWeapon,
       contextFlashes: view.contextFlashes,
     }).toString();
-    expect(html).toContain("Acquired: 3 x Feather");
+    expect(html).toContain("+3 Feather");
   });
 
   it("counts kills for the active quest objective", async () => {
@@ -800,12 +876,12 @@ describe("combat", () => {
     const view = selectGame(loadView(fighter, now)!, { now });
     const card = ZoneMonsters(view.monsters, {
       userId: fighter, gathering: false, weapon: null,
-      health: view.user.h, contextFlashes: view.contextFlashes,
+      contextFlashes: view.contextFlashes,
     }).toString();
     const first = card.slice(card.indexOf('id="monsters-0"'), card.indexOf('id="monsters-1"'));
     expect(first).toContain(`Your ${club.name} broke.`);
     expect(first).not.toContain(`You attack ${chicken.name}.`);
-    expect(first.indexOf("broke")).toBeLessThan(first.indexOf("Attacks with"));
+    expect(first.indexOf("broke")).toBeLessThan(first.indexOf("Drops"));
     expect(first).toContain("Flee");
     expect(first).toContain(`Barehanded, ${UNARMED.damage} damage a hit`);
 
@@ -826,7 +902,7 @@ describe("combat", () => {
     const view = selectGame(loadView(fighter, now)!, { now });
     const card = ZoneMonsters(view.monsters, {
       userId: fighter, gathering: false, weapon: null,
-      health: view.user.h, contextFlashes: view.contextFlashes,
+      contextFlashes: view.contextFlashes,
     }).toString();
     expect(card).toContain("/game/monsters/0/attack");
     expect(card).toContain("Barehanded");
@@ -908,6 +984,51 @@ describe("combat", () => {
     expect(readHp()).toBeUndefined();
   });
 
+  it("ends the fight on a step out of the zone exactly as exit does", async () => {
+    const step = stepFrom(zone, true)!;
+    const leave = async (direction: "exit" | typeof step.direction) => {
+      const id = (await run({ type: "login", userId: "" }))!;
+      equipWeapon(id);
+      await attack(id);
+      expect(readFight(id)).toBeDefined();
+      await run({ type: "move", userId: id, direction });
+      const user = getUser(id)!;
+      return {
+        user,
+        outcome: {
+          z: user.z,
+          fight: readFight(id),
+          hp: readHp(),
+          // Landing on a new cell is announced; that's the move, not the exit.
+          messages: getSystemMessages(id)
+            .filter(({ action_id }) => !action_id?.startsWith("tile:"))
+            .map(({ message, type }) => ({ message, type })),
+          monsters: [...getDiscoveries(id).monsters],
+        },
+      };
+    };
+
+    const exited = await leave("exit");
+    const stepped = await leave(step.direction);
+
+    expect(exited.outcome.fight).toBeUndefined();
+    expect(exited.outcome.messages).toContainEqual({ message: "You flee the fight.", type: "info" });
+    expect(stepped.outcome).toEqual(exited.outcome);
+    expect(exited.user.p).toEqual(zone);
+    expect(stepped.user.p).toEqual(step.to);
+  });
+
+  it("keeps fighting when a step from the zone is refused, or on enter", async () => {
+    const step = stepFrom(zone, false);
+    await attack();
+    if (step) {
+      await run({ type: "move", userId: fighter, direction: step.direction });
+    }
+    await run({ type: "move", userId: fighter, direction: "enter" });
+    expect(getUser(fighter)!).toMatchObject({ p: zone, z: true });
+    expect(readFight()).toBeDefined();
+  });
+
   it("uses every weapon style against each monster defence profile", async () => {
     const profiles = [
       { melee: 100, ranged: 0, magic: 0 },
@@ -958,7 +1079,7 @@ describe("combat", () => {
     }
   });
 
-  it("shows the last hits, and only the fighter their health and flee control", async () => {
+  it("shows the fighter the fight and its hits, and everyone the monster", async () => {
     await attack();
     now += 3000;
     tick(now);
@@ -967,50 +1088,71 @@ describe("combat", () => {
     expect(monsterHit).toMatchObject({ by_monster: 1, damage: 5, at: now, fatal: 0 });
     expect(secondHit).toMatchObject({ by_monster: 0, damage: 10, at: now - 1000 });
     expect(firstHit).toMatchObject({ by_monster: 0, damage: 10, at: now - 3000 });
-    const fighterHtml = ZoneMonsters(view.monsters, {
-      userId: fighter, gathering: false, weapon: clubWeapon, health: 100,
+
+    expect(view.activity).toMatchObject({ kind: "fight", active: true, fight: { spawn: 0 } });
+    const activity = Activity(view.activity, {
+      userId: fighter, health: view.user.h, weaponSpeed: 2000,
+    }).toString();
+    expect(activity).toContain("Flee");
+    expect(activity).toContain(`hit-activity-player-${monsterHit!.id}`);
+    expect(activity).toContain(`hit-activity-monster-${secondHit!.id}`);
+    expect(activity).toContain(`hurt-${monsterHit!.id}`);
+    expect(activity).toContain(`swing-activity-player-${now + 1000}`);
+    expect(activity).toContain(`swing-activity-monster-${now + 3000}`);
+
+    const log = LogCombat(view.combatLog, fighter).toString();
+    expect(log).toContain(`${chicken.name} hit you for 5`);
+    expect(log).toContain(`You hit ${chicken.name} for 10`);
+    expect(log.indexOf(`log-h${firstHit!.id}`)).toBeLessThan(log.indexOf(`log-h${monsterHit!.id}`));
+
+    const card = (userId: string) => ZoneMonsters(view.monsters, {
+      userId, gathering: false, weapon: clubWeapon,
       contextFlashes: view.contextFlashes,
     }).toString();
-    expect(fighterHtml).toContain("Flee");
-    expect(fighterHtml).toContain(`hit-${monsterHit!.id}`);
-    expect(fighterHtml).toContain(`hurt-${monsterHit!.id}`);
-    expect(fighterHtml).toContain(`${chicken.name} hit you for 5`);
-    expect(fighterHtml).toContain(`You hit ${chicken.name} for 10`);
-    expect(fighterHtml).toContain(`swing-player-0-${now + 1000}`);
-    const spectatorHtml = ZoneMonsters(view.monsters, {
-      userId: "someone_else", gathering: false, weapon: clubWeapon, health: 100,
-      contextFlashes: view.contextFlashes,
-    }).toString();
+    const fighterHtml = card(fighter);
+    const spectatorHtml = card("someone_else");
     expect(fighterHtml).toContain("In combat with you");
+    expect(fighterHtml).toContain("Flee");
+    expect(fighterHtml).not.toContain("swing-");
+    expect(fighterHtml).not.toContain("hurt-");
+    expect(fighterHtml).not.toContain("hit you for");
     expect(spectatorHtml).toContain(`In combat with ${restrictUserId(fighter)}`);
     expect(spectatorHtml).not.toContain("/game/monsters/0/attack");
     expect(spectatorHtml).toContain("/game/monsters/1/attack");
     expect(spectatorHtml).not.toContain("Flee");
-    expect(spectatorHtml).toContain(`hit-${secondHit!.id}`);
-    expect(spectatorHtml).toContain(`swing-monster-0-${now + 3000}`);
-    expect(spectatorHtml).not.toContain(`hurt-${monsterHit!.id}`);
-    expect(spectatorHtml).toContain(`${restrictUserId(fighter)} hit ${chicken.name} for 10`);
+    expect(spectatorHtml).toContain(`hit-monster-0-${secondHit!.id}`);
+
+    const other = selectGame(loadView(fighter, now)!, { now });
+    expect(other.combatLog.every(({ hit }) => hit.user_id === fighter)).toBe(true);
   });
 
-  it("keeps the final blow and the fighter's health on screen after a kill, then clears the log", async () => {
+  it("keeps the final blow in the activity bar for a moment after a kill, then clears the log", async () => {
     chicken.health = 10;
     await attack();
-    const viewer = (view: ReturnType<typeof selectGame>) => ({
-      userId: fighter, gathering: false, weapon: clubWeapon,
-      health: view.user.h, contextFlashes: view.contextFlashes,
-    });
+    const render = (view: ReturnType<typeof selectGame>) =>
+      Activity(view.activity, { userId: fighter, health: view.user.h, weaponSpeed: 2000 }).toString();
 
     let view = selectGame(loadView(fighter, now)!, { now });
     const [finalBlow] = view.monsters[0]!.hits;
     expect(finalBlow).toMatchObject({ by_monster: 0, damage: 10, fatal: 1 });
-    let html = ZoneMonsters(view.monsters, viewer(view)).toString();
-    expect(html).toContain("Respawns in");
+    expect(view.activity).toMatchObject({ kind: "fight", active: false });
+    let html = render(view);
     expect(html).toContain(`0/${chicken.health}`);
-    expect(html).toContain(`hit-${finalBlow!.id}`);
-    expect(html).toContain(`You finished ${chicken.name} off with 10`);
-    expect(html).toContain(`100/100`);
+    expect(html).toContain(`hit-activity-monster-${finalBlow!.id}`);
+    expect(html).toContain("Victory");
+    expect(html).not.toContain("Flee");
+    expect(LogCombat(view.combatLog, fighter).toString()).toContain(
+      `You finished ${chicken.name} off with 10`
+    );
     const killedAt = now;
-    now += FLASH_MS;
+    expect(view.wakeAt).toBe(killedAt + FIGHT_LINGER_MS);
+
+    now = killedAt + FIGHT_LINGER_MS;
+    view = selectGame(loadView(fighter, now)!, { now });
+    expect(view.activity).toBeNull();
+    expect(render(view)).toContain("Nothing in progress");
+    expect(view.combatLog).toHaveLength(1);
+    now = killedAt + FLASH_MS;
     view = selectGame(loadView(fighter, now)!, { now });
     expect(view.wakeAt).toBe(killedAt + COMBAT_LOG_MS);
 
@@ -1018,10 +1160,8 @@ describe("combat", () => {
     tick(now);
     view = selectGame(loadView(fighter, now)!, { now });
     expect(view.monsters[0]!.hits).toEqual([]);
+    expect(view.combatLog).toEqual([]);
     expect(writer.prepare("SELECT count(*) AS n FROM combat_hits").get()).toEqual({ n: 0 });
-    html = ZoneMonsters(view.monsters, viewer(view)).toString();
-    expect(html).not.toContain("finished");
-    expect(html).not.toContain(`100/100`);
   });
 
   it("keeps equal damage-per-second weapons close against heavy defence", async () => {

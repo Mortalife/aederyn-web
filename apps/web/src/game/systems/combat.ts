@@ -16,6 +16,7 @@ import { userChanged, zoneChanged } from "../changes.js";
 import { emit } from "../events.js";
 import { currentDurability, wearItem } from "./actions.js";
 import { blockedMessage, blockingEffect } from "../../world/effects.js";
+import { discoverDrop, discoverMonster, discoverTile } from "./discoveries.js";
 import { effectsOn } from "./effects.js";
 import { markMonsterKilled } from "./monsters.js";
 import { removeUserFromZone } from "./presence.js";
@@ -193,6 +194,8 @@ export const stopCombat = (
   zoneChanged(combat.x, combat.y);
   userChanged(userId);
   addSystemMessage(userId, message, "info", now, context(combat));
+  const monster = monstersById.get(combat.monster_id);
+  if (monster) discoverMonster(userId, monster, now);
   return true;
 };
 
@@ -205,6 +208,7 @@ const killMonster = (combat: Combat, monster: Monster, now: number) => {
   const discarded: string[] = [];
   for (const drop of monster.drops) {
     if (Math.random() >= drop.chance) continue;
+    discoverDrop(combat.user_id, monster.id, drop.item_id, now);
     const name = itemsById.get(drop.item_id)?.name ?? drop.item_id;
     const label = `${drop.qty} x ${name}`;
     if (
@@ -243,6 +247,7 @@ const killMonster = (combat: Combat, monster: Monster, now: number) => {
       context(combat)
     );
   }
+  discoverMonster(combat.user_id, monster, now);
 };
 
 const killPlayer = (combat: Combat, user: GameUserModel, now: number) => {
@@ -262,6 +267,9 @@ const killPlayer = (combat: Combat, user: GameUserModel, now: number) => {
     now,
     context(combat)
   );
+  const monster = monstersById.get(combat.monster_id);
+  if (monster) discoverMonster(user.id, monster, now);
+  discoverTile(user.id, user.p.x, user.p.y, now);
 };
 
 /**

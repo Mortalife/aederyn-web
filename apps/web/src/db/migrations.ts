@@ -213,6 +213,16 @@ const migrations: string[][] = [
     "DELETE FROM health_regen",
     "DELETE FROM active_effects",
   ],
+  // What each player has found, one row per thing, e.g. ("tile", "12,31").
+  [
+    `CREATE TABLE discoveries (
+      user_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      id TEXT NOT NULL,
+      at INT NOT NULL,
+      PRIMARY KEY (user_id, kind, id)
+    ) WITHOUT ROWID`,
+  ],
 ];
 
 export const runMigrations = (db: Database, list: string[][] = migrations) => {

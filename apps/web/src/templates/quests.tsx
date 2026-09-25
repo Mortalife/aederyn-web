@@ -9,300 +9,335 @@ import { formatDistance } from "date-fns";
 import { npcsById } from "../config/npcs.js";
 import { resourcesById } from "../config/resources.js";
 import type { SystemMessage } from "../user/system.js";
-import { ContextualFlash } from "./elements.js";
+import { FloatingResult, ScenePanel, SidePanel, rowToggle } from "./ui.js";
+import { Glyph } from "./icons.js";
 
-const QuestsIcon = html`<svg
-  xmlns="http://www.w3.org/2000/svg"
-  fill="none"
-  viewBox="0 0 24 24"
-  stroke-width="1.5"
-  stroke="currentColor"
-  class="size-5"
->
-  <path
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-  />
-</svg>`;
+export type MarkerKind =
+  | "available"
+  | "objective"
+  | "completable"
+  | "elsewhere"
+  | "hidden";
 
-const getQuestTypeStyle = (type: keyof ZoneQuests) => {
-  switch (type) {
-    case "availableQuests":
-      return {
-        icon: "!",
-        color: "text-yellow-400",
-        bg: "bg-yellow-500/10",
-        border: "border-yellow-500/30",
-      };
-    case "inProgressQuests":
-      return {
-        icon: "◆",
-        color: "text-blue-400",
-        bg: "bg-blue-500/10",
-        border: "border-blue-500/30",
-      };
-    case "completableQuests":
-      return {
-        icon: "?",
-        color: "text-green-400",
-        bg: "bg-green-500/10",
-        border: "border-green-500/30",
-      };
-    case "elsewhereQuests":
-      return {
-        icon: "→",
-        color: "text-gray-400",
-        bg: "bg-gray-500/10",
-        border: "border-gray-500/30",
-      };
-    case "discoverableQuests":
-      return {
-        icon: "",
-        color: "text-gray-400",
-        bg: "bg-gray-500/10",
-        border: "border-gray-500/30",
-      };
-  }
+const MARKERS: Record<MarkerKind, { symbol: string; label: string; class: string }> = {
+  available: { symbol: "!", label: "Quest available", class: "text-quest-available" },
+  objective: { symbol: "◆", label: "Quest objective", class: "text-quest-objective" },
+  completable: { symbol: "?", label: "Ready to hand in", class: "text-quest-completable" },
+  elsewhere: { symbol: "→", label: "Elsewhere", class: "text-quest-elsewhere" },
+  hidden: { symbol: "✦", label: "Hidden quest", class: "text-quest-hidden" },
 };
 
+/** The one symbol and colour for each quest state, used everywhere. */
+export const QuestMarker = (kind: MarkerKind, className = "") => {
+  const marker = MARKERS[kind];
+  return html`<span
+    class="quest-marker ${marker.class} ${className}"
+    title="${marker.label}"
+    aria-label="${marker.label}"
+    >${marker.symbol}</span
+  >`;
+};
+
+export const KindBadge = (quest: PlacedQuest) =>
+  html`<span
+    class="shrink-0 text-[0.65rem] leading-4 px-1.5 rounded-full ${quest.kind === "contract"
+      ? "bg-white/10 text-gray-400"
+      : quest.is_tutorial
+      ? "bg-emerald-500/20 text-emerald-300"
+      : "bg-purple-500/20 text-purple-300"}"
+    >${quest.kind === "contract" ? "Contract" : quest.is_tutorial ? "Tutorial" : "Story"}</span
+  >`;
+
+/** "3/5" for an objective that counts, otherwise null. */
+export const objectiveCount = (objective: PlacedObjective) => {
+  if (objective.type === "talk" || objective.type === "explore") {
+    return null;
+  }
+  const required = objective.type === "kill" ? objective.count : objective.amount;
+  return `${Math.max(0, objective.progress?.current ?? 0)}/${required}`;
+};
+
+/** Where to hand a quest in. */
+export const returnTo = (quest: PlacedQuest) =>
+  `Return to ${
+    quest.completion.entity_id ? npcName(quest.completion.entity_id) : "the contract board"
+  } at (${quest.completion.x}, ${quest.completion.y})`;
+
+type QuestRowKind = "available" | "here" | "elsewhere" | "completable";
+
 /**
- * The quests panel. Contracts on offer are listed by the contract board, and
- * story quests from the people who live here by the People panel, so only
- * the rest of what's available here is listed.
+ * A quest as one compact line: marker, name, kind and what to do next. It
+ * expands in place to the description, every objective and its actions.
+ */
+const QuestRow = (props: {
+  quest: PlacedQuest;
+  kind: QuestRowKind;
+  now: number;
+}) => {
+  const { quest, kind } = props;
+  const objective = quest.currentObjective;
+  const count = objective ? objectiveCount(objective) : null;
+  const handIn = kind === "completable" || !objective;
+  const marker: MarkerKind =
+    kind === "available"
+      ? "available"
+      : kind === "completable"
+      ? "completable"
+      : kind === "here"
+      ? "objective"
+      : "elsewhere";
+  const where =
+    kind === "elsewhere" && objective ? objectiveWhere(objective) : null;
+  const open = `($_quest === '${quest.id}' || $_density.quests === 'full')`;
+
+  return html`<div id="quest-${quest.id}" class="rounded" data-class="{'bg-white/5': ${open}}">
+    <button
+      class="flex w-full items-start gap-2 rounded px-1.5 py-1.5 min-h-11 sm:min-h-0 text-left hover:bg-white/5"
+      data-on:click="$_quest = $_quest === '${quest.id}' ? '' : '${quest.id}'"
+      data-attr:aria-expanded="${open} ? 'true' : 'false'"
+    >
+      ${QuestMarker(marker, "mt-0.5")}
+      <span class="flex min-w-0 flex-1 flex-col">
+        <span class="flex items-center gap-1.5">
+          <span class="truncate text-sm font-semibold">${quest.name}</span>
+          ${KindBadge(quest)}
+        </span>
+        <span class="flex gap-2 text-xs text-gray-400">
+          <span class="min-w-0 flex-1 truncate"
+            >${kind === "available"
+              ? quest.giver.entity_id
+                ? `From ${npcName(quest.giver.entity_id)}`
+                : quest.description
+              : handIn
+              ? returnTo(quest)
+              : objective!.description}</span
+          >
+          ${count && !handIn
+            ? html`<span class="shrink-0 font-mono tabular-nums">${count}</span>`
+            : null}
+        </span>
+      </span>
+    </button>
+    <div class="flex flex-col gap-2 px-1.5 pb-2 pl-7 text-xs" data-show="${open}">
+      <p class="text-gray-300">${quest.description}</p>
+      ${quest.kind === "contract"
+        ? html`<span class="text-gray-400"
+            >${formatDistance(quest.ends_at, props.now)} left</span
+          >`
+        : null}
+      ${QuestObjectivesCompleted(quest)}
+      ${where ? html`<span class="text-gray-300">${where}</span>` : null}
+      <div class="flex gap-2">
+        ${kind === "available"
+          ? html`<button
+              class="btn btn-xs btn-primary min-h-11 sm:min-h-0"
+              data-on:click="@post('/game/quest/${quest.id}')"
+            >
+              Accept
+            </button>`
+          : kind === "completable"
+          ? html`<button
+              class="btn btn-xs btn-success min-h-11 sm:min-h-0"
+              data-on:click="@post('/game/quest/${quest.id}/complete')"
+            >
+              Complete
+            </button>`
+          : html`<button
+              class="btn btn-xs btn-outline btn-warning min-h-11 sm:min-h-0"
+              data-on:click="@delete('/game/quest/${quest.id}')"
+            >
+              Abandon
+            </button>`}
+      </div>
+    </div>
+  </div>`;
+};
+
+const QuestSection = (title: string, rows: ReturnType<typeof QuestRow>[]) =>
+  rows.length === 0
+    ? null
+    : html`<section class="flex flex-col gap-0.5">
+        <h3 class="px-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          ${title} <span class="font-normal">(${rows.length})</span>
+        </h3>
+        ${rows}
+      </section>`;
+
+/**
+ * The quest log in the side panel. Contracts on offer are listed by the
+ * contract board, and story quests from the people who live here by the
+ * People list, so only the rest of what's available here is listed.
+ * Conversations happen in the scene; this only points at them.
  */
 export const Quests = (props: {
   zoneQuests: ZoneQuests;
   npcInteractions?: ZoneInteraction[];
   flashMessage?: SystemMessage;
-  /** NPCs whose offers the People panel shows. */
+  /** NPCs whose offers the People list shows. */
   residents?: Set<string>;
+  /** Whether the player is in the zone, where conversations happen. */
+  inZone?: boolean;
   /** For "time left"; rounded so the render only changes when the text does. */
   now: number;
 }) => {
-  if (!props.zoneQuests) return null;
+  const { zoneQuests, now } = props;
+  const available = zoneQuests.availableQuests.filter(
+    (q) =>
+      q.kind === "story" &&
+      !(q.giver.entity_id && props.residents?.has(q.giver.entity_id))
+  );
+  const talks = props.npcInteractions ?? [];
+  const hidden = zoneQuests.discoverableQuests.filter((q) => q.kind === "story").length;
+  const row = (kind: QuestRowKind) => (quest: PlacedQuest) =>
+    QuestRow({ quest, kind, now });
+  const empty =
+    talks.length +
+      available.length +
+      zoneQuests.completableQuests.length +
+      zoneQuests.inProgressQuests.length +
+      zoneQuests.elsewhereQuests.length ===
+    0;
 
-  const zoneQuests: ZoneQuests = {
-    ...props.zoneQuests,
-    availableQuests: props.zoneQuests.availableQuests.filter(
-      (q) =>
-        q.kind === "story" &&
-        !(q.giver.entity_id && props.residents?.has(q.giver.entity_id))
-    ),
-  };
-  props = { ...props, zoneQuests };
-
-  const totalQuests =
-    props.zoneQuests.availableQuests.length +
-    props.zoneQuests.inProgressQuests.length +
-    props.zoneQuests.completableQuests.length +
-    props.zoneQuests.elsewhereQuests.length;
-
-  const hasNpcInteractions =
-    props.npcInteractions && props.npcInteractions.length > 0;
-
-  return html`<div
-    id="quests"
-    class="flex flex-col gap-4 p-4 rounded-xl bg-black/20 border border-white/10"
-    data-show="$_showQuests"
-  >
-    <!-- Section Header -->
-    <div class="flex items-center gap-3 pb-2 border-b border-white/10">
-      <div class="p-2 rounded-lg bg-white/5">${QuestsIcon}</div>
-      <div>
-        <h2 class="text-xl font-bold">Quests</h2>
-        <p class="text-sm text-gray-400">
-          ${totalQuests > 0 || hasNpcInteractions
-            ? `${totalQuests} quest${totalQuests !== 1 ? "s" : ""} tracked`
-            : "No active quests in this area"}
-        </p>
-      </div>
-    </div>
-
-    <!-- Quest Contextual Flash Messages -->
-    ${ContextualFlash({ message: props.flashMessage })}
-    ${hasNpcInteractions
-      ? html`
-          <div class="flex flex-col gap-3">
-            <div class="flex items-center gap-2 text-purple-400">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-5"
+  return SidePanel({
+    id: "quests",
+    panel: "quests",
+    title: "Quests",
+    full: true,
+    class: "relative",
+    body: html`${FloatingResult(props.flashMessage)}
+    ${talks.length > 0
+      ? html`<div class="flex flex-col gap-0.5">
+          ${talks.map(
+            (talk) => html`<button
+              class="flex items-center gap-2 rounded px-1.5 py-1.5 min-h-11 sm:min-h-0 text-left text-sm hover:bg-white/5"
+              data-on:click="$_sheet = ''"
+            >
+              ${QuestMarker("objective")}
+              <span class="flex-1"
+                >${props.inZone
+                  ? `Talk to ${npcName(talk.objective.entity_id)} here`
+                  : `Enter to talk to ${npcName(talk.objective.entity_id)}`}</span
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"
-                />
-              </svg>
-              <h3 class="text-lg font-semibold">NPCs Nearby</h3>
-              <span class="text-xs opacity-60"
-                >(${props.npcInteractions?.length})</span
-              >
-            </div>
-            <div class="grid grid-cols-1 gap-2">
-              ${props.npcInteractions?.map((interaction) => {
-                return html`
-                  <div
-                    class="flex flex-col gap-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/30"
-                  >
-                    ${QuestNPC({ interaction })}
-                  </div>
-                `;
-              })}
-            </div>
-          </div>
-        `
-      : null}
-    ${Object.entries(props.zoneQuests).map(
-      ([type, quests]: [string, PlacedQuest[]]) => {
-        if (!quests.length) return null;
-        if (type === "discoverableQuests") return null;
-
-        const style = getQuestTypeStyle(type as keyof ZoneQuests);
-        return html`
-          <div class="flex flex-col gap-3">
-            <div class="flex items-center gap-2 ${style.color}">
-              <span
-                class="flex items-center justify-center size-6 font-bold text-lg"
-                >${style.icon}</span
-              >
-              <h3 class="text-lg font-semibold">
-                ${QuestHeader({ type } as { type: keyof ZoneQuests })}
-              </h3>
-              <span class="text-xs opacity-60">(${quests.length})</span>
-            </div>
-            <div class="grid grid-cols-1 gap-2">
-              ${quests.map((quest) =>
-                QuestItem({
-                  quest,
-                  type:
-                    type === "elsewhereQuests"
-                      ? "elsewhere"
-                      : type === "inProgressQuests"
-                      ? "in_progress"
-                      : type === "availableQuests"
-                      ? "available"
-                      : "completed",
-                  style,
-                  now: props.now,
-                })
-              )}
-            </div>
-          </div>
-        `;
-      }
-    )}
-    ${totalQuests === 0 && !hasNpcInteractions
-      ? html`<div class="text-center py-8 text-gray-400">
-          <p>No quests available in this zone.</p>
-          <p class="text-sm mt-2">Explore other areas to find quest givers!</p>
+            </button>`
+          )}
         </div>`
       : null}
-  </div>`;
+    ${QuestSection("Hand in here", zoneQuests.completableQuests.map(row("completable")))}
+    ${QuestSection("In progress", [
+      ...zoneQuests.inProgressQuests.map(row("here")),
+      ...zoneQuests.elsewhereQuests.map(row("elsewhere")),
+    ])}
+    ${QuestSection("Available here", available.map(row("available")))}
+    ${empty
+      ? html`<p class="px-1.5 text-sm text-gray-400">
+          No quests yet. People around the valley have work for you.
+        </p>`
+      : null}
+    ${hidden > 0
+      ? html`<p class="flex items-center gap-2 px-1.5 text-xs text-gray-400">
+          ${QuestMarker("hidden")} ${hidden} more
+          quest${hidden === 1 ? "" : "s"} to find
+        </p>`
+      : null}`,
+  });
 };
 
-export const DialogStep = (entity_id: string | null, dialog: string) => {
-  const speaker = entity_id ? npcsById.get(entity_id)?.name ?? "Unknown" : "You";
-  const isPlayer = entity_id === null;
-
-  return html`<div
-    class="flex flex-col gap-1 p-3 rounded-lg ${isPlayer
-      ? "bg-blue-500/10 border border-blue-500/20 ml-8"
-      : "bg-white/5 border border-white/10 mr-8"}"
+export const DialogStep = (speaker: string | null, dialog: string, latest = false) => html`<p
+  class="${latest ? "text-gray-100" : "text-gray-400"}"
+>
+  <span class="font-semibold ${speaker ? "text-purple-300" : "text-blue-300"}"
+    >${speaker ?? "You"}:</span
   >
-    <span
-      class="font-bold text-xs ${isPlayer
-        ? "text-blue-400"
-        : "text-purple-400"}"
-      >${speaker}</span
-    >
-    <p class="text-sm">${dialog}</p>
-  </div>`;
-};
+  ${dialog}
+</p>`;
 
-export const QuestNPC = (props: { interaction: ZoneInteraction }) => {
-  const progress = props.interaction.objective.progress;
-  const npc = npcsById.get(props.interaction.objective.entity_id);
-  const name = npc?.name ?? "Unknown";
-
+/**
+ * A conversation for a talk objective, as a dialogue box: the lines so far,
+ * newest at the bottom, and the button that moves it on.
+ */
+export const QuestNPC = (props: {
+  interaction: ZoneInteraction;
+  /** NPCs the player has met; without it everyone is named. */
+  known?: Set<string>;
+}) => {
+  const { objective, quest_id } = props.interaction;
+  const progress = objective.progress;
   if (!progress) return null;
 
-  const buttonText =
-    progress.current === 0
-      ? "Start Conversation"
-      : progress.current === progress.required - 1
-      ? "Finish Conversation"
-      : "Continue...";
+  const npc = npcsById.get(objective.entity_id);
+  const name =
+    !props.known || props.known.has(objective.entity_id)
+      ? npc?.name ?? "Unknown"
+      : "A stranger";
+  const last = progress.current === progress.required - 1;
+  const speaker = (entityId: string | null) =>
+    entityId === null
+      ? null
+      : entityId === objective.entity_id
+      ? name
+      : npcName(entityId);
 
-  return html`
-    <div class="flex flex-col gap-4">
-      <!-- NPC Header -->
-      <div class="flex flex-row gap-4 items-start">
-        <div class="p-3 rounded-xl bg-purple-500/20 text-purple-400">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="size-8"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
-            />
-          </svg>
-        </div>
-        <div class="flex flex-col gap-1 flex-1">
-          <span class="font-bold text-lg text-purple-300">${name}</span>
-          <span class="text-xs text-gray-400 line-clamp-2"
-            >${npc?.backstory}</span
-          >
-        </div>
-        <button
-          class="btn btn-sm ${progress.current === progress.required - 1
-            ? "btn-success"
-            : "btn-primary"}"
-          id="complete_${props.interaction.objective.id}"
-          data-on:click="@put('/game/quest/${props.interaction
-            .quest_id}/objective/${props.interaction.objective.id}')"
-        >
-          ${buttonText}
-        </button>
-      </div>
-
-      <!-- Dialog History -->
-      ${progress.current > 0
-        ? html`<div
-            id="interaction-${props.interaction.objective.id}"
-            class="flex flex-col gap-2 max-h-[300px] overflow-y-auto"
-          >
-            ${Array.from({ length: progress.current }).map((_, i) =>
-              DialogStep(
-                props.interaction.objective.dialog_steps[i]?.entity_id ?? null,
-                props.interaction.objective.dialog_steps[i]?.dialog ?? ""
-              )
-            )}
-          </div>`
-        : html`<p class="text-sm text-gray-400 italic">
-            Click to start the conversation...
-          </p>`}
+  return html`<div
+    id="talk-${objective.id}"
+    class="flex flex-col gap-2 rounded-md border border-purple-400/30 bg-[#16111d]/95 p-3 text-sm shadow-2xl backdrop-blur"
+  >
+    <div class="flex items-center gap-2">
+      <span class="grid size-7 shrink-0 place-items-center rounded-full bg-purple-500/20 text-purple-300"
+        >${Glyph("person", "size-4")}</span
+      >
+      <span class="font-semibold text-purple-200">${name}</span>
+      <span class="ml-auto font-mono text-xs tabular-nums text-gray-500"
+        >${progress.current}/${progress.required}</span
+      >
     </div>
-  `;
+    <div class="flex max-h-36 flex-col-reverse overflow-y-auto">
+      <div id="interaction-${objective.id}" class="flex flex-col gap-1">
+        ${progress.current > 0
+          ? Array.from({ length: progress.current }, (_, i) => {
+              const step = objective.dialog_steps[i];
+              return DialogStep(
+                speaker(step?.entity_id ?? null),
+                step?.dialog ?? "",
+                i === progress.current - 1
+              );
+            })
+          : html`<p class="italic text-gray-400">
+              ${npc?.idleLine ?? `${name} looks up as you approach.`}
+            </p>`}
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <button
+        id="complete_${objective.id}"
+        class="h-11 rounded px-3 text-xs font-medium text-white sm:h-7 ${last
+          ? "bg-green-700 hover:bg-green-600"
+          : "bg-purple-600/80 hover:bg-purple-500"}"
+        data-on:click="@put('/game/quest/${quest_id}/objective/${objective.id}')"
+      >
+        ${progress.current === 0 ? "Talk" : last ? "Finish" : "Continue ▸"}
+      </button>
+    </div>
+  </div>`;
 };
+
+/**
+ * Conversations in progress where the player is standing, anchored to the
+ * bottom of the scene. Empty, but still present for patching, with none.
+ */
+export const Dialogue = (
+  interactions: ZoneInteraction[],
+  known: Set<string>
+) =>
+  html`<div id="dialogue" class="hud-dialogue">${interactions.map(
+    (interaction) => QuestNPC({ interaction, known })
+  )}</div>`;
 
 const npcName = (entityId: string) => npcsById.get(entityId)?.name ?? "Unknown";
 
 const regionName = (region: string) => region.replace(/-/g, " ");
 
 /** Where the player should go for an objective they aren't at. */
-const objectiveWhere = (objective: PlacedObjective): string | null => {
+export const objectiveWhere = (objective: PlacedObjective): string | null => {
   switch (objective.type) {
     case "talk":
       return `Find ${npcName(objective.entity_id)} at (${objective.x}, ${objective.y})`;
@@ -345,196 +380,62 @@ export const ContractBoard = (props: {
     return html`<div id="board"></div>`;
   }
 
-  return html`<div
-    id="board"
-    class="flex flex-col gap-4 p-4 rounded-xl bg-amber-900/10 border border-amber-500/20"
-    data-show="$_showQuests"
-  >
-    <div class="flex items-center gap-3 pb-2 border-b border-white/10">
-      <div class="p-2 rounded-lg bg-white/5">${QuestsIcon}</div>
-      <div>
-        <h2 class="text-xl font-bold">Contract board</h2>
-        <p class="text-sm text-gray-400">
-          ${props.contracts.length > 0
-            ? "Jobs for anyone who wants them. New postings every two hours."
-            : "Nothing posted right now. Check back after the next rotation."}
-        </p>
-      </div>
-    </div>
-    ${ContextualFlash({ message: props.flashMessage })}
-    <div class="grid grid-cols-1 gap-2">
-      ${props.contracts.map(
-        ({ quest, status }) => html`<div
-          id="contract-${quest.id}"
-          class="flex flex-col md:flex-row items-start justify-between gap-3 p-4 rounded-lg bg-white/5 border border-white/10 ${status ===
-          "done"
-            ? "opacity-60"
-            : ""}"
-        >
-          <div class="flex flex-col gap-1 flex-1">
-            <div class="flex items-center gap-2">
-              <span class="font-bold">${quest.name}</span>
-              ${QuestBadge(quest, props.now)}
-            </div>
-            <p class="text-sm text-gray-300">${quest.description}</p>
-          </div>
-          ${status === "available"
-            ? html`<button
-                class="btn btn-sm btn-primary"
-                data-on:click="@post('/game/quest/${quest.id}')"
+  const body = props.contracts.length
+    ? html`<table class="w-full text-left text-sm">
+        <tbody>
+          ${props.contracts.map(
+            ({ quest, status }) => html`<tr
+                id="contract-${quest.id}"
+                class="cursor-pointer hover:bg-white/5 data-[open]:bg-white/5 ${status ===
+                "done"
+                  ? "opacity-60"
+                  : ""}"
+                data-row
+                data-preserve-attr="data-open"
+                data-on:click="${rowToggle}"
               >
-                Take contract
-              </button>`
-            : html`<span class="text-xs text-gray-400 italic"
-                >${status === "done"
-                  ? "Done. Posted again in a later rotation."
-                  : "Taken: see your quests."}</span
-              >`}
-        </div>`
-      )}
-    </div>
-  </div>`;
-};
+                <td class="py-1 pl-1 pr-2">
+                  <span class="font-semibold">${quest.name}</span>
+                  <p class="d-full text-xs text-gray-400">${quest.description}</p>
+                </td>
+                <td
+                  class="whitespace-nowrap px-2 py-1 text-xs tabular-nums text-gray-400"
+                  title="Time left"
+                >
+                  ${formatDistance(quest.ends_at, props.now)}
+                </td>
+                <td class="py-1 pl-2 pr-1 text-right">
+                  ${status === "available"
+                    ? html`<button
+                        class="h-11 rounded bg-blue-600/80 px-2.5 text-xs font-medium text-white hover:bg-blue-500 sm:h-7"
+                        data-on:click="@post('/game/quest/${quest.id}')"
+                      >
+                        Take
+                      </button>`
+                    : html`<span
+                        class="text-xs text-gray-500"
+                        title="${status === "done"
+                          ? "Posted again in a later rotation"
+                          : "See your quests"}"
+                        >${status === "done" ? "Done" : "Taken"}</span
+                      >`}
+                </td>
+              </tr>`
+          )}
+        </tbody>
+      </table>`
+    : html`<p class="py-1 text-xs text-gray-400">
+        Nothing posted right now. Check back after the next rotation.
+      </p>`;
 
-export const QuestHeader = (props: { type: keyof ZoneQuests }) => {
-  switch (props.type) {
-    case "availableQuests":
-      return html`Available Quests`;
-    case "inProgressQuests":
-      return html`In Progress Quests`;
-    case "completableQuests":
-      return html`Outstanding Quests`;
-    case "elsewhereQuests":
-      return html`Happening Elsewhere`;
-  }
-};
-
-export const QuestItem = (props: {
-  quest: PlacedQuest;
-  type: "available" | "in_progress" | "completed" | "elsewhere";
-  style?: { icon: string; color: string; bg: string; border: string };
-  now: number;
-}) => {
-  const style = props.style ?? {
-    bg: "bg-gray-500/10",
-    border: "border-gray-500/30",
-    color: "text-gray-400",
-  };
-
-  const elsewhereLocation =
-    props.type === "elsewhere" && props.quest.currentObjective
-      ? objectiveWhere(props.quest.currentObjective)
-      : null;
-
-  return html`<div
-    id="quest-${props.quest.id}"
-    class="flex flex-col gap-3 p-4 rounded-lg ${style.bg} ${style.border} border"
-  >
-    <!-- Quest Header -->
-    <div class="flex flex-col md:flex-row items-start justify-between gap-4">
-      <div class="flex flex-col gap-1 flex-1">
-        <div class="flex items-center gap-2">
-          <span class="font-bold text-lg">${props.quest.name}</span>
-          ${QuestBadge(props.quest, props.now)}
-        </div>
-        ${props.type === "available" && props.quest.giver.entity_id
-          ? html`<span class="text-xs text-purple-300"
-              >From ${npcName(props.quest.giver.entity_id)}</span
-            >`
-          : null}
-        <p class="text-sm text-gray-300">${props.quest.description}</p>
-      </div>
-
-      ${props.type === "in_progress" || props.type === "elsewhere"
-        ? html`<button
-            class="btn btn-sm btn-outline btn-warning"
-            data-on:click="@delete('/game/quest/${props.quest.id}')"
-          >
-            Abandon
-          </button>`
-        : props.type === "available"
-        ? html`<button
-            class="btn btn-sm btn-primary"
-            data-on:click="@post('/game/quest/${props.quest.id}')"
-          >
-            Accept Quest
-          </button>`
-        : html`<button
-            class="btn btn-sm btn-success"
-            data-on:click="@post('/game/quest/${props.quest.id}/complete')"
-          >
-            Complete Quest
-          </button>`}
-    </div>
-
-    <!-- Objectives -->
-    ${QuestObjectivesCompleted(props.quest)}
-
-    <!-- Elsewhere location hint -->
-    ${props.type === "elsewhere" && elsewhereLocation
-      ? html`<div
-          class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500/20 border border-gray-500/30"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="size-5 text-gray-400"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-            />
-          </svg>
-          <span class="text-sm text-gray-300 font-medium">
-            ${elsewhereLocation}
-          </span>
-        </div>`
-      : null}
-
-    <!-- Turn-in reminder -->
-    ${!props.quest.currentObjective &&
-    (props.type === "in_progress" || props.type === "elsewhere")
-      ? html`<div
-          class="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/20 border border-yellow-500/30"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="size-5 text-yellow-400"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-            />
-          </svg>
-          <span class="text-sm text-yellow-400 font-medium">
-            ${props.quest.completion.entity_id
-              ? `Return to ${npcName(props.quest.completion.entity_id)}`
-              : "Return to the contract board"}
-            at (${props.quest.completion.x}, ${props.quest.completion.y}) to
-            claim your reward!
-          </span>
-        </div>`
-      : null}
-  </div>`;
+  return ScenePanel({
+    id: "board",
+    panel: "board",
+    sections: ["board"],
+    title: "Contract board",
+    meta: "New postings every two hours",
+    body: html`${FloatingResult(props.flashMessage)}${body}`,
+  });
 };
 
 export const QuestObjectivesCompleted = (quest: PlacedQuest) => {
@@ -561,7 +462,7 @@ export const QuestObjectivesCompleted = (quest: PlacedQuest) => {
       <div class="flex flex-col gap-1">
         ${objectives.map(
           (objective, index) =>
-            html`<div class="flex items-center gap-2 text-sm">
+            html`<div class="flex items-center gap-2 text-xs">
               <span
                 class="flex items-center justify-center size-5 rounded-full text-xs font-bold
                 ${objective.progress?.completed
@@ -569,20 +470,7 @@ export const QuestObjectivesCompleted = (quest: PlacedQuest) => {
                   : "bg-white/10 text-gray-400"}"
               >
                 ${objective.progress?.completed
-                  ? html`<svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="2"
-                      stroke="currentColor"
-                      class="size-3"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M4.5 12.75l6 6 9-13.5"
-                      />
-                    </svg>`
+                  ? Glyph("check", "size-3")
                   : `${index + 1}`}
               </span>
               <span

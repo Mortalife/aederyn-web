@@ -6,22 +6,22 @@ import type { NPC } from "../entities/npc.schema.js";
 import type { Quest } from "../entities/quest.schema.js";
 import type { HouseTile } from "../entities/house-tile.schema.js";
 
-// Example migration: Item v1 -> v2 (adding iconUrl field)
-export const itemV1ToV2: Migration<Omit<Item, 'iconUrl'>, Item> = {
+// Example migration: Item v1 -> v2 (adding icon field)
+export const itemV1ToV2: Migration<Omit<Item, 'icon'>, Item> = {
   entityType: "item",
   fromVersion: 1,
   toVersion: 2,
-  description: "Add iconUrl field to items",
+  description: "Add icon field to items",
   
   up(data) {
     return {
       ...data,
-      iconUrl: undefined,
+      icon: undefined,
     };
   },
   
   down(data) {
-    const { iconUrl, ...rest } = data;
+    const { icon, ...rest } = data;
     return rest;
   },
   

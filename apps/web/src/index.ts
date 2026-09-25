@@ -21,6 +21,7 @@ import {
   type Command,
 } from "./game/commands.js";
 import { startLoop } from "./game/loop.js";
+import { ICON_SPRITE_FILE, ICON_SPRITE_URL } from "./templates/item-icon.js";
 import {
   closeConnection,
   openConnection,
@@ -78,6 +79,13 @@ app.use(
   })
 );
 
+app.get(ICON_SPRITE_URL, (c) =>
+  c.body(ICON_SPRITE_FILE, 200, {
+    "Content-Type": "image/svg+xml",
+    "Cache-Control": "public, max-age=31536000, immutable",
+  })
+);
+
 app.get("/", async (c) => {
   return c.html(
     await Content({
@@ -92,10 +100,7 @@ app.get("/", async (c) => {
 });
 
 app.post("/game/login", async (c) => {
-  const { user_id = "", isMobile = false } = await c.req.json<{
-    user_id: string;
-    isMobile: boolean;
-  }>();
+  const { user_id = "" } = await c.req.json<{ user_id: string }>();
   const id = await submit({ type: "login", userId: user_id });
 
   if (id) {
@@ -139,10 +144,6 @@ app.get("/game", async (c) => {
   const session = c.get("session");
   const userId = session.get("user_id") ?? "";
 
-  const datastarParam = c.req.query("datastar");
-  const signals = datastarParam ? JSON.parse(datastarParam) : {};
-  const isMobile = Boolean(signals.isMobile);
-
   const stream = getStream(c);
 
   if (!userId || !getUser(userId)) {
@@ -154,7 +155,7 @@ app.get("/game", async (c) => {
   await submit({ type: "connect", userId });
 
   // From here the tick sends this stream whatever changes.
-  const connection = openConnection(userId, isMobile, stream);
+  const connection = openConnection(userId, stream);
 
   if (!connection) {
     await stream.writeSSE(
@@ -175,14 +176,10 @@ app.get("/game/refresh", async (c) => {
   const session = c.get("session");
   const user_id = session.get("user_id") ?? "";
 
-  const datastarParam = c.req.query("datastar");
-  const signals = datastarParam ? JSON.parse(datastarParam) : {};
-  const isMobile = Boolean(signals.isMobile);
-
   return streamSSE(
     c,
     async (stream) => {
-      const game = renderGameFor(user_id, isMobile);
+      const game = renderGameFor(user_id);
       await stream.writeSSE(
         game
           ? patchEvent([game])

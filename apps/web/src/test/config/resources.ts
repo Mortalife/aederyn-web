@@ -34,6 +34,20 @@ export const resources: ResourceModel[] = [
     type: "resource",
     verb: "Chop",
   },
+  {
+    id: "resource_stone_axe_01",
+    name: "Stone Axe",
+    amount: 1,
+    limitless: true,
+    reward_items: [{ item_id: "item_stone_axe_01", qty: 1 }],
+    required_items: [
+      { item_id: "item_stone_01", qty: 2, consumed: true },
+      { item_id: "item_stick_01", qty: 1, consumed: true },
+    ],
+    collectionTime: 5,
+    type: "workbench",
+    verb: "Make",
+  },
 ];
 
 export const resourcesById = new Map<string, ResourceModel>(resources.map((r) => [r.id, r]));

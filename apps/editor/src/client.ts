@@ -527,9 +527,33 @@ window.updateDurabilityVisibility = (selectEl: HTMLSelectElement) => {
   }
 };
 
+// Icon picker (see components/IconPicker.tsx)
+window.pickIcon = (button: HTMLElement, id: string) => {
+  const picker = button.closest("[data-icon-picker]");
+  if (!picker) return;
+  picker.querySelector<HTMLInputElement>('input[type="hidden"]')!.value = id;
+  picker.querySelector("[data-icon-preview] use")!.setAttribute("href", id ? `#icon-${id}` : "");
+  const label = picker.querySelector<HTMLElement>("[data-icon-label]")!;
+  label.textContent = id || "None (shows a monogram)";
+  label.classList.replace("text-red-400", "text-gray-300");
+  picker.querySelectorAll<HTMLElement>("[data-icon]").forEach((el) => {
+    el.setAttribute("aria-pressed", String(el.dataset.icon === id));
+  });
+};
+
+window.filterIcons = (input: HTMLInputElement) => {
+  const query = input.value.trim().toLowerCase();
+  input
+    .closest("[data-icon-picker]")
+    ?.querySelectorAll<HTMLElement>("[data-icon]")
+    .forEach((el) => el.classList.toggle("hidden", !el.dataset.icon!.includes(query)));
+};
+
 // Extend Window interface
 declare global {
   interface Window {
+    pickIcon: (button: HTMLElement, id: string) => void;
+    filterIcons: (input: HTMLInputElement) => void;
     addEffectRow: (listId: string) => void;
     addMapRow: (templateId: string, listId: string, vars?: Record<string, string>) => void;
     removeMapRow: (button: HTMLElement) => void;

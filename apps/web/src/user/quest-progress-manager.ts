@@ -332,6 +332,45 @@ export const selectInProgressQuests = (
   return result;
 };
 
+export type TrackedQuest = {
+  quest: PlacedQuest;
+  status: "in_progress" | "completable";
+};
+
+/**
+ * Every quest the player is on, wherever it is: ready to hand in first,
+ * then the rest in the order they were accepted.
+ */
+export const selectTrackedQuests = (
+  quests: PlacedQuest[],
+  state: UserQuestState
+): TrackedQuest[] =>
+  quests
+    .flatMap((quest) => {
+      const progress = state.quests.get(quest.id);
+      if (progress?.status !== "in_progress" && progress?.status !== "completable") {
+        return [];
+      }
+      const placed = withObjectiveProgress(quest, state.objectives);
+      const currentObjective =
+        progress.status === "in_progress"
+          ? findCurrentObjective(quest, state.objectives) ?? undefined
+          : undefined;
+      return [
+        {
+          quest: { ...placed, currentObjective },
+          status: progress.status,
+          startedAt: progress.started_at,
+        },
+      ];
+    })
+    .sort(
+      (a, b) =>
+        Number(b.status === "completable") - Number(a.status === "completable") ||
+        a.startedAt - b.startedAt
+    )
+    .map(({ quest, status }) => ({ quest, status }));
+
 export const selectZoneNPCInteractions = (
   quests: PlacedQuest[],
   state: UserQuestState,

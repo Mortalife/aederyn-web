@@ -1,6 +1,7 @@
 import type { FC } from "hono/jsx";
 import type { Effect, Item } from "../repository/index.js";
 import { EffectList } from "../components/EffectList.js";
+import { IconPicker } from "../components/IconPicker.js";
 import type { ItemAttributes, ItemRequirements } from "@aederyn/types";
 import type { UsedByReference } from "../services/references.js";
 import { UsedBySection } from "./components/used-by-section.js";
@@ -130,6 +131,8 @@ export const ItemForm: FC<ItemFormProps> = ({ item, isNew = true, usedBy = [], e
               <option value="legendary" selected={i.rarity === "legendary"}>Legendary</option>
             </select>
           </div>
+
+          <IconPicker name="icon" value={i.icon} />
 
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-2">

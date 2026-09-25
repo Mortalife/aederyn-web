@@ -20,7 +20,7 @@ export const tileTypes: Tile[] = [
   }),
   tile("tile_trees", { name: "Trees", resources: [{ id: "resource_trees_01" }] }),
   tile("tile_enchanted_grove", { name: "Grove", resources: [{ id: "resource_trees_01" }] }),
-  tile("tile_rocky_outcrop", { name: "Stone Yard" }),
+  tile("tile_rocky_outcrop", { name: "Stone Yard", resources: [{ id: "resource_stone_axe_01" }] }),
   tile("tile_wall", { name: "Wall", accessible: false }),
 ];
 

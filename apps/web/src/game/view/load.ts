@@ -19,7 +19,13 @@ import {
 } from "../../world/monsters.js";
 import { visibleArea } from "../../world/index.js";
 import { getTimedEffects } from "../../world/effects.js";
-import { chatVersion, onlineVersion, zoneVersion } from "../versions.js";
+import { getDiscoveries, type Discoveries } from "../../user/discoveries.js";
+import {
+  chatVersion,
+  discoveryVersion,
+  onlineVersion,
+  zoneVersion,
+} from "../versions.js";
 
 /**
  * Reads shared by many screens are cached by the version of what they read,
@@ -72,6 +78,24 @@ const loadOnlineCount = () => {
   return onlineCount.count;
 };
 
+const discoveries = new Map<
+  string,
+  { version: number; discoveries: Discoveries }
+>();
+
+/** A player's discoveries, read again only when they find something new. */
+const loadDiscoveries = (userId: string) => {
+  const version = discoveryVersion(userId);
+  let cached = discoveries.get(userId);
+
+  if (cached?.version !== version) {
+    cached = { version, discoveries: getDiscoveries(userId) };
+    discoveries.set(userId, cached);
+  }
+
+  return cached;
+};
+
 /**
  * Everything a player's screen needs, read from the reader connection in
  * one synchronous pass. Each table is read once; everything derived from
@@ -102,6 +126,7 @@ export const loadView = (userId: string, now: number) => {
     timedEffects: getTimedEffects(user.id, now),
     activeQuests: questProgressManager.getActiveQuests(now),
     questState: questProgressManager.getUserQuestState(user.id),
+    discoveries: loadDiscoveries(user.id),
   };
 };
 

@@ -1,28 +1,32 @@
 import type { HtmlEscapedString } from "hono/utils/html";
-import { html, raw } from "hono/html";
+import { raw } from "hono/html";
+import { ZoneEquipment, ZoneInventory } from "../../templates/bag.js";
+import { ZoneMonsters } from "../../templates/combat.js";
+import { UserInfo } from "../../templates/hud.js";
+import { Minimap, WorldMap } from "../../templates/map.js";
+import { Tracker, TrackerLine } from "../../templates/tracker.js";
+import { ZonePlayers } from "../../templates/social.js";
+import { Activity } from "../../templates/activity.js";
+import { Journal } from "../../templates/journal.js";
+import { LogChat, LogCombat, LogGame } from "../../templates/log.js";
 import {
-  ChatMessages,
-  UserInfo,
-  WorldMap,
   Zone,
   ZoneHeader,
-  ZoneEquipment,
-  ZoneInventory,
-  ZoneMonsters,
   ZoneNPCs,
   ZoneNav,
-  ZonePlayers,
   ZoneResources,
-} from "../../templates/elements.js";
-import { Game, GameContent } from "../../templates/game.js";
-import { ContractBoard, Quests } from "../../templates/quests.js";
+} from "../../templates/zone.js";
+import { Game, Scene } from "../../templates/game.js";
+import { ContractBoard, Dialogue, Quests } from "../../templates/quests.js";
 import {
   chatVersion,
   onlineVersion,
   userVersion,
   zoneVersion,
 } from "../versions.js";
-import type { GameView } from "./select.js";
+import { UNARMED } from "../../config.js";
+import { tileKey } from "../../user/discoveries.js";
+import { selectJournal, type GameView } from "./select.js";
 
 /**
  * A piece of the screen with a stable element id. `key` names everything
@@ -38,13 +42,17 @@ export type Fragment = {
 };
 
 export type Screen = {
-  /** "map" or "zone:x,y". A new layout replaces all of `#content`. */
+  /** "map" or "zone:x,y". A new layout replaces all of `#scene`. */
   layout: string;
-  info: Fragment;
-  /** What's inside `#content`, patched one by one while the layout holds. */
+  /**
+   * The HUD, side panel and log: on screen whatever the layout, so a
+   * layout change leaves them alone and patches them one by one.
+   */
+  regions: Fragment[];
+  /** What's inside `#scene`, patched one by one while the layout holds. */
   parts: Fragment[];
-  /** Assembles `#content` from the parts' HTML, by id. */
-  content: (parts: Map<string, string>) => HtmlEscapedString;
+  /** Assembles `#scene` from the parts' HTML, by id. */
+  scene: (parts: Map<string, string>) => HtmlEscapedString;
 };
 
 /** Names each `activeQuests` array, which is replaced whenever it's re-read. */
@@ -73,76 +81,181 @@ const workingWeapon = (user: GameView["user"]) => {
     : null;
 };
 
-export const buildScreen = (
-  view: GameView,
-  activeQuests: object,
-  isMobile = false
-): Screen => {
+export const buildScreen = (view: GameView, activeQuests: object): Screen => {
   const { user } = view;
   const u = `${user.id}:u${userVersion(user.id)}`;
   const aq = `aq${questSetId(activeQuests)}`;
-
-  const info: Fragment = {
-    id: "info",
-    key: `${u}:o${onlineVersion()}:a${view.alertKey}`,
-    render: () =>
-      html`<div id="info">
-        ${UserInfo(
-          user,
-          view.messages,
-          view.totalPlayersOnline,
-          view.messages.find((m) => String(m.id) === view.alertKey),
-          view.effects
-        )}
-      </div>`,
+  const f = `f${view.flashKey}`;
+  const here = user.z ? view.map.find((tile) => tile.here)! : null;
+  const zone = here ? `${here.x},${here.y}` : null;
+  const z = here ? `z${zoneVersion(here.x, here.y)}` : null;
+  const d = `d${view.discoveryVersion}`;
+  const glows = new Map(
+    view.map.flatMap((tile) => {
+      const key = tileKey(tile.x, tile.y);
+      const message = view.contextFlashes.get(`discovery:tile:${key}`);
+      return message ? [[key, message] as const] : [];
+    })
+  );
+  const g = `g${[...glows.values()].map((m) => m.id).join(",")}`;
+  const mapProps = {
+    map: view.map,
+    indicators: view.mapIndicators,
+    discoveries: view.discoveries,
+    glows,
   };
 
-  if (!user.z) {
+  const regions: Fragment[] = [
+    {
+      id: "hud",
+      key: `${u}:o${onlineVersion()}:h${view.hitsKey}`,
+      render: () =>
+        UserInfo(
+          user,
+          view.totalPlayersOnline,
+          view.effects,
+          view.combatLog.find(({ hit }) => hit.by_monster)?.hit
+        ),
+    },
+    {
+      id: "activity",
+      // Progress bars and swing timers run on the client: no clock here.
+      key: `${u}:h${view.hitsKey}:${view.activityKey}:${d}`,
+      render: () =>
+        Activity(view.activity, {
+          userId: user.id,
+          health: user.h,
+          weaponSpeed: workingWeapon(user)?.speed ?? UNARMED.speed,
+          knownOutputs: view.discoveries.resourceOutputs,
+        }),
+    },
+    {
+      id: "inventory",
+      key: `${u}:ob${[...view.objectiveItems].join(",")}:uh${[...view.usableHere].join(",")}`,
+      render: () =>
+        ZoneInventory(user, {
+          objectiveItems: view.objectiveItems,
+          usableHere: view.usableHere,
+        }),
+    },
+    {
+      id: "equipment",
+      key: u,
+      render: () => ZoneEquipment(user),
+    },
+    {
+      id: "quests",
+      key: `${u}:${aq}:${f}:t${view.clock}`,
+      render: () =>
+        Quests({
+          zoneQuests: view.quests,
+          npcInteractions: view.npcInteractions,
+          flashMessage: view.contextFlashes.get("quest"),
+          residents: new Set(view.npcs.map(({ npc }) => npc.entity_id)),
+          inZone: user.z,
+          now: view.clock,
+        }),
+    },
+    {
+      id: "journal",
+      key: `${user.id}:${d}`,
+      render: () => Journal(selectJournal(view.discoveries)),
+    },
+    {
+      id: "minimap",
+      key: `${u}:${aq}:${d}:${g}`,
+      render: () => Minimap({ ...mapProps, inZone: user.z }),
+    },
+    {
+      id: "tracker",
+      key: `${u}:${aq}`,
+      render: () => Tracker(view.tracked),
+    },
+    {
+      id: "tracker-line",
+      key: `${u}:${aq}`,
+      render: () => TrackerLine(view.tracked),
+    },
+    {
+      id: "dialogue",
+      key: `${u}:${aq}:${d}`,
+      render: () => Dialogue(view.npcInteractions, view.discoveries.npcs),
+    },
+    {
+      id: "zone-players",
+      // Shared by everyone in the zone: no user in the key.
+      key: zone ? `${zone}:${z}` : "map",
+      render: () => ZonePlayers(zone ? view.zoneUsers : null),
+    },
+    {
+      id: "log-game",
+      key: `${user.id}:m${view.messagesKey}`,
+      render: () => LogGame(view.messages),
+    },
+    {
+      id: "log-chat",
+      // Shared by everyone whose history starts at the same message.
+      key: `c${chatVersion()}:${view.chatMessages.at(-1)?.id ?? ""}`,
+      render: () => LogChat(view.chatMessages),
+    },
+    {
+      id: "log-combat",
+      key: `${user.id}:${view.combatLog.map(({ hit }) => hit.id).join(",")}`,
+      render: () => LogCombat(view.combatLog, user.id),
+    },
+  ];
+
+  if (!here) {
     const worldMap: Fragment = {
       id: "world-map",
-      key: `${u}:${aq}:m${isMobile}`,
-      render: () =>
-        WorldMap(view.map, view.mapIndicators, isMobile, view.quests),
+      key: `${u}:${aq}:${d}:${g}`,
+      render: () => WorldMap(mapProps),
     };
 
     return {
       layout: "map",
-      info,
+      regions,
       parts: [worldMap],
-      content: (parts) => part(GameContent(part(parts, "world-map"))),
+      scene: (parts) => part(Scene(part(parts, "world-map"))),
     };
   }
-
-  const here = view.map.find((tile) => tile.here)!;
-  const zone = `${here.x},${here.y}`;
-  const z = `z${zoneVersion(here.x, here.y)}`;
-  const f = `f${view.flashKey}`;
 
   const parts: Fragment[] = [
     {
       id: "zone-header",
       // Tile config only, which doesn't change while the game runs.
-      key: zone,
+      key: zone!,
       render: () => ZoneHeader(here),
     },
     {
       id: "zone-nav",
-      key: `${u}:${z}:${aq}:${f}`,
+      key: `${u}:${z}:${aq}`,
       render: () =>
         ZoneNav({
           worldTile: here,
-          user,
-          playerCount: view.players.length,
-          zoneQuests: view.quests,
-          npcInteractions: view.npcInteractions,
           monsters: view.monsters,
-          contextFlashes: view.contextFlashes,
+          residents: view.npcs,
+          board: view.board,
+          resourceObjectives: view.resourceObjectives,
+          monsterObjectives: view.monsterObjectives,
+          npcAttention: new Set([
+            ...view.npcInteractions.map((i) => i.objective.entity_id),
+            ...view.quests.completableQuests.flatMap((q) =>
+              q.completion.entity_id ? [q.completion.entity_id] : []
+            ),
+          ]),
         }),
     },
     {
       id: "npcs",
-      key: `${u}:${zone}:${aq}`,
-      render: () => ZoneNPCs(view.npcs),
+      key: `${u}:${zone}:${aq}:${f}:${d}`,
+      render: () =>
+        ZoneNPCs(view.npcs, {
+          known: view.discoveries.npcs,
+          completable: view.quests.completableQuests,
+          interactions: view.npcInteractions,
+          contextFlashes: view.contextFlashes,
+        }),
     },
     {
       id: "board",
@@ -157,7 +270,7 @@ export const buildScreen = (
     {
       id: "resources",
       // The progress bar runs on the client, so this has no clock in its key.
-      key: `${u}:${z}:${aq}:${f}`,
+      key: `${u}:${z}:${aq}:${f}:${d}`,
       render: () =>
         ZoneResources({
           worldTile: here,
@@ -165,62 +278,30 @@ export const buildScreen = (
           inprogress: view.inprogress,
           resourceObjectives: view.resourceObjectives,
           contextFlashes: view.contextFlashes,
+          discoveries: view.discoveries,
         }),
     },
     {
       id: "monsters",
       // Attack and flee controls depend on the viewer's equipment and action.
-      key: `${u}:${z}:${f}:h${view.hitsKey}`,
+      key: `${u}:${z}:${f}:h${view.hitsKey}:${d}`,
       render: () => ZoneMonsters(view.monsters, {
         userId: user.id,
         weapon: workingWeapon(user),
-        health: user.h,
         gathering: !!view.inprogress,
         contextFlashes: view.contextFlashes,
+        discoveries: view.discoveries,
       }),
-    },
-    {
-      id: "quests",
-      key: `${u}:${aq}:${f}:t${view.clock}`,
-      render: () =>
-        Quests({
-          zoneQuests: view.quests,
-          npcInteractions: view.npcInteractions,
-          flashMessage: view.contextFlashes.get("quest"),
-          residents: new Set(view.npcs.map(({ npc }) => npc.entity_id)),
-          now: view.clock,
-        }) ?? html`<div id="quests"></div>`,
-    },
-    {
-      id: "inventory",
-      key: u,
-      render: () => ZoneInventory(user),
-    },
-    {
-      id: "equipment",
-      key: u,
-      render: () => ZoneEquipment(user),
-    },
-    {
-      id: "zone-players",
-      // Shared by everyone in the zone: no user in the key.
-      key: `${zone}:${z}`,
-      render: () => ZonePlayers(view.zoneUsers),
-    },
-    {
-      id: "chat-messages",
-      key: `${user.id}:c${chatVersion()}:t${view.clock}`,
-      render: () => ChatMessages(view.chatMessages, user, view.clock),
     },
   ];
 
   return {
     layout: `zone:${zone}`,
-    info,
+    regions,
     parts,
-    content: (parts) =>
+    scene: (parts) =>
       part(
-        GameContent(
+        Scene(
           part(
             Zone({
               header: part(parts, "zone-header"),
@@ -229,11 +310,6 @@ export const buildScreen = (
               board: part(parts, "board"),
               resources: part(parts, "resources"),
               monsters: part(parts, "monsters"),
-              quests: part(parts, "quests"),
-              inventory: part(parts, "inventory"),
-              equipment: part(parts, "equipment"),
-              players: part(parts, "zone-players"),
-              chatMessages: part(parts, "chat-messages"),
             })
           )
         )
@@ -278,7 +354,7 @@ export const emptyDrawn = (): Drawn => ({ layout: null, sent: new Map() });
 /**
  * Brings `drawn` up to date with `screen` and returns the elements to patch:
  * nothing for fragments whose key or HTML hasn't changed, and the whole of
- * `#content` when the layout changed.
+ * `#scene` when the layout changed.
  */
 export const diffScreen = (
   drawn: Drawn,
@@ -298,15 +374,18 @@ export const diffScreen = (
     return { html, changed: previous?.html !== html };
   };
 
-  const info = update(screen.info);
-  if (info.changed) {
-    patches.push(info.html);
+  for (const region of screen.regions) {
+    const { html, changed } = update(region);
+    if (changed) {
+      patches.push(html);
+    }
   }
 
   if (drawn.layout !== screen.layout) {
-    // Parts of the old layout are gone from the page.
+    // Parts of the old scene are gone from the page.
+    const regions = new Set(screen.regions.map((region) => region.id));
     for (const id of drawn.sent.keys()) {
-      if (id !== screen.info.id) {
+      if (!regions.has(id)) {
         drawn.sent.delete(id);
       }
     }
@@ -315,7 +394,7 @@ export const diffScreen = (
     const parts = new Map(
       screen.parts.map((part) => [part.id, update(part).html])
     );
-    patches.push(screen.content(parts).toString());
+    patches.push(screen.scene(parts).toString());
     return patches;
   }
 
@@ -340,7 +419,29 @@ export const renderGame = (
   drawn.layout = null;
   drawn.sent.clear();
 
-  const [info, content] = diffScreen(drawn, screen, cache);
+  // With nothing drawn, the last patch is the scene.
+  const scene = diffScreen(drawn, screen, cache).at(-1)!;
+  const region = (id: string) => raw(drawn.sent.get(id)?.html ?? "");
 
-  return Game({ userId, now, info: raw(info), content: raw(content) }).toString();
+  return Game({
+    userId,
+    now,
+    hud: region("hud"),
+    scene: raw(scene),
+    inventory: region("inventory"),
+    equipment: region("equipment"),
+    quests: region("quests"),
+    journal: region("journal"),
+    minimap: region("minimap"),
+    tracker: region("tracker"),
+    trackerLine: region("tracker-line"),
+    players: region("zone-players"),
+    activity: region("activity"),
+    dialogue: region("dialogue"),
+    log: {
+      game: region("log-game"),
+      chat: region("log-chat"),
+      combat: region("log-combat"),
+    },
+  }).toString();
 };

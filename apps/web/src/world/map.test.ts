@@ -22,7 +22,7 @@ const { allCells, generateMap, getTileSelection, isOutOfBounds, rollCell } =
   await import("./index.js");
 const { collectEffects } = await import("./effects.js");
 const { npcsAtHome } = await import("../game/view/select.js");
-const { ZoneNPCs } = await import("../templates/elements.js");
+const { ZoneNPCs } = await import("../templates/zone.js");
 
 const region = (id: string, anchors: { x: number; y: number }[], tiles = [{ id: `tile_${id}`, weight: 1 }]) => ({
   id,
@@ -215,11 +215,15 @@ describe("NPC homes", () => {
     const npc = npcsAtHome("landmark_camp").find((n) => n.entity_id === "npc_quartermaster");
     expect(npc).toBeDefined();
     expect(npcsAtHome(null)).toEqual([]);
-    const html = ZoneNPCs(
-      npcsAtHome("landmark_camp").map((npc) => ({ npc, offers: [] }))
-    ).toString();
+    const residents = npcsAtHome("landmark_camp").map((npc) => ({ npc, offers: [] }));
+    const html = ZoneNPCs(residents, { known: new Set([npc!.entity_id]) }).toString();
     expect(html).toContain(npc!.name);
     expect(html).toContain(npc!.idleLine!);
+
+    const stranger = ZoneNPCs(residents).toString();
+    expect(stranger).not.toContain(npc!.name);
+    expect(stranger).toContain("A stranger");
+    expect(stranger).toContain(npc!.idleLine!);
     expect(ZoneNPCs([]).toString()).toBe('<div id="npcs"></div>');
   });
 });

@@ -18,7 +18,8 @@ const { MAP_BOUNDS, START_POSITION } = await import("../config.js");
 const { writer } = await import("../db/writer.js");
 const { loadView } = await import("./view/load.js");
 const { selectGame } = await import("./view/select.js");
-const { UserInfo, ZoneHeader } = await import("../templates/elements.js");
+const { UserInfo } = await import("../templates/hud.js");
+const { ZoneHeader } = await import("../templates/zone.js");
 const { userVersion } = await import("./versions.js");
 const {
   collectEffects,
@@ -262,7 +263,7 @@ describe("effects in the game", () => {
     const view = selectGame(loadView(userId, now)!, { now });
     expect(find(view.effects, "effect_bountiful")).toMatchObject({ strength: 50 });
 
-    const html = UserInfo(view.user, [], 1, null, view.effects).toString();
+    const html = UserInfo(view.user, 1, view.effects).toString();
     expect(html).toContain("Bountiful");
     expect(html).toContain(`id="effect-effect_bountiful-${now}"`);
 

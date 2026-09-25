@@ -19,6 +19,7 @@ import {
   poolThings,
 } from "@aederyn/types";
 import { repository } from "../repository/index.js";
+import { ICON_IDS } from "../../../web/src/assets/icons.js";
 
 export interface ValidationError {
   type:
@@ -28,6 +29,7 @@ export interface ValidationError {
     | "missing_tile"
     | "missing_monster"
     | "missing_effect"
+    | "missing_icon"
     | "missing_quest"
     | "missing_house_tile"
     | "missing_landmark"
@@ -168,6 +170,13 @@ export async function runValidation(): Promise<ValidationResult> {
     if (item.weapon && item.type !== "weapon") invalid('only items of type "weapon" can have weapon stats', "type");
     if (item.weapon && item.equipSlot !== "mainHand") invalid('weapons must equip to "mainHand"', "equipSlot");
     if (item.defence && !item.equippable) invalid("defence only applies to equippable items", "defence");
+  }
+
+  const iconIds = new Set<string>(ICON_IDS);
+  for (const item of items) {
+    if (item.icon !== undefined && !iconIds.has(item.icon)) {
+      errors.push({ type: "missing_icon", source: item.id, sourceName: item.name, sourceType: "item", reference: item.icon, location: "icon" });
+    }
   }
 
   // Effects: every reference must exist, and each list must make sense for the effect's kind
@@ -1134,6 +1143,7 @@ export function getErrorTypeLabel(type: ValidationError["type"]): string {
     missing_tile: "Missing Tile",
     missing_monster: "Missing Monster",
     missing_effect: "Missing Effect",
+    missing_icon: "Missing Icon",
     missing_quest: "Missing Quest",
     missing_house_tile: "Missing House Tile",
     missing_landmark: "Missing Landmark",

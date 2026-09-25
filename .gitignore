@@ -9,3 +9,7 @@ dist
 **/public/textures/*.webp
 
 docs
+
+# Playwright output
+test-results/
+playwright-report/

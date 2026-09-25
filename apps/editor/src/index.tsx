@@ -1331,6 +1331,7 @@ app.post("/commands/items", async (c) => {
       | "rare"
       | "epic"
       | "legendary",
+    icon: (body.icon as string) || undefined,
     stackable: body.stackable === "on",
     maxStackSize: parseInt(body.maxStackSize as string) || 1,
     equippable: body.equippable === "on",
@@ -1369,6 +1370,7 @@ app.post("/commands/items/:id", async (c) => {
       | "rare"
       | "epic"
       | "legendary",
+    icon: (body.icon as string) || undefined,
     stackable: body.stackable === "on",
     maxStackSize: parseInt(body.maxStackSize as string) || 1,
     equippable: body.equippable === "on",

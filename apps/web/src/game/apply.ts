@@ -7,6 +7,11 @@ import {
   gatherDurationMultiplier,
 } from "../world/effects.js";
 import { markActionComplete, markActionInProgress } from "./systems/actions.js";
+import {
+  backfillDiscoveries,
+  discoverNpc,
+  discoverTile,
+} from "./systems/discoveries.js";
 import { effectsOn } from "./systems/effects.js";
 import { useItem } from "./systems/use.js";
 import { combatForUser, startCombat, stopCombat } from "./systems/combat.js";
@@ -38,6 +43,15 @@ import {
   saveUser,
   unequipItem,
 } from "./systems/users.js";
+import type { GameUserModel } from "../config.js";
+
+const backfill = (user: GameUserModel, now: number) =>
+  backfillDiscoveries(
+    user,
+    questQueries.getActiveQuests(now),
+    questQueries.getUserQuestState(user.id),
+    now
+  );
 
 /**
  * Apply one command. Runs inside the tick's transaction, so it must stay
@@ -46,8 +60,13 @@ import {
  */
 export const apply = (command: Command, now: number): unknown => {
   switch (command.type) {
-    case "login":
-      return loginUser(command.userId)?.id ?? null;
+    case "login": {
+      const user = loginUser(command.userId);
+      if (user) {
+        backfill(user, now);
+      }
+      return user?.id ?? null;
+    }
     case "rotate_contracts":
       rotateContracts(now, { force: command.force });
       return;
@@ -61,6 +80,7 @@ export const apply = (command: Command, now: number): unknown => {
 
   switch (command.type) {
     case "connect": {
+      backfill(user, now);
       markUserOnline(user.id, now);
       if (user.z) {
         addUserToZone(user.id, user.p.x, user.p.y, now);
@@ -77,16 +97,6 @@ export const apply = (command: Command, now: number): unknown => {
 
     case "move": {
       const { direction } = command;
-
-      stopCombat(user.id, now);
-
-      if (user.z && direction !== "exit") {
-        return;
-      }
-
-      // Cancel in-progress actions
-      markActionComplete(user.id, user.p.x, user.p.y);
-
       const p = { ...user.p };
       switch (direction) {
         case "up":
@@ -101,19 +111,32 @@ export const apply = (command: Command, now: number): unknown => {
         case "right":
           p.x += 1;
           break;
-        case "enter":
-          user.z = true;
-          addUserToZone(user.id, p.x, p.y, now);
-          break;
-        case "exit":
-          user.z = false;
-          removeUserFromZone(user.id);
-          break;
+      }
+      const stepping = p.x !== user.p.x || p.y !== user.p.y;
+      const reachable =
+        !isOutOfBounds(p.x, p.y) && getTileSelection(p.x, p.y).accessible;
+
+      // A step from inside a zone leaves it first, so it's refused whole
+      // rather than leaving the zone for a cell it can't reach.
+      if (user.z && (direction === "enter" || (stepping && !reachable))) {
+        return;
       }
 
-      if (!isOutOfBounds(p.x, p.y) && getTileSelection(p.x, p.y).accessible) {
+      stopCombat(user.id, now);
+      markActionComplete(user.id, user.p.x, user.p.y);
+
+      if (direction === "enter") {
+        user.z = true;
+        addUserToZone(user.id, p.x, p.y, now);
+      } else if (user.z || direction === "exit") {
+        user.z = false;
+        removeUserFromZone(user.id);
+      }
+
+      if (reachable) {
         user.p = p;
         saveUser(user);
+        discoverTile(user.id, p.x, p.y, now);
       }
       return;
     }
@@ -246,6 +269,7 @@ export const apply = (command: Command, now: number): unknown => {
         return;
       }
 
+      discoverNpc(user.id, interaction.objective.entity_id, now);
       return updateObjectiveProgress(
         user.id,
         interaction.quest_id,

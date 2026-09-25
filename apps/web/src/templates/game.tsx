@@ -1,58 +1,211 @@
 import { html } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
+import {
+  ActionsIcon,
+  EquipmentIcon,
+  InventoryIcon,
+  MapIcon,
+  QuestsIcon,
+  SocialIcon,
+} from "./icons.js";
+import { LOG_LINES, LogPanel } from "./log.js";
+import { DEFAULT_DENSITY, KeyboardShortcut } from "./ui.js";
+
+/** Panel sizes the player sets, remembered by `client.ts`. */
+const DEFAULT_LAYOUT = { tracker: "full", logLines: LOG_LINES.short };
+
+type SideTab = { id: string; label: string; key: string };
+
+const SIDE_TABS: SideTab[] = [
+  { id: "bag", label: "Bag", key: "I" },
+  { id: "gear", label: "Gear", key: "E" },
+  { id: "quests", label: "Quests", key: "Q" },
+  { id: "social", label: "Social", key: "S" },
+  { id: "journal", label: "Journal", key: "J" },
+];
+
+const SideTabButton = ({ id, label, key }: SideTab) => html`<button
+  role="tab"
+  class="flex-1 flex items-center justify-center gap-1.5 min-h-11 lg:min-h-9 px-2 text-sm font-medium text-gray-400 border-b-2 border-transparent hover:text-white transition-colors"
+  data-class="{'text-white border-white/60 bg-white/5': $_tab === '${id}'}"
+  data-attr:aria-selected="$_tab === '${id}' ? 'true' : 'false'"
+  data-on:click="$_tab = '${id}'"
+  data-on-keys:${key.toLowerCase()}="el.click()"
+>
+  ${label} ${KeyboardShortcut(key)}
+</button>`;
+
+/** A phone tab bar button: opens its sheet, or closes it if it's open. */
+const SheetButton = (props: {
+  label: string;
+  /** Expression that's true while this button's sheet is open. */
+  open: string;
+  toggle: string;
+  icon: ReturnType<typeof html>;
+  badge?: ReturnType<typeof html>;
+  class?: string;
+}) => html`<button
+  class="${props.class ?? ""} relative flex-1 flex flex-col items-center justify-center gap-0.5 min-h-11 text-[0.7rem] text-gray-400"
+  data-class="{'text-white bg-white/10': ${props.open}}"
+  data-on:click="${props.toggle}"
+>
+  ${props.icon} ${props.badge ?? ""}
+  <span>${props.label}</span>
+</button>`;
+
+const sheetToggle = (tab: string) =>
+  `$_sheet = $_sheet === 'side' && $_tab === '${tab}' ? '' : 'side'; $_tab = '${tab}'`;
 
 /**
- * The game screen's shell. `info` and `content` are fragments rendered by
- * `game/view/fragments.ts`, which also patches their parts on their own.
+ * The game screen's shell: the same regions on the map and in a zone, laid
+ * out by CSS for each screen size (`.hud-*` in style.css). Each region holds
+ * fragments rendered by `game/view/fragments.ts`, which patches them on
+ * their own; only `scene` changes with where the player is.
  */
 export const Game = (props: {
   userId: string;
   /** The server's clock when this was rendered. */
   now: number;
-  info: HtmlEscapedString;
-  content: HtmlEscapedString;
+  hud: HtmlEscapedString;
+  scene: HtmlEscapedString;
+  inventory: HtmlEscapedString;
+  equipment: HtmlEscapedString;
+  quests: HtmlEscapedString;
+  journal: HtmlEscapedString;
+  minimap: HtmlEscapedString;
+  tracker: HtmlEscapedString;
+  trackerLine: HtmlEscapedString;
+  players: HtmlEscapedString;
+  activity: HtmlEscapedString;
+  dialogue: HtmlEscapedString;
+  log: Record<"game" | "chat" | "combat", HtmlEscapedString>;
 }) => {
+  const panes: Record<string, HtmlEscapedString> = {
+    bag: props.inventory,
+    gear: props.equipment,
+    quests: props.quests,
+    social: props.players,
+    journal: props.journal,
+  };
+
   return html`
     <div
       id="game"
-      class="md:container md:mx-auto flex flex-col gap-4 h-full"
+      class="hud-shell"
       data-signals="{
         user_id: ${JSON.stringify(props.userId)},
         _serverOffset: ${props.now} - Date.now(),
       }"
-      data-signals__if-missing="${JSON.stringify({
-        _showActions: true,
-        _showMonsters: true,
-        _showQuests: true,
-        _showInventory: true,
-        _showEquipment: true,
-        _showSocial: true,
+      data-signals__ifmissing="${JSON.stringify({
+        _density: DEFAULT_DENSITY,
+        _layout: DEFAULT_LAYOUT,
+        _logDrag: 0,
+        _isolate: "",
+        _tab: "bag",
+        _sheet: "",
+        _slot: "",
+        _quest: "",
+        _mapSel: "",
+        _drop: "",
+        _logFilter: "all",
+        message: "",
       })}"
+      data-attr:data-sheet="$_sheet"
     >
-      ${props.info} ${props.content}
+      ${props.hud} ${props.trackerLine} ${props.scene} ${props.dialogue} ${props.activity}
+      <div
+        id="item-tip"
+        class="item-tip"
+        role="tooltip"
+        aria-hidden="true"
+      ></div>
+      <button
+        id="log-peek"
+        type="button"
+        class="hud-log-peek"
+        aria-label="Open the log"
+        data-on:click="$_sheet = 'log'"
+      ></button>
+      ${LogPanel(props.userId, props.log)}
+
+      <aside class="hud-rail">
+        ${props.minimap} ${props.tracker}
+        <section id="side" class="hud-side">
+          <div role="tablist" class="flex shrink-0 border-b border-white/10">
+            ${SIDE_TABS.map(SideTabButton)}
+            <button
+              class="sm:hidden min-h-11 min-w-11"
+              data-on:click="$_sheet = ''"
+            >
+              ✕<span class="sr-only">Close</span>
+            </button>
+          </div>
+          <div class="flex-1 min-h-0 overflow-y-auto p-2">
+            ${SIDE_TABS.map(
+              ({ id }) =>
+                html`<div role="tabpanel" data-show="$_tab === '${id}'">
+                  ${panes[id]}
+                </div>`
+            )}
+          </div>
+        </section>
+      </aside>
+
+      <nav class="hud-tabbar">
+        ${SheetButton({
+          label: "Here",
+          open: "$_sheet === ''",
+          toggle: "$_sheet = ''",
+          icon: ActionsIcon,
+        })}
+        ${SheetButton({
+          label: "Map",
+          open: "$_sheet === 'map'",
+          toggle: "$_sheet = $_sheet === 'map' ? '' : 'map'",
+          icon: MapIcon,
+          class: "tab-map",
+        })}
+        ${SheetButton({
+          label: "Bag",
+          open: "$_sheet === 'side' && $_tab === 'bag'",
+          toggle: sheetToggle("bag"),
+          icon: InventoryIcon,
+        })}
+        ${SheetButton({
+          label: "Gear",
+          open: "$_sheet === 'side' && $_tab === 'gear'",
+          toggle: sheetToggle("gear"),
+          icon: EquipmentIcon,
+        })}
+        ${SheetButton({
+          label: "Quests",
+          open: "$_sheet === 'side' && $_tab === 'quests'",
+          toggle: sheetToggle("quests"),
+          icon: QuestsIcon,
+        })}
+        ${SheetButton({
+          label: "Log",
+          open: "$_sheet === 'log'",
+          toggle: "$_sheet = $_sheet === 'log' ? '' : 'log'",
+          icon: SocialIcon,
+          badge: html`<span class="log-unread" data-unread="all"></span>`,
+        })}
+      </nav>
     </div>
   `;
 };
 
-/** The world map or the zone, whichever the player is in. */
-export const GameContent = (inner: HtmlEscapedString) => html`<div
-  id="content"
-  class="flex-1 flex flex-col gap-4 overflow-auto"
+/** The centre of the screen: the world map or the zone. */
+export const Scene = (inner: HtmlEscapedString) => html`<main
+  id="scene"
+  class="hud-scene"
 >
   ${inner}
-</div>`;
+</main>`;
 
 export const GameContainer = (props: { user_id: string }) => html`
-  <div
-    id="game-container"
-    class="h-full"
-    data-signals="{
-      isMobile: window.innerWidth < 1024,
-    }"
-    data-init="@get('/game')"
-  >
+  <div id="game-container" data-init="@get('/game')">
     <div
-      class="md:container md:mx-auto"
       id="game"
       data-signals="${JSON.stringify({ user_id: props.user_id })}"
     ></div>
@@ -61,7 +214,7 @@ export const GameContainer = (props: { user_id: string }) => html`
 
 export const GameLogin = (props: { user_id: string; error?: string }) => html`
   <div
-    class="container mx-auto flex items-center justify-center min-h-[80vh]"
+    class="container mx-auto p-4 flex items-center justify-center min-h-[80vh]"
     id="game"
     data-signals="${JSON.stringify({ user_id: props.user_id })}"
   >

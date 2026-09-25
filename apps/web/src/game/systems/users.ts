@@ -12,6 +12,7 @@ import { writer } from "../../db/writer.js";
 import { migrateUser, needsMigration } from "../../user/migrations.js";
 import { userChanged } from "../changes.js";
 import { emit } from "../events.js";
+import { discoverItem } from "./discoveries.js";
 import { addSystemMessage } from "./system-messages.js";
 
 const insertUser = writer.prepare<[string, string]>(
@@ -235,6 +236,7 @@ export const addToInventory = (
 
   saveUser(user);
   inventoryChanged(user);
+  discoverItem(user_id, item.id, now);
 
   return true;
 };

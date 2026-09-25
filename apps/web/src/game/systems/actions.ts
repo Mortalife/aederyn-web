@@ -6,6 +6,7 @@ import type { UserAction } from "../../user/action.js";
 import type { SystemMessageContext } from "../../user/system.js";
 import { userChanged, zoneChanged } from "../changes.js";
 import { emit } from "../events.js";
+import { discoverResource } from "./discoveries.js";
 import { markResourceUsed } from "./resources.js";
 import { addSystemMessage } from "./system-messages.js";
 import {
@@ -260,6 +261,7 @@ const completeAction = (action: UserAction, now: number) => {
     now,
     context
   );
+  discoverResource(action.user_id, resource, now);
 };
 
 /**

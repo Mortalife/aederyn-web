@@ -10,7 +10,8 @@
     "build": "pnpm run textures && vite build --mode client && tsup",
     "textures": "tsx scripts/optimize-textures.ts",
     "start": "NODE_ENV=production node --env-file=.env dist/code/index.js",
-    "db": "pnpx @outerbase/studio local.db --port=3333"
+    "db": "pnpx @outerbase/studio local.db --port=3333",
+    "icons": "tsx scripts/build-icons.ts"
   },
   "dependencies": {
     "@aederyn/types": "workspace:*",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@hono/vite-build": "^1.2.1",
     "@hono/vite-dev-server": "^0.23.0",
+    "@iconify-json/game-icons": "^1.2.4",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "24",
     "autoprefixer": "^10.4.20",

@@ -12,6 +12,7 @@ import { loadView } from "./view/load.js";
 import { selectGame } from "./view/select.js";
 import {
   chatVersion,
+  discoveryVersion,
   onlineVersion,
   questsVersion,
   userVersion,
@@ -21,6 +22,7 @@ import {
 /** The versions a connection was last drawn at. */
 type Seen = {
   user: number;
+  discoveries: number;
   /** The zone the player was in, or null on the world map. */
   zone: { x: number; y: number; version: number } | null;
   chat: number;
@@ -32,7 +34,6 @@ type Seen = {
 
 export type Connection = {
   userId: string;
-  isMobile: boolean;
   stream: SSEStreamingApi;
   drawn: Drawn;
   seen: Seen;
@@ -43,28 +44,30 @@ const connections = new Set<Connection>();
 const isDirty = ({ seen, userId }: Connection, now: number) =>
   now >= seen.wakeAt ||
   seen.user !== userVersion(userId) ||
+  seen.discoveries !== discoveryVersion(userId) ||
   seen.quests !== questsVersion() ||
   seen.online !== onlineVersion() ||
-  // Zone state and chat are only on screen inside a zone.
+  seen.chat !== chatVersion() ||
+  // Zone state is only on screen inside a zone.
   (seen.zone !== null &&
-    (seen.zone.version !== zoneVersion(seen.zone.x, seen.zone.y) ||
-      seen.chat !== chatVersion()));
+    seen.zone.version !== zoneVersion(seen.zone.x, seen.zone.y));
 
 /**
  * Loads and lays out a player's screen. Versions are read at the same time
  * as the rows, and nothing writes in between: this runs between ticks.
  */
-const draw = (userId: string, isMobile: boolean, now: number) => {
+const draw = (userId: string, now: number) => {
   const input = loadView(userId, now);
   if (!input) {
     return null;
   }
 
-  const view = selectGame(input, { now, isMobile });
+  const view = selectGame(input, { now });
   const { user } = input;
 
   const seen: Seen = {
     user: userVersion(userId),
+    discoveries: discoveryVersion(userId),
     zone: user.z
       ? { x: user.p.x, y: user.p.y, version: zoneVersion(user.p.x, user.p.y) }
       : null,
@@ -74,7 +77,7 @@ const draw = (userId: string, isMobile: boolean, now: number) => {
     wakeAt: view.wakeAt,
   };
 
-  return { screen: buildScreen(view, input.activeQuests, isMobile), seen };
+  return { screen: buildScreen(view, input.activeQuests), seen };
 };
 
 const send = (connection: Connection, elements: string[]) => {
@@ -91,12 +94,8 @@ const send = (connection: Connection, elements: string[]) => {
  * The whole game for one player, e.g. for a refresh. Null if there's no
  * such user.
  */
-export const renderGameFor = (
-  userId: string,
-  isMobile = false,
-  now = Date.now()
-) => {
-  const drawing = draw(userId, isMobile, now);
+export const renderGameFor = (userId: string, now = Date.now()) => {
+  const drawing = draw(userId, now);
   return drawing ? renderGame(emptyDrawn(), drawing.screen, userId, now) : null;
 };
 
@@ -106,18 +105,16 @@ export const renderGameFor = (
  */
 export const openConnection = (
   userId: string,
-  isMobile: boolean,
   stream: SSEStreamingApi,
   now = Date.now()
 ) => {
-  const drawing = draw(userId, isMobile, now);
+  const drawing = draw(userId, now);
   if (!drawing) {
     return null;
   }
 
   const connection: Connection = {
     userId,
-    isMobile,
     stream,
     drawn: emptyDrawn(),
     seen: drawing.seen,
@@ -153,7 +150,7 @@ export const renderConnections = (now: number) => {
     }
 
     try {
-      const drawing = draw(connection.userId, connection.isMobile, now);
+      const drawing = draw(connection.userId, now);
       if (!drawing) {
         // The user is gone; the stream closes when the client notices.
         connection.seen.wakeAt = Infinity;

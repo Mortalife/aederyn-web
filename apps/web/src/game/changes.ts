@@ -1,5 +1,6 @@
 import {
   bumpChat,
+  bumpDiscoveries,
   bumpOnline,
   bumpQuests,
   bumpUser,
@@ -13,6 +14,11 @@ import {
  */
 export const userChanged = (user_id: string) => {
   bumpUser(user_id);
+};
+
+/** The user found something new. What shows it redraws; the rest stays. */
+export const discovered = (user_id: string) => {
+  bumpDiscoveries(user_id);
 };
 
 export const zoneChanged = (x: number, y: number) => {

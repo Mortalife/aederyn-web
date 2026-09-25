@@ -6,6 +6,7 @@ export type SystemMessageActionType =
   | "inventory"
   | "combat"
   | "zone"
+  | "discovery"
   | "system";
 
 export type SystemMessageContext = {

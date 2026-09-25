@@ -38,6 +38,7 @@ export const ItemSchema = z.object({
   description: z.string().describe("2-3 sentence item description"),
   type: ItemTypeSchema.describe("Item category"),
   rarity: ItemRaritySchema.describe("Item rarity tier"),
+  icon: z.string().optional().describe("Sprite icon id (a game-icons.net name in the web app's icon sprite)"),
   stackable: z.boolean().describe("Whether item can stack in inventory"),
   maxStackSize: z.number().min(1).describe("Maximum stack size if stackable"),
   equippable: z.boolean().describe("Whether item can be equipped"),
@@ -51,7 +52,6 @@ export const ItemSchema = z.object({
   defence: DefenceSchema.optional().describe("Defence against each attack style when equipped"),
   value: z.number().min(0).describe("Gold value based on rarity"),
   weight: z.number().min(0).describe("Weight in inventory units"),
-  iconUrl: z.string().optional().describe("URL to item icon image"),
 });
 
 export const CreateItemDTOSchema = ItemSchema.partial({ id: true });
